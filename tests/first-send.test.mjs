@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { getFirstSendProblem, getFirstSendSlice } from "../lib/first-send.js";
-import { activate, as, catchRedirect, form, jsonRequest, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, as, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp } from "./helpers/app.mjs";
 import { published } from "./stubs/qstash.mjs";
 
 test("the first slice is 5% of never-mailed contacts, between 200 and 2,000", () => {
@@ -13,10 +13,11 @@ test("the first slice is 5% of never-mailed contacts, between 200 and 2,000", ()
 	assert.equal(getFirstSendSlice(100_000), 2000);
 });
 
-test("a slice over the per-send limits stops the rest", () => {
-	assert.equal(getFirstSendProblem({ sent: 250, bounced: 5 }), null, "2% is the limit");
-	assert.equal(getFirstSendProblem({ sent: 250, bounced: 6 }), "The first 250 new contacts had a bounce rate of 2.40% (limit 2.00%)");
-	assert.match(getFirstSendProblem({ sent: 2000, complained: 2 }), /complaint rate of 0.10%/);
+test("a slice over a campaign's levels stops the rest", () => {
+	assert.equal(getFirstSendProblem({ sent: 250, bounced: 5 }), null, "2% is the pause limit");
+	assert.deepEqual(getFirstSendProblem({ sent: 250, bounced: 6 }), { level: "pause", reason: "The first 250 new contacts had a bounce rate of 2.40% (limit 2.00%)" });
+	assert.equal(getFirstSendProblem({ sent: 2000, complained: 2 }).level, "pause");
+	assert.equal(getFirstSendProblem({ sent: 2000, complained: 1 }), null, "one complaint");
 	assert.equal(getFirstSendProblem({ sent: 0 }), null);
 });
 
@@ -126,11 +127,11 @@ describe("first sends in steps", () => {
 		const paused = await campaignOf(user);
 		assert.equal(paused.status, "paused");
 		assert.equal(paused.pauseCode, "first_send_slice");
-		assert.equal(paused.pauseReason, "The first 200 new contacts had a bounce rate of 6.00% (limit 2.00%). The rest of the new contacts weren't sent.");
+		assert.equal(paused.pauseReason, "The first 200 new contacts had a bounce rate of 6.00% (limit 5.00%). The rest of the new contacts weren't sent.");
 		const account = await m.Account.findById(user.accountId).lean();
 		assert.deepEqual(
 			[account.status, account.pausedBy, account.pauseReason],
-			["paused", "slice", "The first 200 new contacts had a bounce rate of 6.00% (limit 2.00%)"]
+			["paused", "slice", "The first 200 new contacts had a bounce rate of 6.00% (limit 5.00%)"]
 		);
 		assert.equal(await count(user, "held"), 2800);
 
@@ -140,6 +141,32 @@ describe("first sends in steps", () => {
 		assert.equal(await count(user, "held"), 0, "the customer chose to send the rest");
 		assert.equal(await count(user, "queued"), 2800);
 		assert.equal((await campaignOf(user)).status, "sending");
+		skipPublished();
+	});
+
+	test("a slice over the pause level only holds the rest, with a warning, until its owner resumes", async () => {
+		const user = await setup("warm-list@example.com", { neverMailed: 3000 });
+		await as(user, () => m.campaigns.sendCampaign(user.campaignId, {}));
+		await runJobs();
+		const slice = await m.Message.find({ accountId: user.accountId, campaignId: user.campaignId, firstSend: true, status: "sent" }).limit(6).lean();
+		await m.Message.updateMany({ accountId: user.accountId, _id: { $in: slice.map(({ _id }) => _id) } }, { $set: { status: "bounced", bouncedAt: new Date() } });
+
+		const emailsBefore = platformEmails.length;
+		const [check] = await runJobs({ checks: true });
+		assert.deepEqual([check.result.paused, check.result.blocked], [true, undefined]);
+		const paused = await campaignOf(user);
+		assert.equal(paused.pauseCode, "first_send_slice");
+		assert.match(paused.pauseReason, /^The first 200 new contacts had a bounce rate of 3.00% \(limit 2.00%\)\. The rest of the new contacts wait: clean the list/);
+		assert.equal((await m.Account.findById(user.accountId).lean()).status, "active", "6 bounces don't block");
+		const emails = platformEmails.slice(emailsBefore);
+		assert.deepEqual(emails.map(({ to, subject }) => [to, subject]), [[["warm-list@example.com"], "[MailCheap] Campaign paused"]]);
+		assert.equal(await count(user, "held"), 2800);
+
+		assert.deepEqual(await as(user, () => m.campaigns.resumeCampaign(user.campaignId)), { ok: true });
+		const resumed = await campaignOf(user);
+		assert.equal(resumed.status, "sending");
+		assert.ok(resumed.ratesAcceptedAt instanceof Date, "the owner took the rates as they are");
+		assert.equal(await count(user, "held"), 0);
 		skipPublished();
 	});
 

@@ -131,7 +131,8 @@ export default function CampaignReport({ campaign, newsletter, providers, remain
 							<p className="text-xs text-pretty text-muted-foreground">
 								{formatNumber(campaign.firstSend.slice)} contacts who never got an email from you go first. The other{" "}
 								{formatNumber(campaign.firstSend.held)} follow {FIRST_SEND.waitMinutes / 60} hours after them if their bounces and
-								complaints stay under the limits. Over them, your account is blocked and the rest isn&apos;t sent.
+								complaints stay low. If they don&apos;t, the rest waits for you to resume, and if they&apos;re far over, your account is
+								blocked.
 							</p>
 						)}
 						{campaign.status === "sending" && campaign.sendingUntil && (
@@ -166,13 +167,13 @@ export default function CampaignReport({ campaign, newsletter, providers, remain
 						label="Bounced"
 						value={formatRate(stats.bounced, stats.sent, 2)}
 						detail={formatNumber(stats.bounced)}
-						tone={rateTone(stats.bounced, stats.sent, LIMITS.bounceRate)}
+						tone={rateTone(stats.bounced, stats.sent, LIMITS.pause.bounceRate)}
 					/>
 					<CardStat
 						label="Complaints"
 						value={formatRate(stats.complained, stats.sent, 3)}
 						detail={formatNumber(stats.complained)}
-						tone={rateTone(stats.complained, stats.sent, LIMITS.complaintRate)}
+						tone={rateTone(stats.complained, stats.sent, LIMITS.pause.complaintRate)}
 					/>
 					<CardStat
 						label="Unsubscribed"

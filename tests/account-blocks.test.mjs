@@ -157,33 +157,63 @@ describe("what blocks an account", () => {
 		assert.match(toOwner.text, /welcome emails included.*Contact hello@mailcheap.ai to unblock it/s);
 	});
 
-	test("3 complaints on a small list, each counted at once", async () => {
+	test("over 7 days: 1 complaint does nothing, 2 warn the owner, 3 over 0.3% block, each counted at once", async () => {
 		const user = await customer("complaints@example.com", { contacts: 0 });
 		const messages = await sentMessages(user, 100);
-		await event(user, messages[0], { type: "complaint" });
-		await event(user, messages[1], { type: "complaint" });
-		assert.equal((await loadAccount(user)).status, "active", "2 could be chance");
+		const subjectsSince = (index) => platformEmails.slice(index).map(({ to, subject }) => `${to.join(",")} ${subject}`);
 
-		const emailsBefore = platformEmails.length;
+		let emailsBefore = platformEmails.length;
+		await event(user, messages[0], { type: "complaint" });
+		assert.deepEqual(subjectsSince(emailsBefore), ["complaints@example.com [MailCheap] Spam complaint"], "only the usual notice");
+
+		emailsBefore = platformEmails.length;
+		await event(user, messages[1], { type: "complaint" });
+		assert.equal((await loadAccount(user)).status, "active", "2 complaints never block");
+		assert.deepEqual(subjectsSince(emailsBefore), ["complaints@example.com [MailCheap] Bounces or complaints are high"]);
+
+		emailsBefore = platformEmails.length;
 		await event(user, messages[2], { type: "complaint" });
 		const account = await loadAccount(user);
 		assert.deepEqual([account.status, account.pausedBy], ["paused", "rates"]);
-		assert.equal(account.pauseReason, "Complaint rate of 3.00% over the last 7 days (limit 0.08%)");
+		assert.equal(account.pauseReason, "Complaint rate of 3.00% over the last 7 days (limit 0.30%)");
 		assert.equal(alertsSince(emailsBefore).length, 2, "the admins and the owner");
 	});
 
-	test("a campaign over the limits, at its next batch: every send of the account stops", async () => {
+	test("a campaign over the pause level pauses alone with a warning; resumed, only the block level stops it", async () => {
+		const user = await customer("campaign-warning@example.com", { contacts: 3 });
+		const warned = await draft(user, "Warned");
+		const other = await draft(user, "Other");
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(warned, {})), { ok: true });
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(other, {})), { ok: true });
+		await m.Campaign.updateOne({ accountId: user.accountId, _id: warned }, { $set: { "stats.sent": 100, "stats.bounced": 5 } });
+
+		const emailsBefore = platformEmails.length;
+		assert.equal(sentCount(await runJobs(user)), 3, "the other campaign went out");
+		assert.equal((await loadAccount(user)).status, "active");
+		const paused = await loadCampaign(user, warned);
+		assert.deepEqual([paused.status, paused.pauseCode], ["paused", "high_rates"]);
+		assert.match(paused.pauseReason, /^Bounce rate of 5.00% on this campaign \(limit 2.00%\)\. Check where these contacts came from before you resume/);
+		assert.equal((await loadCampaign(user, other)).status, "sent");
+		const emails = platformEmails.slice(emailsBefore);
+		assert.deepEqual(emails.map(({ to, subject }) => [to, subject]), [[["campaign-warning@example.com"], "[MailCheap] Campaign paused"]], "no admin email");
+
+		assert.deepEqual(await as(user, () => m.campaigns.resumeCampaign(warned)), { ok: true });
+		assert.equal(sentCount(await runJobs(user)), 3, "the same rates don't pause it again");
+		assert.equal((await loadCampaign(user, warned)).status, "sent");
+	});
+
+	test("a campaign over the block level, at its next batch: every send of the account stops", async () => {
 		const user = await customer("campaign-rates@example.com", { contacts: 3 });
 		const bad = await draft(user, "Bad");
 		const other = await draft(user, "Other");
 		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(bad, {})), { ok: true });
 		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(other, {})), { ok: true });
-		await m.Campaign.updateOne({ accountId: user.accountId, _id: bad }, { $set: { "stats.sent": 100, "stats.bounced": 3 } });
+		await m.Campaign.updateOne({ accountId: user.accountId, _id: bad }, { $set: { "stats.sent": 100, "stats.bounced": 10 } });
 
 		const emailsBefore = platformEmails.length;
 		assert.equal(sentCount(await runJobs(user)), 0);
 		const account = await loadAccount(user);
-		assert.deepEqual([account.status, account.pausedBy, account.pauseReason], ["paused", "campaign", "Bounce rate of 3.00% on a campaign (limit 2.00%)"]);
+		assert.deepEqual([account.status, account.pausedBy, account.pauseReason], ["paused", "campaign", "Bounce rate of 10.00% on a campaign (limit 5.00%)"]);
 		for (const id of [bad, other]) {
 			const campaign = await loadCampaign(user, id);
 			assert.deepEqual([campaign.status, campaign.pauseCode, campaign.pauseReason], ["paused", "account_blocked", "the account is blocked"]);

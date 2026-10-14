@@ -132,8 +132,8 @@ function Health({ health }) {
 	if (!health?.sent) return <TextEmpty />;
 	return (
 		<span className="text-xs">
-			<Rate value={health.bounceRate} limit={LIMITS.bounceRate} /> bounces ·{" "}
-			<Rate value={health.complaintRate} limit={LIMITS.complaintRate} digits={3} /> complaints
+			<Rate value={health.bounceRate} limit={LIMITS.pause.bounceRate} /> bounces ·{" "}
+			<Rate value={health.complaintRate} limit={LIMITS.pause.complaintRate} digits={3} /> complaints
 		</span>
 	);
 }

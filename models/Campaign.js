@@ -19,6 +19,9 @@ const campaignSchema = new mongoose.Schema(
 		// Why a send paused itself; a code from lib/account-state.js when the account or plan stopped it.
 		pauseReason: { type: String },
 		pauseCode: { type: String },
+		// Its owner resumed it from a pause for its bounce or complaint rates: from then on, only the block level
+		// stops it (lib/rate-levels.js).
+		ratesAcceptedAt: { type: Date },
 		// Warm-up: send to the most engaged contacts first, capped at audienceLimit.
 		audienceLimit: { type: Number, min: 1 },
 		// Contacts never mailed before go out in steps: a first slice, a check, then the rest (lib/first-send.js).
