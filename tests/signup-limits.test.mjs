@@ -5,8 +5,8 @@ import { getAliasPattern, getCanonicalEmail } from "../lib/email-aliases.js";
 import { as, catchRedirect, form, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 
 test("an address's inbox: Gmail ignores dots and +tags, these providers +tags, Yahoo -tags", () => {
-	assert.equal(getCanonicalEmail("Marc.Lou+news@googlemail.com"), "marclou@gmail.com");
-	assert.equal(getCanonicalEmail("marc+2@gmail.com"), "marc@gmail.com");
+	assert.equal(getCanonicalEmail("Jane.Doe+news@googlemail.com"), "janedoe@gmail.com");
+	assert.equal(getCanonicalEmail("janedoe+2@gmail.com"), "janedoe@gmail.com");
 	for (const domain of ["outlook.com", "hotmail.fr", "live.com", "icloud.com", "fastmail.com", "proton.me", "protonmail.com"]) {
 		assert.equal(getCanonicalEmail(`jane.doe+promo@${domain}`), `jane.doe@${domain}`, domain);
 	}
@@ -16,9 +16,9 @@ test("an address's inbox: Gmail ignores dots and +tags, these providers +tags, Y
 	assert.equal(getCanonicalEmail("jane.doe+promo@example.com"), "jane.doe+promo@example.com", "other domains decide for themselves");
 	assert.equal(getCanonicalEmail("not an email"), null);
 
-	const gmail = getAliasPattern("marc@gmail.com");
-	for (const email of ["marc@gmail.com", "m.a.r.c@gmail.com", "marc+x@googlemail.com", "ma.rc+news.letter@gmail.com"]) assert.match(email, gmail);
-	for (const email of ["marco@gmail.com", "mar@gmail.com", "marc@gmail.co", "xmarc@gmail.com", "marc@outlook.com"]) assert.doesNotMatch(email, gmail);
+	const gmail = getAliasPattern("jane.doe@gmail.com");
+	for (const email of ["jane.doe@gmail.com", "j.a.n.e.d.o.e@gmail.com", "janedoe+x@googlemail.com", "jan.edoe+news.letter@gmail.com"]) assert.match(email, gmail);
+	for (const email of ["jane.does@gmail.com", "jane.do@gmail.com", "jane.doe@gmail.co", "xjane.doe@gmail.com", "jane.doe@outlook.com"]) assert.doesNotMatch(email, gmail);
 	assert.doesNotMatch("jane.doe@outlook.com", getAliasPattern("janedoe+x@outlook.com"), "dots count at Outlook");
 	assert.equal(getAliasPattern("jane@example.com"), null);
 	assert.match("a*b+x@outlook.com", getAliasPattern("a*b@outlook.com"));
@@ -58,14 +58,14 @@ describe("sign-ups on MailCheap Cloud", () => {
 	after(() => app?.stop());
 
 	test("one account per inbox: a +tag or dots on the same Gmail is told to use the first account", async () => {
-		await signIn("marc.lou@gmail.com");
-		for (const alias of ["marclou+2@gmail.com", "m.arclou@googlemail.com"]) {
+		await signIn("jane.doe@gmail.com");
+		for (const alias of ["janedoe+2@gmail.com", "j.anedoe@googlemail.com"]) {
 			assert.deepEqual(await signUp(alias), { email: alias, error: m.auth.SIGNUP_ERRORS.email_alias }, alias);
 			assert.equal(await users().countDocuments({ email: alias }), 0);
 		}
 		assert.equal(m.auth.SIGNUP_ERRORS.email_alias, "An account already uses this inbox under another address. Sign in with that address instead.");
-		assert.ok(await signIn("marc.lou@gmail.com"), "the first account signs in as before");
-		assert.ok(await signIn("marco@gmail.com"), "another inbox");
+		assert.ok(await signIn("jane.doe@gmail.com"), "the first account signs in as before");
+		assert.ok(await signIn("john.doe@gmail.com"), "another inbox");
 	});
 
 	test("the same goes for Outlook's +tags and Yahoo's -tags, whichever came first", async () => {
@@ -78,11 +78,11 @@ describe("sign-ups on MailCheap Cloud", () => {
 
 	test("accounts that share an inbox from before keep signing in", async () => {
 		const now = new Date();
-		for (const email of ["twice@gmail.com", "tw.ice+old@gmail.com"]) {
+		for (const email of ["janeroe@gmail.com", "jane.roe+old@gmail.com"]) {
 			const { insertedId } = await users().insertOne({ email, emailVerified: true, name: "", createdAt: now, updatedAt: now });
 			await m.Account.create({ ownerId: insertedId });
 		}
-		for (const email of ["twice@gmail.com", "tw.ice+old@gmail.com"]) assert.ok(await signIn(email), email);
+		for (const email of ["janeroe@gmail.com", "jane.roe+old@gmail.com"]) assert.ok(await signIn(email), email);
 	});
 
 	test("throwaway inboxes get no code and no account; one from before still signs in", async () => {
@@ -117,13 +117,13 @@ describe("sign-ups on MailCheap Cloud", () => {
 	});
 
 	test("Google sign-ups get the same checks, and /signin says why", async () => {
-		await signIn("google.user@gmail.com");
-		const refused = await signInWithGoogle(m, "googleuser+2@gmail.com");
+		await signIn("john.roe@gmail.com");
+		const refused = await signInWithGoogle(m, "johnroe+2@gmail.com");
 		assert.deepEqual(refused, { path: "/signin", error: "email_alias", isSignedIn: false });
-		assert.equal(await users().countDocuments({ email: "googleuser+2@gmail.com" }), 0);
+		assert.equal(await users().countDocuments({ email: "johnroe+2@gmail.com" }), 0);
 		assert.equal(m.auth.getSignupError(refused.error), m.auth.SIGNUP_ERRORS.email_alias);
 		assert.equal(m.auth.getSignupError("constructor"), null);
-		assert.deepEqual(await signInWithGoogle(m, "google.user@gmail.com"), { path: "/", error: null, isSignedIn: true }, "the same address signs in");
+		assert.deepEqual(await signInWithGoogle(m, "john.roe@gmail.com"), { path: "/", error: null, isSignedIn: true }, "the same address signs in");
 	});
 
 	test("an address Google hasn't verified opens no user and no account, so its owner never finds one waiting", async () => {
@@ -136,7 +136,7 @@ describe("sign-ups on MailCheap Cloud", () => {
 
 	test("self-hosted servers decide with their allowlist alone", async () => {
 		await withEnv({ MAILCHEAP_CLOUD: "", ALLOWED_EMAILS: "@gmail.com", EMAIL_FROM: "MailCheap <login@mail.example.com>" }, async () => {
-			assert.ok(await signIn("marc.lou+selfhosted@gmail.com"));
+			assert.ok(await signIn("jane.doe+selfhosted@gmail.com"));
 		});
 	});
 });

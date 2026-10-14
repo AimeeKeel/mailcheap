@@ -27,18 +27,18 @@ test("the shared address is hello@ on the newsletter's own subdomain, and replie
 	assert.equal(getSharedSendingDomain("field-notes", SHARED), "field-notes.mailcheapmail.com");
 	assert.equal(getSharedAddress("field-notes", SHARED), "hello@field-notes.mailcheapmail.com");
 	assert.equal(getSharedAddress("field-notes", null), null);
-	assert.deepEqual(resolveFrom({ newsletter, domains: [], ownerEmail: "jane@gmail.com", sharedDomain: SHARED, providerId: "ses" }), {
+	assert.deepEqual(resolveFrom({ newsletter, domains: [], ownerEmail: "jane@example.com", sharedDomain: SHARED, providerId: "ses" }), {
 		identity: "field-notes.mailcheapmail.com",
-		replyTo: "jane@gmail.com",
+		replyTo: "jane@example.com",
 		isShared: true,
 	});
 	assert.equal(
-		resolveFrom({ newsletter: { ...newsletter, replyTo: "hi@jane.dev" }, ownerEmail: "jane@gmail.com", sharedDomain: SHARED, providerId: "ses" }).replyTo,
+		resolveFrom({ newsletter: { ...newsletter, replyTo: "hi@jane.dev" }, ownerEmail: "jane@example.com", sharedDomain: SHARED, providerId: "ses" }).replyTo,
 		"hi@jane.dev"
 	);
 	for (const fromEmail of ["hello@other-slug.mailcheapmail.com", "jane@field-notes.mailcheapmail.com", "field-notes@mailcheapmail.com"]) {
 		assert.match(
-			resolveFrom({ newsletter: { ...newsletter, fromEmail }, ownerEmail: "jane@gmail.com", sharedDomain: SHARED, providerId: "ses" }).problem,
+			resolveFrom({ newsletter: { ...newsletter, fromEmail }, ownerEmail: "jane@example.com", sharedDomain: SHARED, providerId: "ses" }).problem,
 			/The shared address for this newsletter is hello@field-notes.mailcheapmail.com/,
 			fromEmail
 		);
@@ -46,7 +46,7 @@ test("the shared address is hello@ on the newsletter's own subdomain, and replie
 });
 
 test("the shared address sends once its subdomain is verified at the active provider", () => {
-	const from = (sharedSender, providerId = "ses") => resolveFrom({ newsletter: { ...newsletter, sharedSender }, ownerEmail: "jane@gmail.com", sharedDomain: SHARED, providerId });
+	const from = (sharedSender, providerId = "ses") => resolveFrom({ newsletter: { ...newsletter, sharedSender }, ownerEmail: "jane@example.com", sharedDomain: SHARED, providerId });
 	assert.match(from(undefined).problem, /hello@field-notes.mailcheapmail.com is still being set up/);
 	assert.match(from({ ...ready, verified: false }).problem, /still being set up/);
 	assert.match(from({ ...ready, domain: "old-slug.mailcheapmail.com" }).problem, /still being set up/, "the old slug's subdomain");
@@ -55,7 +55,7 @@ test("the shared address sends once its subdomain is verified at the active prov
 });
 
 test("an own domain sends once the account added and verified it", () => {
-	const from = (fromEmail) => resolveFrom({ newsletter: { ...newsletter, fromEmail }, domains, ownerEmail: "jane@gmail.com", sharedDomain: SHARED });
+	const from = (fromEmail) => resolveFrom({ newsletter: { ...newsletter, fromEmail }, domains, ownerEmail: "jane@example.com", sharedDomain: SHARED });
 	assert.deepEqual(from("hi@example.com"), { identity: "example.com", replyTo: undefined, isShared: false });
 	assert.match(from("hi@pending.example.org").problem, /isn't verified yet/);
 	assert.match(from("hi@stranger.com").problem, /isn't one of your domains/);
@@ -112,8 +112,8 @@ test("with the app's own domain shared, <slug>.mailcheap.ai is the shared addres
 	}
 
 	const ready = { domain: "weekly.mailcheap.ai", provider: "postshiba", verified: true };
-	const from = (fromEmail) => resolveFrom({ newsletter: { slug: "weekly", fromEmail, sharedSender: ready }, ownerEmail: "jane@gmail.com", sharedDomain, providerId: "postshiba" });
-	assert.deepEqual(from("hello@weekly.mailcheap.ai"), { identity: "weekly.mailcheap.ai", replyTo: "jane@gmail.com", isShared: true });
+	const from = (fromEmail) => resolveFrom({ newsletter: { slug: "weekly", fromEmail, sharedSender: ready }, ownerEmail: "jane@example.com", sharedDomain, providerId: "postshiba" });
+	assert.deepEqual(from("hello@weekly.mailcheap.ai"), { identity: "weekly.mailcheap.ai", replyTo: "jane@example.com", isShared: true });
 	assert.match(from("hello@r.mailcheap.ai").problem, /The shared address for this newsletter is hello@weekly.mailcheap.ai/, "never MailCheap's own sender");
 	assert.equal(getOwnDomainLocalPart("hello@weekly.mailcheap.ai", sharedDomain), "hi");
 });

@@ -196,7 +196,7 @@ describe("from addresses", () => {
 
 	test("a domain the account didn't add is refused at save and at delivery", async () => {
 		const user = await customer("stranger@example.com", "stranger-news");
-		assert.match((await saveFrom(user, "stranger-news", "hi@gmail.com")).error, /Add gmail.com on the Domains page first/);
+		assert.match((await saveFrom(user, "stranger-news", "hi@example.com")).error, /Add example.com on the Domains page first/);
 
 		const id = await draft(user);
 		await as(user, () => m.contacts.importContacts({ newsletterId: user.newsletterId, consent: true, rows: [{ email: "reader@example.org", status: "active" }] }));

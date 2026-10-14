@@ -53,13 +53,13 @@ test("sign-in codes go out through Resend and are stored hashed", async () => {
 
 test("an inbox gets 5 codes every 15 minutes, whatever dots or +tags its address takes", async () => {
 	const emailsBefore = platformEmails.length;
-	const addresses = ["flood.me@gmail.com", "floodme+1@gmail.com", "f.l.o.o.d.me@googlemail.com", "floodme+2@gmail.com", "Flood.Me+3@gmail.com"];
+	const addresses = ["jane.doe@gmail.com", "janedoe+1@gmail.com", "j.a.n.e.d.o.e@googlemail.com", "janedoe+2@gmail.com", "Jane.Doe+3@gmail.com"];
 	for (const [index, email] of addresses.entries()) {
 		const visitor = { jar: new Map(), ip: `198.51.100.${150 + index}` };
 		assert.deepEqual(await as(visitor, () => actions.sendSigninCode(null, form({ email }))), { email: email.toLowerCase() }, email);
 	}
 	const sixth = { jar: new Map(), ip: "198.51.100.160" };
-	assert.deepEqual(await as(sixth, () => actions.sendSigninCode(null, form({ email: "floodme+4@gmail.com" }))), {
+	assert.deepEqual(await as(sixth, () => actions.sendSigninCode(null, form({ email: "janedoe+4@gmail.com" }))), {
 		error: "Too many codes. Try again in 15 minutes.",
 	});
 	assert.equal(platformEmails.length - emailsBefore, 5);

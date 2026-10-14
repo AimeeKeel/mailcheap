@@ -21,24 +21,24 @@ test("an address takes a dot-atom, no doubled dots, and a domain ending of lette
 });
 
 test("misspelled provider domains and endings no domain has get the address they were meant to be", () => {
-	assert.equal(getEmailSuggestion("jane@gmial.com"), "jane@gmail.com");
+	assert.equal(getEmailSuggestion("jane.doe@gmial.com"), "jane.doe@gmail.com");
 	assert.equal(getEmailSuggestion("jane@hotmial.com"), "jane@hotmail.com");
 	assert.equal(getEmailSuggestion("jane@yaho.com"), "jane@yahoo.com");
-	assert.equal(getEmailSuggestion("jane@gmail.co"), "jane@gmail.com");
-	assert.equal(getEmailSuggestion("jane@gmial.con"), "jane@gmail.com", "both at once");
+	assert.equal(getEmailSuggestion("jane.doe@gmail.co"), "jane.doe@gmail.com");
+	assert.equal(getEmailSuggestion("jane.doe@gmial.con"), "jane.doe@gmail.com", "both at once");
 	assert.equal(getEmailSuggestion("jane@acme.con"), "jane@acme.com");
 	assert.equal(getEmailSuggestion("jane@acme.ogr"), "jane@acme.org");
-	for (const email of ["jane@gmail.com", "jane@acme.co", "jane@mail.com", "jane@email.com", "jane@ymail.com", "jane@gmx.com", "jane@cloud.com", "jane@wahoo.com", "jane@acme.om"]) {
+	for (const email of ["jane.doe@gmail.com", "jane@acme.co", "jane@mail.com", "jane@email.com", "jane@ymail.com", "jane@gmx.com", "jane@cloud.com", "jane@wahoo.com", "jane@acme.om"]) {
 		assert.equal(getEmailSuggestion(email), null, `${email} is a real domain`);
 	}
 });
 
 test("misspellings and spam trap addresses are dropped from imports and refused on signups; role addresses only from imports", () => {
-	assert.equal(getDropReason("jane@gmial.com"), "typo");
+	assert.equal(getDropReason("jane.doe@gmial.com"), "typo");
 	for (const email of ["spamtrap@acme.com", "spam-trap.2@acme.com", "honeypot@acme.com", "the.honey_pot@acme.com"]) assert.equal(getDropReason(email), "trap", email);
 	assert.equal(getDropReason("jane.honeycutt@acme.com"), null);
 
-	assert.equal(getSignupEmailProblem("jane@gmial.com"), "Did you mean jane@gmail.com?");
+	assert.equal(getSignupEmailProblem("jane.doe@gmial.com"), "Did you mean jane.doe@gmail.com?");
 	assert.equal(getSignupEmailProblem("spamtrap@acme.com"), "This address can't be added");
 	assert.equal(getSignupEmailProblem("info@acme.com"), null, "people sign up with these themselves");
 	assert.equal(getSignupEmailProblem("jane@mailinator.com"), null);
@@ -220,7 +220,7 @@ describe("contact imports", () => {
 			return response;
 		};
 		for (const [email, message] of [
-			["jane@gmial.com", "Did you mean jane@gmail.com?"],
+			["jane.doe@gmial.com", "Did you mean jane.doe@gmail.com?"],
 			["Jane@Hotmial.com", "Did you mean jane@hotmail.com?"],
 			["spamtrap@acme.com", "This address can't be added"],
 			["jo@no-mail.example", "This email's domain can't receive email"],
@@ -230,7 +230,7 @@ describe("contact imports", () => {
 			assert.equal(response.status, 400, email);
 			assert.deepEqual(response.body.error, { code: "validation_failed", message }, email);
 		}
-		assert.equal((await signup("jane@gmail.com")).status, 201);
+		assert.equal((await signup("jane.doe@gmail.com")).status, 201);
 		assert.equal((await signup("info@acme.com")).status, 201, "a role address someone signs up with");
 
 		const formResult = await anonymous(() => m.archive.subscribe(null, form({ newsletter: "signup-checks", email: "kim@yaho.com" })));
@@ -238,6 +238,6 @@ describe("contact imports", () => {
 		assert.equal((await anonymous(() => m.archive.subscribe(null, form({ newsletter: "signup-checks", email: "kim@yahoo.com" })))).ok, true);
 
 		const emails = (await m.Contact.find({ accountId: user.accountId, newsletterId: newsletter }).lean()).map(({ email }) => email).sort();
-		assert.deepEqual(emails, ["info@acme.com", "jane@gmail.com", "kim@yahoo.com"]);
+		assert.deepEqual(emails, ["info@acme.com", "jane.doe@gmail.com", "kim@yahoo.com"]);
 	});
 });

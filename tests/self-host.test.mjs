@@ -239,9 +239,9 @@ describe("sign-in allowlist", () => {
 	});
 
 	test("Google: an address off the list is refused before any user exists; an allowed one signs in", async () => {
-		const refused = await signInWithGoogle({ email: "stranger@gmail.com" });
+		const refused = await signInWithGoogle({ email: "stranger@example.com" });
 		assert.deepEqual(refused, { status: 302, path: "/signin", error: m.auth.SIGNIN_NOT_ALLOWED, isSignedIn: false });
-		assert.equal(await countUsers("stranger@gmail.com"), 0);
+		assert.equal(await countUsers("stranger@example.com"), 0);
 
 		const allowed = await signInWithGoogle({ email: "google@team.example.org" });
 		assert.deepEqual(allowed, { status: 302, path: "/", error: null, isSignedIn: true });

@@ -164,7 +164,7 @@ describe("without a plan", () => {
 
 		assert.deepEqual(await add("me@example.org", null), { error: "Check that this person agreed to get your emails" }, "a refusal doesn't count");
 		assert.deepEqual(await add("me@example.org"), { email: "me@example.org", status: "active" }, "though new newsletters ask signups to confirm");
-		assert.deepEqual(await add("me@gmial.com"), { error: "Did you mean me@gmail.com?" }, "a refused address doesn't count");
+		assert.deepEqual(await add("jane.doe@gmial.com"), { error: "Did you mean jane.doe@gmail.com?" }, "a refused address doesn't count");
 		assert.deepEqual(await add("me@example.org"), { error: "me@example.org is already a contact" });
 		for (const email of ["a@example.org", "b@example.org", "c@example.org"]) assert.equal((await add(email)).status, "active", email);
 		assert.deepEqual(await add("d@example.org"), { error: "Pick a plan to add more contacts", code: "subscription_required" });

@@ -302,7 +302,7 @@ describe("sending through the API", () => {
 		assert.equal(assertError(await api(user.key, "POST", `/campaigns/${id}/send`), 422, "send_check_failed"), "Add a postal address to the newsletter");
 
 		assert.equal((await api(user.key, "PATCH", `/newsletters/${user.slug}`, { postalAddress: "1 Main St, Paris" })).status, 200);
-		assert.match(assertError(await api(user.key, "PATCH", `/newsletters/${user.slug}`, { fromEmail: "ceo@gmail.com" }), 422, "sender_not_allowed"), /gmail.com/);
+		assert.match(assertError(await api(user.key, "PATCH", `/newsletters/${user.slug}`, { fromEmail: "ceo@example.com" }), 422, "sender_not_allowed"), /example.com/);
 		assert.equal((await api(user.key, "POST", "/domains", { domain: "checks-api.dev" })).status, 201);
 		assert.equal((await api(user.key, "PATCH", `/newsletters/${user.slug}`, { fromEmail: "hi@checks-api.dev" })).status, 200, "a domain it added");
 		assert.match(assertError(await api(user.key, "POST", `/campaigns/${id}/send`), 422, "sender_not_allowed"), /isn't verified yet/);
@@ -454,7 +454,7 @@ describe("contacts", () => {
 		assert.ok(Date.now() - hand.consent.at < 60_000, "and when");
 		assert.equal(hand.confirmedAt, undefined, "nobody clicked a confirmation link");
 		assert.deepEqual(await add("hand@example.org"), { error: "hand@example.org is already a contact" });
-		assert.deepEqual(await add("hand@gmial.com"), { error: "Did you mean hand@gmail.com?" });
+		assert.deepEqual(await add("jane.doe@gmial.com"), { error: "Did you mean jane.doe@gmail.com?" });
 		assert.deepEqual(await add("hand..doe@example.org"), { error: "email is invalid" });
 
 		assert.equal((await saveSettingsForm(user, { confirmation: getConfirmationContent({ name: `${user.slug} news` }) })).ok, true);
