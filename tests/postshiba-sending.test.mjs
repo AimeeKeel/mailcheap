@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { after, afterEach, before, describe, test } from "node:test";
 import mongoose from "mongoose";
 import { decryptSecret } from "../lib/credentials.js";
@@ -60,6 +61,20 @@ async function loadAccount(user) {
 	return m.Account.findById(user.accountId).lean();
 }
 
+// PostShiba's webhook as it posts in production: one signed event per request, naming the message by its own id.
+function postWebhook(event) {
+	const body = JSON.stringify([event]);
+	const timestamp = String(Math.floor(Date.now() / 1000));
+	const signature = `sha256=${crypto.createHmac("sha256", POSTSHIBA.webhookSecret).update(`${timestamp}.${body}`).digest("hex")}`;
+	return m.webhookRoute.POST(
+		new Request("http://localhost:3000/api/webhooks/postshiba", {
+			method: "POST",
+			headers: { "content-type": "application/json", "x-capsule-timestamp": timestamp, "x-capsule-signature": signature },
+			body,
+		})
+	);
+}
+
 // A paying customer whose newsletter sends from its own domain, verified at PostShiba.
 async function customer(email, slug) {
 	const user = await signIn(email);
@@ -94,6 +109,7 @@ before(async () => {
 		admin: await import("../app/admin/actions.js"),
 		sending: await import("../lib/sending.js"),
 		sendBatchRoute: await import("../app/api/jobs/send-batch/route.js"),
+		webhookRoute: await import("../app/api/webhooks/postshiba/route.js"),
 		billing: await import("../lib/billing.js"),
 		accounts: await import("../lib/accounts.js"),
 		tenants: await import("../lib/tenants.js"),
@@ -293,8 +309,38 @@ describe("PostShiba sending", () => {
 		assert.equal(body.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
 		assert.equal(body.headers["Feedback-ID"], undefined, "PostShiba sets its own");
 		assert.deepEqual(body.unique_args, { account_id: String(user.accountId), message_id: String(message._id), kind: "test", campaign_id: id });
-		assert.equal(message.providerMessageId, response.message_id);
+		assert.ok(response.message_id);
+		assert.equal(message.providerMessageId, undefined, "the Message-ID /sends answers with isn't the id PostShiba's events carry");
 		assert.equal(message.status, "sent");
+	});
+
+	test("a test email's events from PostShiba, under PostShiba's own message id, mark it delivered", async () => {
+		const user = await customer("ps-delivered@example.com", "ps-delivered");
+		const id = await draft(user, "Issue 8");
+		assert.deepEqual(await as(user, () => m.campaigns.sendTestCampaign(id)), { ok: true });
+		const { body } = fake.state.sends.at(-1);
+		const sgMessageId = crypto.randomBytes(16).toString("hex");
+		const event = (type, fields = {}) => ({
+			event: type,
+			email: "ps-delivered@example.com",
+			timestamp: Math.floor(Date.now() / 1000),
+			sg_event_id: `capsule-${crypto.randomUUID()}`,
+			sg_message_id: sgMessageId,
+			"smtp-id": `<${fake.state.sends.at(-1).response.message_id}>`,
+			tenant_id: user.account.postshiba.tenantSlug,
+			...body.unique_args,
+			unique_args: body.unique_args,
+			...fields,
+		});
+
+		for (const type of ["processed", "delivered"]) {
+			const response = await postWebhook(event(type, type === "delivered" && { response: "250 2.0.0 OK gsmtp" }));
+			assert.deepEqual(await response.json(), { ok: true, handled: 1 }, type);
+		}
+		const message = await m.Message.findOne({ accountId: user.accountId, kind: "test", campaignId: id }).lean();
+		assert.equal(message.status, "delivered");
+		assert.ok(message.deliveredAt);
+		assert.equal(message.providerMessageId, sgMessageId, "matched from then on by PostShiba's id");
 	});
 
 	test("campaigns go out over HTTP inject on the bulk cluster with the tenant's SMTP login", async () => {
