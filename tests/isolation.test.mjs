@@ -143,7 +143,7 @@ describe("server actions refuse another account's data", () => {
 			{ error: "Newsletter not found" }
 		);
 		assert.deepEqual(
-			await as(alice, () => m.contacts.addContact(null, form({ newsletterId: bobData.newsletterId, email: "spam@example.net" }))),
+			await as(alice, () => m.contacts.addContact(null, form({ newsletterId: bobData.newsletterId, email: "spam@example.net", consent: "on" }))),
 			{ error: "Newsletter not found" }
 		);
 		assert.deepEqual(await snapshot(), before);

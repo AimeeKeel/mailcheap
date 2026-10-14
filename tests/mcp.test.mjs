@@ -178,6 +178,19 @@ describe("tools", () => {
 		assert.equal(invalid.isError, true, "the schema refuses it before the action runs");
 	});
 
+	test("add_contact asks to confirm when the newsletter does: the dashboard's consent box isn't one of its inputs", async () => {
+		const user = await customer("mcp-confirm@example.com", "mcp-confirm");
+		const settings = { id: user.newsletterId, name: "mcp-confirm news", slug: "mcp-confirm", postalAddress: "1 Main St, Paris", requireConfirmation: "on" };
+		assert.equal((await as(user, () => m.newsletters.saveNewsletter(null, form(settings)))).ok, true);
+		const { body } = await mcp(user.fullKey, "tools/list");
+		assert.equal("consent" in body.result.tools.find(({ name }) => name === "add_contact").inputSchema.properties, false);
+
+		const added = await callTool(user.fullKey, "add_contact", { email: "agent-reader@example.org", consent: true });
+		assert.equal(added.structuredContent.status, "pending");
+		const stored = await m.Contact.findOne({ accountId: user.accountId, email: "agent-reader@example.org" }).lean();
+		assert.deepEqual([stored.status, stored.source, stored.consent], ["pending", "api", undefined]);
+	});
+
 	test("create_newsletter starts with list cleanup on, unless cleanup.enabled is false", async () => {
 		const user = await customer("mcp-cleanup@example.com", "mcp-cleanup");
 		const created = await callTool(user.fullKey, "create_newsletter", { name: "From an agent" });

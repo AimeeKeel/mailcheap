@@ -15,6 +15,7 @@ before(async () => {
 	m = {
 		welcome: await import("../app/welcome/actions.js"),
 		onboarding: await import("../lib/onboarding.js"),
+		sharedSender: await import("../lib/shared-sender.js"),
 		campaigns: await import("../app/(app)/campaigns/actions.js"),
 		contacts: await import("../app/(app)/contacts/actions.js"),
 		domains: await import("../app/(app)/domains/actions.js"),
@@ -155,19 +156,20 @@ describe("without a plan", () => {
 		assert.equal(signedOut.status, 401);
 	});
 
-	test("the dashboard adds 5 contacts a day by hand, with the signup checks and no email; imports stay paid", async () => {
+	test("the dashboard adds 5 contacts a day by hand, active at once with the signup checks and no email; imports stay paid", async () => {
 		const user = await signIn("contacts-trial@example.com");
 		await welcome(user, { name: "Contacts trial" });
 		const newsletterId = String((await m.Newsletter.findOne({ accountId: user.accountId }).lean())._id);
-		const add = (email) => as(user, () => m.contacts.addContact(null, form({ newsletterId, email })));
+		const add = (email, consent = "on") => as(user, () => m.contacts.addContact(null, form({ newsletterId, email, ...(consent && { consent }) })));
 
-		assert.deepEqual(await add("me@example.org"), { email: "me@example.org", status: "pending" }, "new newsletters ask to confirm");
+		assert.deepEqual(await add("me@example.org", null), { error: "Check that this person agreed to get your emails" }, "a refusal doesn't count");
+		assert.deepEqual(await add("me@example.org"), { email: "me@example.org", status: "active" }, "though new newsletters ask signups to confirm");
 		assert.deepEqual(await add("me@gmial.com"), { error: "Did you mean me@gmail.com?" }, "a refused address doesn't count");
 		assert.deepEqual(await add("me@example.org"), { error: "me@example.org is already a contact" });
-		for (const email of ["a@example.org", "b@example.org", "c@example.org"]) assert.equal((await add(email)).status, "pending", email);
+		for (const email of ["a@example.org", "b@example.org", "c@example.org"]) assert.equal((await add(email)).status, "active", email);
 		assert.deepEqual(await add("d@example.org"), { error: "Pick a plan to add more contacts", code: "subscription_required" });
 		await flushAfter();
-		assert.equal(await m.Message.countDocuments({ accountId: user.accountId }), 0, "sending stays paid: no confirmation email");
+		assert.equal(await m.Message.countDocuments({ accountId: user.accountId }), 0, "sending stays paid: no email");
 		const contacts = await m.Contact.find({ accountId: user.accountId }).sort({ email: 1 }).lean();
 		assert.deepEqual(
 			contacts.map(({ email, source }) => [email, source]),
@@ -177,9 +179,31 @@ describe("without a plan", () => {
 		assert.equal((await as(user, () => m.contacts.importContacts({ newsletterId, rows, consent: true }))).code, "subscription_required");
 
 		await activate(user);
-		assert.equal((await add("d@example.org")).status, "pending", "a plan lifts the cap");
+		assert.equal((await add("d@example.org")).status, "active", "a plan lifts the cap");
 		await flushAfter();
-		assert.equal(await m.Message.countDocuments({ accountId: user.accountId, kind: "confirmation" }), 1, "with a plan, the confirmation email goes out");
+		assert.equal(await m.Message.countDocuments({ accountId: user.accountId }), 0, "with a plan, still no confirmation email");
+	});
+
+	test("a contact added by hand gets the welcome email once the account has a plan, never before", async () => {
+		const user = await signIn("welcome-trial@example.com");
+		await welcome(user, { name: "Welcome trial" });
+		const { _id, name, slug } = await m.Newsletter.findOne({ accountId: user.accountId }).lean();
+		const newsletterId = String(_id);
+		const settings = { id: newsletterId, name, slug, postalAddress: "1 Main St, Paris", welcomeEnabled: "on", welcomeSubject: "Welcome", welcomeMarkdown: "Thanks." };
+		assert.equal((await as(user, () => m.newsletters.saveNewsletter(null, form(settings)))).ok, true, "signups don't confirm, so the welcome email is on");
+		const add = (email) => as(user, () => m.contacts.addContact(null, form({ newsletterId, email, consent: "on" })));
+
+		assert.equal((await add("early@example.org")).status, "active");
+		await flushAfter();
+		assert.equal(await m.Message.countDocuments({ accountId: user.accountId }), 0, "a trial account sends nothing");
+
+		// What Stripe's webhook does when the plan starts: the shared address gets set up at the provider.
+		await activate(user);
+		await m.sharedSender.syncSharedSenders(await loadAccount(user));
+		assert.equal((await add("paid@example.org")).status, "active");
+		await flushAfter();
+		const messages = await m.Message.find({ accountId: user.accountId }).lean();
+		assert.deepEqual(messages.map(({ kind, email, status }) => [kind, email, status]), [["welcome", "paid@example.org", "sent"]]);
 	});
 
 	test("the REST API and MCP still need a plan for everything but billing, adding a contact included", async () => {

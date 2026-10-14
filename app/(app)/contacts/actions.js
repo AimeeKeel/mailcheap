@@ -16,12 +16,12 @@ export async function importContacts({ newsletterId, rows, consent, importId, du
 	return output;
 }
 
-// Signs someone up the way the API does: the newsletter's confirmation or welcome email follows.
+// With the box ticked, the contact is active at once: no confirmation email, the welcome email if it's on.
 export async function addContact(_state, formData) {
 	const { output, failure } = await runDashboardAction("add_contact", {
 		newsletter: String(formData.get("newsletterId") ?? ""),
 		email: String(formData.get("email") ?? ""),
-		source: "dashboard",
+		consent: formData.get("consent") === "on",
 	});
 	if (failure) return toFormError(failure);
 	revalidatePath("/contacts");

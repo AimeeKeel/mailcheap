@@ -46,6 +46,7 @@ export default function DialogAddContact({ newsletter, variant = "outline", size
 function FormContact({ newsletter, onClose }) {
 	const paywall = usePaywall();
 	const [email, setEmail] = useState("");
+	const [hasConsent, setHasConsent] = useState(false);
 	const [state, action, isPending] = useActionState(async (previous, formData) => {
 		const result = await addContact(previous, formData);
 		if (result?.code === ERROR_CODES.subscriptionRequired && paywall) {
@@ -53,7 +54,7 @@ function FormContact({ newsletter, onClose }) {
 			paywall.open("contact");
 		} else if (!result?.error) {
 			onClose();
-			toast.success(getAddedMessage(result, paywall?.hasPlan ?? true));
+			toast.success(getAddedMessage(result));
 		}
 		return result;
 	}, null);
@@ -63,8 +64,8 @@ function FormContact({ newsletter, onClose }) {
 			<DialogHeader>
 				<DialogTitle>Add a contact</DialogTitle>
 				<DialogDescription>
-					To <span className="font-medium text-foreground">{newsletter?.name}</span>. Only add people who agreed to get your
-					emails.
+					They join <span className="font-medium text-foreground">{newsletter?.name}</span> right away, with no confirmation
+					email.
 				</DialogDescription>
 			</DialogHeader>
 			<input type="hidden" name="newsletterId" value={newsletter?.id ?? ""} />
@@ -81,9 +82,20 @@ function FormContact({ newsletter, onClose }) {
 				autoComplete="email"
 				spellCheck={false}
 			/>
+			<label className="flex items-start gap-2.5 text-sm">
+				<input
+					type="checkbox"
+					name="consent"
+					checked={hasConsent}
+					onChange={(event) => setHasConsent(event.target.checked)}
+					required
+					className="mt-0.5 size-4 shrink-0 accent-foreground"
+				/>
+				This person agreed to get my emails
+			</label>
 			{state?.error && <p className="text-sm text-destructive">{state.error}</p>}
 			<DialogFooter>
-				<Button type="submit" disabled={isPending} className="min-w-20">
+				<Button type="submit" disabled={!hasConsent || isPending} className="min-w-20">
 					{isPending ? <Loader2 className="animate-spin" /> : "Add"}
 				</Button>
 			</DialogFooter>
@@ -91,8 +103,7 @@ function FormContact({ newsletter, onClose }) {
 	);
 }
 
-function getAddedMessage({ email, status }, hasPlan) {
-	if (status === "active") return `${email} added`;
-	if (status === "pending") return `${email} added, pending until they confirm${hasPlan ? "" : ". Confirmation emails need a plan."}`;
-	return `${email} added as ${status}`;
+// A suppressed address joins as bounced, complained or unsubscribed.
+function getAddedMessage({ email, status }) {
+	return status === "active" ? `${email} added` : `${email} added as ${status}`;
 }

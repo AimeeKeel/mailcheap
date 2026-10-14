@@ -10,6 +10,7 @@
 ## API keys, REST and MCP
 
 - The dashboard, the REST API and the MCP server run the same actions (`lib/actions`), so the same permission, plan, rate limit and input checks apply everywhere. A test fails if a dashboard server action does anything but run a registered action, apart from the newsletter menu's, which only sets which of the account's newsletters the dashboard shows.
+- Only the dashboard's Add contact skips confirmation: the contact is active at once when the signed-in user ticks that the person agreed, and the server refuses it otherwise. The REST API and MCP don't take that box, so their signups confirm when the newsletter asks.
 - API keys are 32 random bytes, stored as SHA-256 hashes and shown once. They belong to one account and only reach its data. Revoking one takes effect on the next request.
 - Two levels: full access, and signups only, which can only add contacts. Keys made before levels count as signups only. Only a full access key can create keys.
 - Each key gets 300 requests a minute across REST and MCP, plus an hourly limit on actions that send, import, upload, add domains, create keys or call Stripe. Signups keep the per-key and per-visitor limits they had.
@@ -23,7 +24,7 @@
 - Contacts exports are signed links (a key derived from `BETTER_AUTH_SECRET`) that name the account and the filters and expire after an hour. Anyone holding a link can download the file until then.
 - Images uploaded by URL are downloaded over https on port 443 only, and the connection is refused when the host resolves to a loopback, private, link-local, carrier-grade NAT, documentation, multicast or reserved address, checked at connect time and after each of up to 3 redirects. Size is capped at 4 MB while reading.
 - A from address is either the newsletter's shared address (`hello@<slug>.SHARED_DOMAIN`) or on a domain the account verified; it's checked when a newsletter is saved, before every send and again for each email. A domain, a shared sending subdomain and an archive subdomain belong to one account, and at the provider to that account's tenant only.
-- Provider events are recorded only in the account they name: SES's `account_id` tag; PostShiba's `account_id` unique arg, which has to match the PostShiba tenant on the event, or, without unique args, that tenant's account. An event whose tenant isn't the named account's is dropped. CSV imports record the customer's consent, who gave it and when.
+- Provider events are recorded only in the account they name: SES's `account_id` tag; PostShiba's `account_id` unique arg, which has to match the PostShiba tenant on the event, or, without unique args, that tenant's account. An event whose tenant isn't the named account's is dropped. CSV imports and contacts added by hand record the customer's consent, who gave it and when.
 
 ## Sign-in
 

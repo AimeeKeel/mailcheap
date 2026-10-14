@@ -11,6 +11,11 @@ const contactSchema = new mongoose.Schema(
 		status: { type: String, enum: CONTACT_STATUSES, default: "active" },
 		source: { type: String, trim: true },
 		importId: { type: mongoose.Schema.Types.ObjectId, ref: "ContactImport" },
+		// Added by hand on the dashboard: the user who said this person agreed to get the newsletter, and when.
+		consent: {
+			userId: { type: mongoose.Schema.Types.ObjectId },
+			at: { type: Date },
+		},
 		subscribedAt: { type: Date, default: Date.now },
 		confirmedAt: { type: Date },
 		unsubscribedAt: { type: Date },

@@ -36,6 +36,7 @@ test("an action needs a name, docs, a route, schemas and a handler", () => {
 		description: "",
 		http: { method: "PUT", path: "/things" },
 		input: z.string(),
+		dashboardInput: z.boolean(),
 		permission: "admin",
 		destructive: true,
 		handler: null,

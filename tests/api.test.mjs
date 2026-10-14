@@ -432,27 +432,51 @@ describe("contacts", () => {
 		assert.equal((await api(user.key, "GET", "/campaigns")).headers.get("access-control-allow-origin"), null);
 	});
 
-	test("the dashboard's Add contact signs people up like the API: same checks, statuses and emails", async () => {
+	test("the dashboard's Add contact takes the user's word that the person agreed: active at once, no confirmation email", async () => {
 		const user = await customer("signups-dashboard@example.com");
 		await api(user.key, "PATCH", `/newsletters/${user.slug}`, { welcome: { enabled: true, subject: "Welcome", markdown: "Thanks." } });
-		const add = (email) => as(user, () => m.contacts.addContact(null, form({ newsletterId: user.newsletterId, email })));
+		const add = (email, fields = { consent: "on" }) =>
+			as(user, () => m.contacts.addContact(null, form({ newsletterId: user.newsletterId, email, ...fields })));
 		const before = sesEmails.length;
+
+		for (const fields of [{}, { consent: "off" }, { consent: "true" }]) {
+			assert.deepEqual(await add("unticked@example.org", fields), { error: "Check that this person agreed to get your emails" }, JSON.stringify(fields));
+		}
+		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId }), 0, "the server refuses it without the box");
 
 		assert.deepEqual(await add("Hand@Example.org"), { email: "hand@example.org", status: "active" });
 		await flushAfter();
 		assert.equal(sesEmails.length - before, 1);
 		assert.equal(sesEmails.at(-1).subject, "Welcome");
 		assert.equal((await api(user.key, "GET", "/contacts/hand%40example.org")).body.source, "dashboard");
+		const hand = await m.Contact.findOne({ accountId: user.accountId, email: "hand@example.org" }).lean();
+		assert.equal(String(hand.consent.userId), String(user.userId), "the consent names who gave it");
+		assert.ok(Date.now() - hand.consent.at < 60_000, "and when");
+		assert.equal(hand.confirmedAt, undefined, "nobody clicked a confirmation link");
 		assert.deepEqual(await add("hand@example.org"), { error: "hand@example.org is already a contact" });
 		assert.deepEqual(await add("hand@gmial.com"), { error: "Did you mean hand@gmail.com?" });
 		assert.deepEqual(await add("hand..doe@example.org"), { error: "email is invalid" });
 
 		assert.equal((await saveSettingsForm(user, { confirmation: getConfirmationContent({ name: `${user.slug} news` }) })).ok, true);
-		assert.deepEqual(await add("later@example.org"), { email: "later@example.org", status: "pending" });
+		const fromSite = await api(user.signupsKey, "POST", "/contacts", { email: "site@example.org", consent: true, source: "dashboard" });
+		assert.deepEqual([fromSite.status, fromSite.body.status], [201, "pending"], "an API signup still confirms, whatever its body says");
 		await flushAfter();
-		assert.equal(sesEmails.length - before, 2, "no welcome email for the duplicate or the refused addresses");
-		assert.match(sesEmails.at(-1).subject, /^Confirm your subscription/);
-		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId }), 2);
+		// Past the confirmation's resend window, where signing up again sends it again.
+		await m.Message.collection.updateMany({ accountId: user.accountId, kind: "confirmation" }, { $set: { createdAt: new Date(Date.now() - 3_600_000) } });
+		assert.deepEqual(await add("site@example.org"), { error: "site@example.org is already a contact" });
+		assert.deepEqual(await add("later@example.org"), { email: "later@example.org", status: "active" }, "added by hand, it doesn't");
+		await flushAfter();
+		assert.deepEqual(
+			sesEmails.slice(before + 1).map(({ subject }) => /^Confirm your subscription/.test(subject)),
+			[true],
+			"one confirmation email, for the API signup; the welcome email is off while signups confirm"
+		);
+		const stored = await m.Contact.find({ accountId: user.accountId, email: { $in: ["later@example.org", "site@example.org"] } }).sort({ email: 1 }).lean();
+		assert.deepEqual(
+			stored.map(({ email, status, consent }) => [email, status, Boolean(consent)]),
+			[["later@example.org", "active", true], ["site@example.org", "pending", false]],
+			"the pending contact stays as it was"
+		);
 	});
 
 	test("the empty contacts page's request adds a contact once YOUR_API_KEY is a key", async () => {
