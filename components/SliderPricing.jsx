@@ -26,8 +26,9 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 
 	return (
 		<div className="grid overflow-hidden rounded-3xl bg-card shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_2px_4px_rgb(0_0_0/0.03),0_24px_48px_-24px_rgb(0_0_0/0.16)] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] dark:shadow-border">
-			<div className="flex flex-col p-6 sm:p-9">
-				<div className="flex flex-col-reverse items-start gap-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+			<div className="@container flex flex-col p-6 sm:p-9">
+				{/* Side by side, the label and the switch take about 22rem: in a narrower column, on any screen, the switch goes first. */}
+				<div className="flex flex-col-reverse items-start gap-8 @sm:flex-row @sm:flex-wrap @sm:items-center @sm:justify-between @sm:gap-4">
 					<label htmlFor={`${id}-emails`} className="text-sm font-medium">
 						Emails a month
 					</label>
@@ -53,7 +54,7 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 					</fieldset>
 				</div>
 
-				<p className="mt-3 font-display text-6xl leading-none font-[440] tracking-[-0.03em] tabular-nums sm:mt-8 sm:text-7xl">{plan.emails}</p>
+				<p className="mt-3 font-display text-6xl leading-none font-[440] tracking-[-0.03em] tabular-nums @sm:mt-8 sm:text-7xl">{plan.emails}</p>
 				<p className="mt-3 text-sm text-muted-foreground tabular-nums">
 					For up to <span className="font-medium text-foreground">{plan.subscribers}</span> subscribers
 				</p>
@@ -113,12 +114,12 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 			</div>
 
 			<div className="flex flex-col border-t border-border/70 bg-muted/40 p-6 sm:p-9 lg:border-t-0 lg:border-l">
-				<div className="flex items-center justify-between gap-3">
+				<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 					<p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
 						{plan.name}
-						{isCurrent && <span className="rounded-full bg-foreground px-2 py-0.5 text-[11px] text-background">Current plan</span>}
+						{isCurrent && <span className="rounded-full bg-foreground px-2 py-0.5 text-[11px] whitespace-nowrap text-background">Current plan</span>}
 					</p>
-					<p className="rounded-full bg-foreground/[0.06] px-2.5 py-0.5 text-xs text-muted-foreground tabular-nums">
+					<p className="rounded-full bg-foreground/[0.06] px-2.5 py-0.5 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
 						{price.perThousand} per 1,000 emails
 					</p>
 				</div>
