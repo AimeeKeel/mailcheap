@@ -1,13 +1,17 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ArrowRight, Check } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // plans: display-ready values from lib/pricing.js, in plan order, with a price for each billing period.
-// children: under the Subscribe button. The Subscribe link isn't a <Link>: a prefetch would open a Checkout session.
-export default function SliderPricing({ plans, freeMonths, initialIndex = 0, initialPeriod = "month", children }) {
+// current: the account's plan, and its interval when Stripe bills it: then only that billing period is marked.
+// action: with a plan Stripe bills, the server action that switches to the plan and period picked. Without it, the
+// button subscribes through Checkout.
+// children: under the button. The Subscribe link isn't a <Link>: a prefetch would open a Checkout session.
+export default function SliderPricing({ plans, freeMonths, initialIndex = 0, initialPeriod = "month", current, action, children }) {
 	const id = useId();
 	const [index, setIndex] = useState(initialIndex);
 	const [period, setPeriod] = useState(initialPeriod);
@@ -17,6 +21,8 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 	const lastIndex = plans.length - 1;
 	const barWidth = (100 - lastIndex * BAR_GAP) / plans.length;
 	const step = barWidth + BAR_GAP;
+	const currentIndex = plans.findIndex((stop) => stop.id === current?.plan && (!current.interval || current.interval === period));
+	const isCurrent = index === currentIndex;
 
 	return (
 		<div className="grid overflow-hidden rounded-3xl bg-card shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_2px_4px_rgb(0_0_0/0.03),0_24px_48px_-24px_rgb(0_0_0/0.16)] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] dark:shadow-border">
@@ -67,6 +73,9 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 								)}
 							>
 								{stop.prices[period].price}
+								{stopIndex === currentIndex && (
+									<span className="absolute bottom-full mb-1.5 text-[11px] font-medium text-foreground">Current</span>
+								)}
 							</button>
 						))}
 					</div>
@@ -78,7 +87,7 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 						step={1}
 						value={index}
 						onChange={(event) => setIndex(Number(event.target.value))}
-						aria-valuetext={`${plan.emails} emails a month, the ${plan.name} plan`}
+						aria-valuetext={`${plan.emails} emails a month, the ${plan.name} plan${isCurrent ? ", your current plan" : ""}`}
 						style={{ "--ratio": index / lastIndex, marginLeft: `calc(${barWidth / 2}% - 0.875rem)`, width: `calc(${100 - barWidth}% + 1.75rem)` }}
 						className="slider-plans mt-3"
 					/>
@@ -105,7 +114,10 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 
 			<div className="flex flex-col border-t border-border/70 bg-muted/40 p-6 sm:p-9 lg:border-t-0 lg:border-l">
 				<div className="flex items-center justify-between gap-3">
-					<p className="text-sm font-medium text-muted-foreground">{plan.name}</p>
+					<p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+						{plan.name}
+						{isCurrent && <span className="rounded-full bg-foreground px-2 py-0.5 text-[11px] text-background">Current plan</span>}
+					</p>
 					<p className="rounded-full bg-foreground/[0.06] px-2.5 py-0.5 text-xs text-muted-foreground tabular-nums">
 						{price.perThousand} per 1,000 emails
 					</p>
@@ -127,16 +139,41 @@ export default function SliderPricing({ plans, freeMonths, initialIndex = 0, ini
 					</ul>
 				</div>
 				<div className="mt-auto pt-8">
-					<Button asChild size="lg" className="h-11 w-full text-[15px]">
-						<a href={price.href} rel="nofollow" data-goal="checkout_started" data-goal-plan={plan.id} data-goal-interval={period}>
-							Subscribe
-							<ArrowRight data-icon="inline-end" />
-						</a>
-					</Button>
+					{action ? (
+						<form action={action}>
+							<input type="hidden" name="plan" value={plan.id} />
+							<input type="hidden" name="interval" value={period} />
+							<ButtonSwitch isCurrent={isCurrent} />
+						</form>
+					) : (
+						<Button asChild size="lg" className="h-11 w-full text-[15px]">
+							<a href={price.href} rel="nofollow" data-goal="checkout_started" data-goal-plan={plan.id} data-goal-interval={period}>
+								Subscribe
+								<ArrowRight data-icon="inline-end" />
+							</a>
+						</Button>
+					)}
 					{children}
 				</div>
 			</div>
 		</div>
+	);
+}
+
+function ButtonSwitch({ isCurrent }) {
+	const { pending } = useFormStatus();
+
+	return (
+		<Button
+			type="submit"
+			size="lg"
+			variant={isCurrent ? "outline" : "default"}
+			disabled={isCurrent || pending}
+			className="h-11 w-full text-[15px]"
+		>
+			{isCurrent ? "Current plan" : "Switch"}
+			{!isCurrent && (pending ? <Loader2 data-icon="inline-end" className="animate-spin" /> : <ArrowRight data-icon="inline-end" />)}
+		</Button>
 	);
 }
 

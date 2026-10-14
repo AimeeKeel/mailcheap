@@ -7,6 +7,7 @@ import { notifyActivity } from "@/lib/alerts";
 import { SIGNIN_NOT_ALLOWED_MESSAGE, SIGNUP_ERRORS, getAuth, getAuthCallContext, getSignupError, isGoogleEnabled, sendSigninCodeEmail } from "@/lib/auth";
 import { isCloud, isEmailAllowed } from "@/lib/config";
 import { isDisposableDomain } from "@/lib/disposable-domains";
+import { getCanonicalEmail } from "@/lib/email-aliases";
 import { isExpiredOAuthQuery, readOAuthQueryField } from "@/lib/oauth-rules";
 import { getClientIp, isRateLimited } from "@/lib/rate-limit";
 import { normalizeEmail, toSafeNextPath } from "@/lib/validation";
@@ -24,7 +25,9 @@ export async function sendSigninCode(_state, formData) {
 	if (!email) return { error: "Enter a valid email" };
 
 	const ip = getClientIp(await headers());
-	if ((await isRateLimited({ ...CODES_PER_IP, key: ip })) || (await isRateLimited({ ...CODES_PER_EMAIL, key: email }))) {
+	// Counted per inbox: every dot and +tag of a Gmail address reaches the same one (lib/email-aliases.js).
+	const inbox = getCanonicalEmail(email) ?? email;
+	if ((await isRateLimited({ ...CODES_PER_IP, key: ip })) || (await isRateLimited({ ...CODES_PER_EMAIL, key: inbox }))) {
 		return { error: "Too many codes. Try again in 15 minutes." };
 	}
 	if (!isEmailAllowed(email)) return { error: SIGNIN_NOT_ALLOWED_MESSAGE };

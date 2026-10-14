@@ -51,6 +51,20 @@ test("sign-in codes go out through Resend and are stored hashed", async () => {
 	assert.equal(stored.value.includes(code), false, "the code itself isn't in the database");
 });
 
+test("an inbox gets 5 codes every 15 minutes, whatever dots or +tags its address takes", async () => {
+	const emailsBefore = platformEmails.length;
+	const addresses = ["flood.me@gmail.com", "floodme+1@gmail.com", "f.l.o.o.d.me@googlemail.com", "floodme+2@gmail.com", "Flood.Me+3@gmail.com"];
+	for (const [index, email] of addresses.entries()) {
+		const visitor = { jar: new Map(), ip: `198.51.100.${150 + index}` };
+		assert.deepEqual(await as(visitor, () => actions.sendSigninCode(null, form({ email }))), { email: email.toLowerCase() }, email);
+	}
+	const sixth = { jar: new Map(), ip: "198.51.100.160" };
+	assert.deepEqual(await as(sixth, () => actions.sendSigninCode(null, form({ email: "floodme+4@gmail.com" }))), {
+		error: "Too many codes. Try again in 15 minutes.",
+	});
+	assert.equal(platformEmails.length - emailsBefore, 5);
+});
+
 test("a wrong code doesn't sign in and doesn't set a session", async () => {
 	const user = { email: "wrong@example.com", jar: new Map(), ip: "198.51.100.201" };
 	await as(user, () => actions.sendSigninCode(null, form({ email: user.email })));

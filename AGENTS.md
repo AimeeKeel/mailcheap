@@ -46,7 +46,7 @@ MailCheap Cloud's marketing site and analytics aren't part of the open source. S
 ## Code style
 
 - JavaScript, no TypeScript. Tabs. Don't run Prettier: it reformats whole files.
-- Components in `components/`, in PascalCase and named by their kind first (`ButtonCopy.jsx`, `CardPlan.jsx`); other files in kebab-case. Server components by default, `"use client"` only where the browser is needed.
+- Components in `components/`, in PascalCase and named by their kind first (`ButtonCopy.jsx`, `CardUsage.jsx`); other files in kebab-case. Server components by default, `"use client"` only where the browser is needed.
 - Comments only for what the code can't show: a constraint, a reason, an outside rule. Not what the next line does.
 - Read the code around a change and write like it.
 

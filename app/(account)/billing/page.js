@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 import { CreditCard } from "lucide-react";
-import { openBillingPortal } from "@/app/(account)/billing/actions";
+import { choosePlan, openBillingPortal } from "@/app/(account)/billing/actions";
 import CardSubscription from "@/components/CardSubscription";
 import CardUsage from "@/components/CardUsage";
 import HeaderPage from "@/components/HeaderPage";
-import ListPlans from "@/components/ListPlans";
 import ListPricing from "@/components/ListPricing";
 import StateEmpty from "@/components/StateEmpty";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,9 @@ import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Billing" };
 
-// Without an active plan: the plans as the pricing page shows them, starting on the one the account's list fits.
+// The plans as the pricing page shows them: without an active plan, starting on the one the account's list fits; with
+// one, on the account's plan, marked. A free plan subscribes through Checkout like no plan; a paid plan's changes are
+// confirmed on Stripe.
 export default async function BillingPage({ searchParams }) {
 	const { account } = await requireAccount();
 	if (!isCloud()) return <PageBillingOff />;
@@ -47,6 +48,7 @@ export default async function BillingPage({ searchParams }) {
 
 	const usage = await getUsage(account);
 	const isFree = isOnFreePlan(account);
+	const current = isFree ? { plan: account.comp.plan } : { plan: account.plan, interval: readInterval(account.interval) };
 	return (
 		<>
 			<HeaderPage title="Billing">
@@ -71,7 +73,7 @@ export default async function BillingPage({ searchParams }) {
 						<h2 className="text-sm font-medium text-muted-foreground">Change plan</h2>
 						{isFree && <p className="text-sm text-pretty text-muted-foreground">A paid plan takes over from your free plan.</p>}
 					</div>
-					<ListPlans interval={interval} current={isFree ? null : { plan: account.plan, interval: account.interval }} />
+					<ListPricing initialPlanId={current.plan} initialPeriod={interval} current={current} action={isFree ? undefined : choosePlan} />
 				</section>
 			</div>
 		</>

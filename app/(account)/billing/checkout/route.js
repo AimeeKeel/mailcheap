@@ -4,8 +4,9 @@ import { runDashboardAction } from "@/lib/actions/dashboard";
 import { getCurrentAccount } from "@/lib/auth";
 import { getPlan, isOnFreePlan, readInterval } from "@/lib/plans";
 
-// A plan button on the public pages: Stripe Checkout for that plan, as the plan picker opens it. Accounts that
-// already pay get the billing page, where a plan change is confirmed on Stripe; one on a free plan gets Checkout.
+// The plans slider's Subscribe link, on the public pages, the paywall and billing: Stripe Checkout for that plan.
+// Accounts that already pay get the billing page, where a plan change is confirmed on Stripe; one on a free plan gets
+// Checkout.
 export async function GET(request) {
 	const url = new URL(request.url);
 	const plan = getPlan(url.searchParams.get("plan"));
