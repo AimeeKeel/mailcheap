@@ -126,6 +126,14 @@ describe("sign-ups on MailCheap Cloud", () => {
 		assert.deepEqual(await signInWithGoogle(m, "google.user@gmail.com"), { path: "/", error: null, isSignedIn: true }, "the same address signs in");
 	});
 
+	test("an address Google hasn't verified opens no user and no account, so its owner never finds one waiting", async () => {
+		const refused = await signInWithGoogle(m, "jo@company.example", { verified: false });
+		assert.deepEqual(refused, { path: "/signin", error: "email_unverified", isSignedIn: false });
+		assert.equal(await users().countDocuments({ email: "jo@company.example" }), 0);
+		assert.equal(m.auth.getSignupError(refused.error), "Google hasn't verified this email. Sign in with a code instead.");
+		assert.deepEqual(await signInWithGoogle(m, "jo@company.example"), { path: "/", error: null, isSignedIn: true }, "once Google verified it");
+	});
+
 	test("self-hosted servers decide with their allowlist alone", async () => {
 		await withEnv({ MAILCHEAP_CLOUD: "", ALLOWED_EMAILS: "@gmail.com", EMAIL_FROM: "MailCheap <login@mail.example.com>" }, async () => {
 			assert.ok(await signIn("marc.lou+selfhosted@gmail.com"));
@@ -134,12 +142,12 @@ describe("sign-ups on MailCheap Cloud", () => {
 });
 
 // Google's consent, then its callback with a code Better Auth trades for an ID token (as in tests/self-host.test.mjs).
-async function signInWithGoogle(m, email) {
+async function signInWithGoogle(m, email, { verified = true } = {}) {
 	const person = { jar: new Map(), ip: "203.0.113.200" };
 	const url = new URL(await as(person, () => catchRedirect(m.signin.signinWithGoogle(form({ next: "/" })))));
 	const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
 	const now = Math.floor(Date.now() / 1000);
-	const claims = { iss: "https://accounts.google.com", aud: "google-client", iat: now, exp: now + 3600, sub: email, email, email_verified: true, name: "Jo" };
+	const claims = { iss: "https://accounts.google.com", aud: "google-client", iat: now, exp: now + 3600, sub: email, email, email_verified: verified, name: "Jo" };
 	const idToken = [encode({ alg: "RS256", kid: "test" }), encode(claims), "c2lnbmF0dXJl"].join(".");
 	const previousFetch = globalThis.fetch;
 	globalThis.fetch = (input, init) =>
