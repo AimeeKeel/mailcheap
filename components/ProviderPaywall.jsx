@@ -39,6 +39,7 @@ const TITLES = {
 	schedule: "Pick a plan to schedule your campaign",
 	test: "Pick a plan to send test emails",
 	import: "Pick a plan to add subscribers",
+	contact: "Pick a plan to add more contacts",
 	domain: "Pick a plan to send from your own domain",
 	apiKey: "Pick a plan to use the API",
 	upload: "Pick a plan to upload more images",

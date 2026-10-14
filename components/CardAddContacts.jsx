@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { ArrowUpRight, Users } from "lucide-react";
 import BlockCode from "@/components/BlockCode";
+import DialogAddContact from "@/components/DialogAddContact";
 import DialogImportContacts from "@/components/DialogImportContacts";
 import GatePlan from "@/components/GatePlan";
 import IconBrand from "@/components/IconBrand";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// The contacts page of a newsletter without contacts: the two ways in, side by side.
+// The contacts page of a newsletter without contacts: the two ways in, side by side, and adding one by hand to try it.
 export default function CardAddContacts({ newsletter, curl }) {
 	return (
 		<section
@@ -69,6 +70,10 @@ export default function CardAddContacts({ newsletter, curl }) {
 						</Link>
 					</div>
 				</ColumnWay>
+			</div>
+			<div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/60 bg-muted/40 px-5 py-3">
+				<p className="text-sm text-muted-foreground">Trying it out? Add yourself as a contact.</p>
+				<DialogAddContact newsletter={newsletter} variant="outline" size="sm" />
 			</div>
 		</section>
 	);

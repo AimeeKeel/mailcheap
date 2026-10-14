@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { getCleanupSettings } from "../lib/cleanup.js";
 import { activate, anonymous, as, callApi, catchRedirect, form, signIn, startTestApp } from "./helpers/app.mjs";
+import { flushAfter } from "./stubs/next-server.mjs";
 
 // A new account names its newsletter at /welcome, tries the dashboard without a plan, and meets the paywall
-// where something costs: sending, imports, domains and API keys. The REST API needs a plan for everything.
+// where something costs: sending, imports, domains and API keys. The REST API and MCP need a plan for everything.
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
 let app;
 let m;
@@ -20,7 +21,10 @@ before(async () => {
 		apiKeys: await import("../app/(app)/api-keys/actions.js"),
 		newsletters: await import("../app/(app)/newsletters/actions.js"),
 		uploadsRoute: await import("../app/api/uploads/route.js"),
+		mcpRoute: await import("../app/mcp/route.js"),
 		Account: (await import("../models/Account.js")).default,
+		Contact: (await import("../models/Contact.js")).default,
+		Message: (await import("../models/Message.js")).default,
 		Newsletter: (await import("../models/Newsletter.js")).default,
 	};
 });
@@ -29,6 +33,21 @@ after(() => app?.stop());
 
 function welcome(user, fields) {
 	return as(user, () => catchRedirect(m.welcome.completeOnboarding(null, form(fields))));
+}
+
+async function callTool(key, name, args) {
+	const request = new Request("http://localhost:3000/mcp", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			accept: "application/json, text/event-stream",
+			"mcp-protocol-version": "2025-06-18",
+			authorization: `Bearer ${key}`,
+		},
+		body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
+	});
+	const text = await (await anonymous(() => m.mcpRoute.POST(request))).text();
+	return JSON.parse(text.split("\n").find((line) => line.startsWith("data: ")).slice(6)).result;
 }
 
 function loadAccount(user) {
@@ -136,7 +155,34 @@ describe("without a plan", () => {
 		assert.equal(signedOut.status, 401);
 	});
 
-	test("the REST API still needs a plan for everything but billing", async () => {
+	test("the dashboard adds 5 contacts a day by hand, with the signup checks and no email; imports stay paid", async () => {
+		const user = await signIn("contacts-trial@example.com");
+		await welcome(user, { name: "Contacts trial" });
+		const newsletterId = String((await m.Newsletter.findOne({ accountId: user.accountId }).lean())._id);
+		const add = (email) => as(user, () => m.contacts.addContact(null, form({ newsletterId, email })));
+
+		assert.deepEqual(await add("me@example.org"), { email: "me@example.org", status: "pending" }, "new newsletters ask to confirm");
+		assert.deepEqual(await add("me@gmial.com"), { error: "Did you mean me@gmail.com?" }, "a refused address doesn't count");
+		assert.deepEqual(await add("me@example.org"), { error: "me@example.org is already a contact" });
+		for (const email of ["a@example.org", "b@example.org", "c@example.org"]) assert.equal((await add(email)).status, "pending", email);
+		assert.deepEqual(await add("d@example.org"), { error: "Pick a plan to add more contacts", code: "subscription_required" });
+		await flushAfter();
+		assert.equal(await m.Message.countDocuments({ accountId: user.accountId }), 0, "sending stays paid: no confirmation email");
+		const contacts = await m.Contact.find({ accountId: user.accountId }).sort({ email: 1 }).lean();
+		assert.deepEqual(
+			contacts.map(({ email, source }) => [email, source]),
+			["a", "b", "c", "me"].map((name) => [`${name}@example.org`, "dashboard"])
+		);
+		const rows = [{ email: "e@example.org" }];
+		assert.equal((await as(user, () => m.contacts.importContacts({ newsletterId, rows, consent: true }))).code, "subscription_required");
+
+		await activate(user);
+		assert.equal((await add("d@example.org")).status, "pending", "a plan lifts the cap");
+		await flushAfter();
+		assert.equal(await m.Message.countDocuments({ accountId: user.accountId, kind: "confirmation" }), 1, "with a plan, the confirmation email goes out");
+	});
+
+	test("the REST API and MCP still need a plan for everything but billing, adding a contact included", async () => {
 		const user = await signIn("api-trial@example.com");
 		await welcome(user, { name: "API trial" });
 		await activate(user);
@@ -145,5 +191,13 @@ describe("without a plan", () => {
 		const response = await callApi("GET", "/api/v1/newsletters", { key });
 		assert.equal(response.status, 402);
 		assert.equal(response.body.error.code, "subscription_required");
+
+		const signup = await callApi("POST", "/api/v1/contacts", { key, body: { email: "late@example.org" } });
+		assert.equal(signup.status, 402);
+		assert.equal(signup.body.error.code, "subscription_required");
+		const tool = await callTool(key, "add_contact", { email: "late@example.org" });
+		assert.equal(tool.isError, true);
+		assert.equal(JSON.parse(tool.content[0].text).error.code, "subscription_required");
+		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId }), 0);
 	});
 });

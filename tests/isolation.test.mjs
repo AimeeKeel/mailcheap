@@ -119,7 +119,7 @@ before(async () => {
 after(() => app?.stop());
 
 describe("server actions refuse another account's data", () => {
-	test("newsletters: update, welcome test, new campaign, contact import", async () => {
+	test("newsletters: update, welcome test, new campaign, contact import, adding a contact", async () => {
 		const before = await snapshot();
 		const update = await as(alice, () =>
 			m.newsletters.saveNewsletter(
@@ -140,6 +140,10 @@ describe("server actions refuse another account's data", () => {
 			await as(alice, () =>
 				m.contacts.importContacts({ newsletterId: bobData.newsletterId, rows: [{ email: "spam@example.net", status: "active" }] })
 			),
+			{ error: "Newsletter not found" }
+		);
+		assert.deepEqual(
+			await as(alice, () => m.contacts.addContact(null, form({ newsletterId: bobData.newsletterId, email: "spam@example.net" }))),
 			{ error: "Newsletter not found" }
 		);
 		assert.deepEqual(await snapshot(), before);

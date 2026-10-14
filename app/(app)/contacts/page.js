@@ -6,6 +6,7 @@ import AvatarContact from "@/components/AvatarContact";
 import BadgeStatus from "@/components/BadgeStatus";
 import ButtonExportContacts from "@/components/ButtonExportContacts";
 import CardAddContacts from "@/components/CardAddContacts";
+import DialogAddContact from "@/components/DialogAddContact";
 import DialogImportContacts from "@/components/DialogImportContacts";
 import FilterContacts from "@/components/FilterContacts";
 import GatePlan from "@/components/GatePlan";
@@ -67,43 +68,48 @@ export default async function ContactsPage({ searchParams }) {
 		<>
 			<HeaderPage title="Contacts">
 				<ButtonExportContacts newsletterId={newsletterId} status={status} query={query} isDisabled={total === 0} />
+				{hasContacts && <DialogAddContact newsletter={newsletter} />}
 				<GatePlan reason="import">
 					<DialogImportContacts newsletter={newsletter} />
 				</GatePlan>
 			</HeaderPage>
 
 			<div className="flex flex-col gap-4">
-				<Suspense fallback={<Skeleton className="h-9 w-full rounded-lg" />}>
-					<FilterContacts key={newsletterId} />
-				</Suspense>
+				{hasContacts && (
+					<>
+						<Suspense fallback={<Skeleton className="h-9 w-full rounded-lg" />}>
+							<FilterContacts key={newsletterId} />
+						</Suspense>
 
-				<nav
-					aria-label="Status"
-					className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 animate-enter [scrollbar-width:none]"
-				>
-					{[null, ...CONTACT_STATUSES].map((key) => {
-						const isActive = key === status;
-						return (
-							<Link
-								key={key ?? "all"}
-								href={href({ status: key, page: null })}
-								scroll={false}
-								aria-current={isActive ? "page" : undefined}
-								className={cn(
-									"inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm transition-[color,background-color,box-shadow] duration-150",
-									isActive
-										? "bg-foreground text-background"
-										: "text-muted-foreground hover:bg-muted hover:text-foreground"
-								)}
-							>
-								{key ? key.charAt(0).toUpperCase() + key.slice(1) : "All"}
-								<span className={cn("text-xs tabular-nums", isActive ? "opacity-70" : "opacity-60")}>
-									{formatNumber(key ? counts[key] || 0 : totalAll)}
-								</span>
-							</Link>
-						);
-					})}
-				</nav>
+						<nav
+							aria-label="Status"
+							className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 animate-enter [scrollbar-width:none]"
+						>
+							{[null, ...CONTACT_STATUSES].map((key) => {
+								const isActive = key === status;
+								return (
+									<Link
+										key={key ?? "all"}
+										href={href({ status: key, page: null })}
+										scroll={false}
+										aria-current={isActive ? "page" : undefined}
+										className={cn(
+											"inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm transition-[color,background-color,box-shadow] duration-150",
+											isActive
+												? "bg-foreground text-background"
+												: "text-muted-foreground hover:bg-muted hover:text-foreground"
+										)}
+									>
+										{key ? key.charAt(0).toUpperCase() + key.slice(1) : "All"}
+										<span className={cn("text-xs tabular-nums", isActive ? "opacity-70" : "opacity-60")}>
+											{formatNumber(key ? counts[key] || 0 : totalAll)}
+										</span>
+									</Link>
+								);
+							})}
+						</nav>
+					</>
+				)}
 
 				{!hasContacts ? (
 					<CardAddContacts newsletter={newsletter} curl={getAddContactCurl(getAppUrl(), selected?.slug)} />

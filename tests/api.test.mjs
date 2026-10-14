@@ -102,6 +102,7 @@ before(async () => {
 		reference: await import("../lib/docs/reference.js"),
 		newsletters: await import("../app/(app)/newsletters/actions.js"),
 		apiKeys: await import("../app/(app)/api-keys/actions.js"),
+		contacts: await import("../app/(app)/contacts/actions.js"),
 		exportRoute: await import("../app/api/v1/contacts/export.csv/route.js"),
 		sendBatchRoute: await import("../app/api/jobs/send-batch/route.js"),
 		accounts: await import("../lib/accounts.js"),
@@ -429,6 +430,29 @@ describe("contacts", () => {
 		const elsewhere = m.rest.handleRestPreflight(new Request("http://localhost:3000/api/v1/campaigns", { method: "OPTIONS" }), ["campaigns"]);
 		assert.equal(elsewhere.headers.get("access-control-allow-origin"), null, "full access endpoints don't answer browsers");
 		assert.equal((await api(user.key, "GET", "/campaigns")).headers.get("access-control-allow-origin"), null);
+	});
+
+	test("the dashboard's Add contact signs people up like the API: same checks, statuses and emails", async () => {
+		const user = await customer("signups-dashboard@example.com");
+		await api(user.key, "PATCH", `/newsletters/${user.slug}`, { welcome: { enabled: true, subject: "Welcome", markdown: "Thanks." } });
+		const add = (email) => as(user, () => m.contacts.addContact(null, form({ newsletterId: user.newsletterId, email })));
+		const before = sesEmails.length;
+
+		assert.deepEqual(await add("Hand@Example.org"), { email: "hand@example.org", status: "active" });
+		await flushAfter();
+		assert.equal(sesEmails.length - before, 1);
+		assert.equal(sesEmails.at(-1).subject, "Welcome");
+		assert.equal((await api(user.key, "GET", "/contacts/hand%40example.org")).body.source, "dashboard");
+		assert.deepEqual(await add("hand@example.org"), { error: "hand@example.org is already a contact" });
+		assert.deepEqual(await add("hand@gmial.com"), { error: "Did you mean hand@gmail.com?" });
+		assert.deepEqual(await add("hand..doe@example.org"), { error: "email is invalid" });
+
+		assert.equal((await saveSettingsForm(user, { confirmation: getConfirmationContent({ name: `${user.slug} news` }) })).ok, true);
+		assert.deepEqual(await add("later@example.org"), { email: "later@example.org", status: "pending" });
+		await flushAfter();
+		assert.equal(sesEmails.length - before, 2, "no welcome email for the duplicate or the refused addresses");
+		assert.match(sesEmails.at(-1).subject, /^Confirm your subscription/);
+		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId }), 2);
 	});
 
 	test("the empty contacts page's request adds a contact once YOUR_API_KEY is a key", async () => {

@@ -16,6 +16,19 @@ export async function importContacts({ newsletterId, rows, consent, importId, du
 	return output;
 }
 
+// Signs someone up the way the API does: the newsletter's confirmation or welcome email follows.
+export async function addContact(_state, formData) {
+	const { output, failure } = await runDashboardAction("add_contact", {
+		newsletter: String(formData.get("newsletterId") ?? ""),
+		email: String(formData.get("email") ?? ""),
+		source: "dashboard",
+	});
+	if (failure) return toFormError(failure);
+	revalidatePath("/contacts");
+	if (!output.created) return { error: `${output.email} is already a contact` };
+	return { email: output.email, status: output.status };
+}
+
 export async function setContactStatus(id, status) {
 	const { failure } = await runDashboardAction("update_contact_status", { id: String(id), status });
 	revalidatePath("/contacts");
