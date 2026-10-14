@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { hasActiveSubscription } from "@/lib/account-state";
-import { runDashboardAction } from "@/lib/actions/dashboard";
+import { runDashboardAction, toBillingError } from "@/lib/actions/dashboard";
 import { getCurrentAccount } from "@/lib/auth";
 import { getPlan, isOnFreePlan, readInterval } from "@/lib/plans";
 
@@ -16,5 +16,5 @@ export async function GET(request) {
 	if (!plan || (hasActiveSubscription(current.account) && !isOnFreePlan(current.account))) redirect(`/billing?interval=${interval}`);
 
 	const { output, failure } = await runDashboardAction("change_plan", { plan: plan.id, interval });
-	redirect(failure ? `/billing?interval=${interval}&error=stripe` : output.url);
+	redirect(failure ? `/billing?interval=${interval}&error=${toBillingError(failure)}` : output.url);
 }

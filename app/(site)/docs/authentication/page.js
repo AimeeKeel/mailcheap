@@ -5,10 +5,9 @@ import { ACTIONS } from "@/lib/actions/registry";
 import { API_BASE_PATH, REQUESTS_PER_KEY } from "@/lib/api/rest";
 import { getAppUrl, isCloud } from "@/lib/config";
 import { getDocsPageMetadata } from "@/lib/docs/llms";
+import { formatWindow } from "@/lib/format";
 
 export const metadata = getDocsPageMetadata("/docs/authentication");
-
-const WINDOW_LABELS = { "1 h": "an hour", "1 m": "a minute" };
 
 export default function AuthenticationPage() {
 	const appUrl = getAppUrl();
@@ -85,7 +84,7 @@ export default function AuthenticationPage() {
 
 			<Section title="Rate limits" stagger={4}>
 				<p>
-					Each key gets {REQUESTS_PER_KEY.limit} requests {WINDOW_LABELS[REQUESTS_PER_KEY.window]} across REST and MCP. Some actions have
+					Each key gets {REQUESTS_PER_KEY.limit} requests {formatWindow(REQUESTS_PER_KEY.window)} across REST and MCP. Some actions have
 					their own limit per key. Over a limit the answer is <Code>429 rate_limited</Code>; wait and retry.
 				</p>
 				<div className="mt-4 overflow-hidden rounded-xl shadow-border">
@@ -99,7 +98,7 @@ export default function AuthenticationPage() {
 								<tr key={name}>
 									<td className="py-2.5 pl-4 font-mono text-[13px]">{name}</td>
 									<td className="py-2.5 pr-4 text-right text-muted-foreground tabular-nums">
-										{rateLimit.limit} {WINDOW_LABELS[rateLimit.window] ?? rateLimit.window}
+										{rateLimit.limit} {formatWindow(rateLimit.window)}
 									</td>
 								</tr>
 							))}

@@ -95,6 +95,7 @@ function PageBillingOff() {
 
 function getNotice({ account, isActive, checkout, error }) {
 	if (error === "stripe") return { tone: "error", text: "Stripe can't be reached right now. Try again in a minute." };
+	if (error === "rate_limited") return { tone: "error", text: "You opened Stripe too many times in the last hour. Try again later." };
 	if (checkout === "pending") return { tone: "info", text: "Payment received. Your plan turns on in a few seconds." };
 	if (!isActive && (account.subscriptionStatus || account.comp?.plan)) {
 		return { tone: "info", text: "Your plan isn't active. Your newsletter, contacts and campaigns are kept: pick a plan to send again." };

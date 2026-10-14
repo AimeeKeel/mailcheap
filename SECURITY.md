@@ -14,6 +14,7 @@
 - API keys are 32 random bytes, stored as SHA-256 hashes and shown once. They belong to one account and only reach its data. Revoking one takes effect on the next request.
 - Two levels: full access, and signups only, which can only add contacts. Keys made before levels count as signups only. Only a full access key can create keys.
 - Each key gets 300 requests a minute across REST and MCP, plus an hourly limit on actions that send, import, upload, add domains, create keys or call Stripe. Signups keep the per-key and per-visitor limits they had.
+- The dashboard has the same hourly limits, counted per account, on what costs something each time: test emails and sends, imports (a file counts once, whatever its chunks), image uploads, adding and checking domains, and Stripe. Adding contacts by hand, which sends the welcome email, takes 600 an hour, like a key's signups. Test emails only go to the account owner's own address.
 - Only the signup endpoint answers browsers (CORS), so a full access key in a web page doesn't work from it.
 - Errors outside the documented codes answer `internal_error` without detail; the detail goes to the server log.
 - The MCP send tools are annotated destructive and say sending can't be undone. Sending a campaign that is already sending or sent answers `conflict`.

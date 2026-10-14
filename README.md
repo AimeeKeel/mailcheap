@@ -42,7 +42,7 @@ MailCheap is the rest of what a newsletter needs, in one Next.js app: an editor,
 - Confirmed opt-in, on by default. Welcome email.
 - CSV import from any platform. It leaves out invalid, misspelled (gmial.com), spam trap, role, throwaway, duplicate and suppressed addresses, and records that your readers agreed. Signups refuse misspellings with a suggestion.
 - Contacts you add by hand are subscribed at once, without a confirmation email, once you tick that they agreed. MailCheap records who ticked it and when.
-- Rate limits on signups, sign-in, unsubscribes and the API, on by default.
+- Rate limits on signups, sign-in, unsubscribes, the API, and the dashboard's test emails, sends, imports and uploads, on by default.
 
 **Keep it healthy**
 
