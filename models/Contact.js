@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { accountScoped } from "../lib/account-scope.js";
 
 // pending: signed up to a newsletter that asks new subscribers to confirm, and hasn't yet.
 export const CONTACT_STATUSES = ["active", "pending", "unsubscribed", "bounced", "complained", "dormant"];
@@ -9,6 +10,7 @@ const contactSchema = new mongoose.Schema(
 		email: { type: String, required: true, lowercase: true, trim: true },
 		status: { type: String, enum: CONTACT_STATUSES, default: "active" },
 		source: { type: String, trim: true },
+		importId: { type: mongoose.Schema.Types.ObjectId, ref: "ContactImport" },
 		subscribedAt: { type: Date, default: Date.now },
 		confirmedAt: { type: Date },
 		unsubscribedAt: { type: Date },
@@ -35,13 +37,15 @@ const contactSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 
+contactSchema.plugin(accountScoped);
 contactSchema.index({ newsletterId: 1, email: 1 }, { unique: true });
 contactSchema.index({ newsletterId: 1, status: 1, createdAt: -1 });
-contactSchema.index({ email: 1 });
+// Bounces and complaints change every contact with the address in the account.
+contactSchema.index({ accountId: 1, email: 1 });
 // The contacts list shows the newest subscribers first, with or without newsletter and status filters.
 // It breaks ties by _id, which the index needs too: without it MongoDB sorts the whole list on every page.
-contactSchema.index({ subscribedAt: -1, _id: -1 });
-contactSchema.index({ status: 1, subscribedAt: -1, _id: -1 });
+contactSchema.index({ accountId: 1, subscribedAt: -1, _id: -1 });
+contactSchema.index({ accountId: 1, status: 1, subscribedAt: -1, _id: -1 });
 contactSchema.index({ newsletterId: 1, subscribedAt: -1, _id: -1 });
 contactSchema.index({ newsletterId: 1, status: 1, subscribedAt: -1, _id: -1 });
 // The list cleanup totals in newsletter settings.

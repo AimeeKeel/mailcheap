@@ -1,13 +1,14 @@
 import crypto from "node:crypto";
 import { Suspense } from "react";
 import Link from "next/link";
-import { Types, isValidObjectId } from "mongoose";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import AvatarContact from "@/components/AvatarContact";
-import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
+import ButtonExportContacts from "@/components/ButtonExportContacts";
+import CardAddContacts from "@/components/CardAddContacts";
 import DialogImportContacts from "@/components/DialogImportContacts";
 import FilterContacts from "@/components/FilterContacts";
+import GatePlan from "@/components/GatePlan";
 import HeaderPage from "@/components/HeaderPage";
 import MenuContact from "@/components/MenuContact";
 import StateEmpty from "@/components/StateEmpty";
@@ -22,53 +23,38 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { connectDb } from "@/lib/db";
+import { scoped } from "@/lib/account-scope";
+import { getAppUrl } from "@/lib/config";
+import { CONTACTS_PAGE_SIZE, findContactsPage } from "@/lib/contacts";
+import { getAddContactCurl } from "@/lib/docs/reference";
 import { formatDate, formatNumber } from "@/lib/format";
-import { NEWSLETTER_SUMMARY_FIELDS, toNewsletterMap, toNewsletterOptions } from "@/lib/newsletters";
+import { toNewsletterOption } from "@/lib/newsletters";
+import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
 import { cn } from "@/lib/utils";
 import Contact, { CONTACT_STATUSES } from "@/models/Contact";
-import Newsletter from "@/models/Newsletter";
 
 export const metadata = { title: "Contacts" };
 
-const PAGE_SIZE = 50;
-
+// The open newsletter's contacts. A newsletter in ?newsletter=, from the filter this page had, opens first.
 export default async function ContactsPage({ searchParams }) {
-	const params = await searchParams;
-	const newsletterId = isValidObjectId(params.newsletter) ? params.newsletter : null;
+	const [view, params] = await Promise.all([getSelectedNewsletter(), searchParams]);
+	openNewsletter(view, params.newsletter, "/contacts");
+	const { account, selected } = view;
+	const newsletterId = selected ? String(selected._id) : null;
 	const status = CONTACT_STATUSES.includes(params.status) ? params.status : null;
 	const query = typeof params.q === "string" ? params.q.trim().toLowerCase().slice(0, 254) : "";
 	const page = Math.max(1, Number.parseInt(params.page, 10) || 1);
 
-	await connectDb();
-	const newsletters = await Newsletter.find().sort({ createdAt: 1 }).select(NEWSLETTER_SUMMARY_FIELDS).lean();
-	const newsletterOptions = toNewsletterOptions(newsletters);
-	const newsletterMap = toNewsletterMap(newsletters);
-
-	const baseFilter = {
-		...(newsletterId && { newsletterId: new Types.ObjectId(newsletterId) }),
-		...(query && { email: { $regex: `^${escapeRegex(query)}` } }),
-	};
-	const filter = { ...baseFilter, ...(status && { status }) };
-
-	// One count per status reads only the status indexes; grouping the contacts would read every one.
-	const [statusCounts, contacts] = await Promise.all([
-		Promise.all(CONTACT_STATUSES.map((key) => Contact.countDocuments({ ...baseFilter, status: key }))),
-		Contact.find(filter)
-			.sort({ subscribedAt: -1, _id: -1 })
-			.skip((page - 1) * PAGE_SIZE)
-			.limit(PAGE_SIZE)
-			.lean(),
-	]);
-	const counts = Object.fromEntries(CONTACT_STATUSES.map((key, index) => [key, statusCounts[index]]));
-	const totalAll = statusCounts.reduce((sum, count) => sum + count, 0);
-	const total = status ? counts[status] || 0 : totalAll;
-	const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+	const { contacts, counts, totalAll, total } = newsletterId
+		? await findContactsPage(account, { newsletterId, status, query, page })
+		: { contacts: [], counts: {}, totalAll: 0, total: 0 };
+	const pageCount = Math.max(1, Math.ceil(total / CONTACTS_PAGE_SIZE));
+	// totalAll counts within the search.
+	const hasContacts = totalAll > 0 || Boolean(query && newsletterId && (await Contact.exists(scoped(account, { newsletterId: selected._id }))));
+	const newsletter = selected && toNewsletterOption(selected);
 
 	function href(changes) {
-		const next = new URLSearchParams(
-			Object.entries({ newsletter: newsletterId, status, q: query, page }).filter(([, value]) => value)
-		);
+		const next = new URLSearchParams(Object.entries({ status, q: query, page }).filter(([, value]) => value));
 		for (const [key, value] of Object.entries(changes)) {
 			if (value) next.set(key, value);
 			else next.delete(key);
@@ -80,12 +66,15 @@ export default async function ContactsPage({ searchParams }) {
 	return (
 		<>
 			<HeaderPage title="Contacts">
-				<DialogImportContacts newsletters={newsletterOptions} defaultNewsletterId={newsletterId} />
+				<ButtonExportContacts newsletterId={newsletterId} status={status} query={query} isDisabled={total === 0} />
+				<GatePlan reason="import">
+					<DialogImportContacts newsletter={newsletter} />
+				</GatePlan>
 			</HeaderPage>
 
 			<div className="flex flex-col gap-4">
 				<Suspense fallback={<Skeleton className="h-9 w-full rounded-lg" />}>
-					<FilterContacts newsletters={newsletterOptions} />
+					<FilterContacts key={newsletterId} />
 				</Suspense>
 
 				<nav
@@ -116,8 +105,10 @@ export default async function ContactsPage({ searchParams }) {
 					})}
 				</nav>
 
-				{contacts.length === 0 ? (
-					<StateEmpty icon={Users} title={totalAll ? "No contacts match" : "No contacts yet"} />
+				{!hasContacts ? (
+					<CardAddContacts newsletter={newsletter} curl={getAddContactCurl(getAppUrl(), selected?.slug)} />
+				) : contacts.length === 0 ? (
+					<StateEmpty icon={Users} title="No contacts match" />
 				) : (
 					<div style={{ "--stagger": 1 }} className="overflow-hidden rounded-xl shadow-border animate-enter">
 						<Table>
@@ -125,7 +116,6 @@ export default async function ContactsPage({ searchParams }) {
 								<TableRow className="hover:bg-transparent">
 									<TableHead className="pl-4">Email</TableHead>
 									<TableHead>Status</TableHead>
-									{!newsletterId && <TableHead className="hidden md:table-cell">Newsletter</TableHead>}
 									<TableHead className="hidden text-right lg:table-cell">Opens</TableHead>
 									<TableHead className="hidden text-right lg:table-cell">Clicks</TableHead>
 									<TableHead className="hidden text-right sm:table-cell">Added</TableHead>
@@ -135,7 +125,7 @@ export default async function ContactsPage({ searchParams }) {
 							<TableBody>
 								{contacts.map((contact) => (
 									<TableRow key={contact._id.toString()} className="tabular-nums">
-										<TableCell className="max-w-0 py-2.5 pl-4 font-medium sm:w-2/5">
+										<TableCell className="w-full max-w-0 py-2.5 pl-4 font-medium sm:w-2/5">
 											<span className="flex min-w-0 items-center gap-2.5">
 												<AvatarContact
 													email={contact.email}
@@ -148,14 +138,6 @@ export default async function ContactsPage({ searchParams }) {
 										<TableCell>
 											<BadgeStatus status={contact.status} />
 										</TableCell>
-										{!newsletterId && (
-											<TableCell className="hidden text-muted-foreground md:table-cell">
-												<span className="flex items-center gap-2">
-													<AvatarNewsletter newsletter={newsletterMap[contact.newsletterId.toString()]} size={18} />
-													<span className="truncate">{newsletterMap[contact.newsletterId.toString()]?.name}</span>
-												</span>
-											</TableCell>
-										)}
 										<TableCell className="hidden text-right lg:table-cell">
 											{engagement(contact, "opens", "openRate")}
 										</TableCell>
@@ -178,7 +160,8 @@ export default async function ContactsPage({ searchParams }) {
 				{pageCount > 1 && (
 					<div className="flex items-center justify-between gap-3 text-sm text-muted-foreground tabular-nums">
 						<span>
-							{formatNumber((page - 1) * PAGE_SIZE + 1)}–{formatNumber(Math.min(page * PAGE_SIZE, total))} of{" "}
+							{formatNumber((page - 1) * CONTACTS_PAGE_SIZE + 1)}–
+							{formatNumber(Math.min(page * CONTACTS_PAGE_SIZE, total))} of{" "}
 							{formatNumber(total)}
 						</span>
 						<div className="flex gap-1">
@@ -215,10 +198,6 @@ function PageLink({ href, isDisabled, label, children }) {
 
 function gravatarHash(email) {
 	return crypto.createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
-}
-
-function escapeRegex(value) {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function engagement(contact, statKey, importedKey) {

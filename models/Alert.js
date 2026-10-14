@@ -1,13 +1,17 @@
 import mongoose from "mongoose";
 
-// One document per alert kind: lastSentAt enforces the cooldown between repeated alerts.
+// One document per alert kind and account: lastSentAt enforces the cooldown between repeated alerts.
+// Platform alerts (the rate limiter) have no account.
 const alertSchema = new mongoose.Schema(
 	{
-		key: { type: String, required: true, unique: true },
+		accountId: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
+		key: { type: String, required: true },
 		title: { type: String },
 		lastSentAt: { type: Date },
 	},
 	{ timestamps: true }
 );
+
+alertSchema.index({ accountId: 1, key: 1 }, { unique: true });
 
 export default mongoose.models.Alert || mongoose.model("Alert", alertSchema);

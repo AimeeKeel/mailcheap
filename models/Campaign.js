@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { accountScoped } from "../lib/account-scope.js";
 
 export const CAMPAIGN_STATUSES = ["draft", "scheduled", "sending", "paused", "sent", "canceled"];
 
@@ -15,11 +16,25 @@ const campaignSchema = new mongoose.Schema(
 		markdown: { type: String, default: "" },
 		html: { type: String, default: "" },
 		status: { type: String, enum: CAMPAIGN_STATUSES, default: "draft" },
+		// Why a send paused itself; a code from lib/account-state.js when the account or plan stopped it.
+		pauseReason: { type: String },
+		pauseCode: { type: String },
 		// Warm-up: send to the most engaged contacts first, capped at audienceLimit.
 		audienceLimit: { type: Number, min: 1 },
+		// Contacts never mailed before go out in steps: a first slice, a check, then the rest (lib/first-send.js).
+		firstSend: {
+			slice: { type: Number },
+			held: { type: Number },
+			checkAt: { type: Date },
+			checkedAt: { type: Date },
+		},
 		source: { type: String, default: "dashboard" },
 		scheduledAt: { type: Date },
 		startedAt: { type: Date },
+		// A send spread over hours (lib/send-spread.js): about when its last batch goes out, and the hours its place
+		// in the account's warm-up gave it, kept for its resumes and next steps.
+		sendingUntil: { type: Date },
+		spreadHours: { type: Number },
 		sentAt: { type: Date },
 		testSentAt: { type: Date },
 		archiveSlug: { type: String, trim: true, lowercase: true },
@@ -55,9 +70,11 @@ const campaignSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 
+campaignSchema.plugin(accountScoped);
 campaignSchema.index({ newsletterId: 1, createdAt: -1 });
-campaignSchema.index({ status: 1 });
-campaignSchema.index({ startedAt: -1 });
+campaignSchema.index({ accountId: 1, status: 1 });
+campaignSchema.index({ newsletterId: 1, startedAt: -1 });
+// Unique across accounts: /p/<slug> on the app's domain finds an issue by its slug alone.
 campaignSchema.index(
 	{ archiveSlug: 1 },
 	{ unique: true, partialFilterExpression: { archiveSlug: { $type: "string" } } }

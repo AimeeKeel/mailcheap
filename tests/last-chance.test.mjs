@@ -6,7 +6,7 @@ import { KEEP_URL_PLACEHOLDER, getLastChanceContent } from "../lib/last-chance-c
 import { buildRecipientEmail, getCampaignPauseReason, getCampaignStatsPath } from "../lib/sending-rules.js";
 import { createUnsubscribeToken, verifyUnsubscribeToken } from "../lib/unsubscribe.js";
 
-process.env.SESSION_SECRET ||= "test-secret-for-last-chance-links";
+process.env.BETTER_AUTH_SECRET ||= "test-secret-for-last-chance-links";
 process.env.APP_URL ||= "https://mailcheap.test";
 
 const REFERENCE = { contactId: "64f1a2b3c4d5e6f7a8b9c0a1", newsletterId: "64f1a2b3c4d5e6f7a8b9c0b1" };

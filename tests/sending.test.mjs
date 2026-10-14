@@ -6,6 +6,7 @@ import {
 	buildRecipientEmail,
 	chunk,
 	formatFromAddress,
+	getCampaignBlockReason,
 	getCampaignPauseReason,
 	getIssueWebUrl,
 	getNextStepLimit,
@@ -15,7 +16,7 @@ import {
 } from "../lib/sending-rules.js";
 import { verifyUnsubscribeToken } from "../lib/unsubscribe.js";
 
-process.env.SESSION_SECRET = "test-session-secret-with-at-least-32-characters";
+process.env.BETTER_AUTH_SECRET = "test-session-secret-with-at-least-32-characters";
 process.env.APP_URL = "https://mail.example.com";
 
 const newsletter = {
@@ -124,7 +125,7 @@ test("from names are quoted, encoded, and can't inject headers", () => {
 	);
 });
 
-test("campaigns pause above the bounce or complaint limit once 100 are sent", () => {
+test("campaigns block their account above the bounce or complaint limit once 100 are sent", () => {
 	assert.equal(LIMITS.bounceRate, 0.02);
 	assert.equal(LIMITS.complaintRate, 0.0008);
 
@@ -135,6 +136,10 @@ test("campaigns pause above the bounce or complaint limit once 100 are sent", ()
 	assert.equal(getCampaignPauseReason({ sent: 1250, complained: 1 }), null);
 	assert.equal(getCampaignPauseReason({ sent: 1000, complained: 1 }), "complaint rate");
 	assert.equal(getCampaignPauseReason({ sent: 5000, bounced: 99, complained: 4 }), null);
+
+	assert.equal(getCampaignBlockReason({ sent: 100, bounced: 2 }), null);
+	assert.equal(getCampaignBlockReason({ sent: 100, bounced: 3 }), "Bounce rate of 3.00% on a campaign (limit 2.00%)");
+	assert.equal(getCampaignBlockReason({ sent: 900 }, { sent: 100, complained: 1 }), "Complaint rate of 0.10% on a campaign (limit 0.08%)");
 });
 
 test("SES errors map to retry later, pause the campaign, or fail one message", () => {
@@ -160,6 +165,10 @@ test("send problems block incomplete or oversized emails", () => {
 	assert.equal(
 		getSendProblem({ campaign, newsletter: { ...newsletter, fromEmail: "" } }),
 		"Add a from email to the newsletter"
+	);
+	assert.equal(
+		getSendProblem({ campaign, newsletter: { ...newsletter, postalAddress: " " } }),
+		"Add a postal address to the newsletter"
 	);
 	assert.equal(getSendProblem({ campaign: { ...campaign, subject: "  " }, newsletter }), "Add a subject");
 	assert.equal(getSendProblem({ campaign: { ...campaign, markdown: "" }, newsletter }), "Add content");

@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
+import { accountScoped } from "../lib/account-scope.js";
 
 const newsletterSchema = new mongoose.Schema(
 	{
 		name: { type: String, required: true, trim: true },
+		// Unique across accounts: the archive lives at /archive/<slug>.
 		slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
 		imageUrl: { type: String, trim: true },
 		fromName: { type: String, trim: true },
@@ -10,6 +12,21 @@ const newsletterSchema = new mongoose.Schema(
 		replyTo: { type: String, lowercase: true, trim: true },
 		postalAddress: { type: String, trim: true },
 		archiveEnabled: { type: Boolean, default: false },
+		// The account's verified archive subdomain (lib/domains.js syncArchiveHosts). Without one, the
+		// archive and the links in its emails use <slug>.<shared domain>.
+		archiveHost: { type: String, lowercase: true, trim: true },
+		// The shared address's sending domain, <slug>.<shared domain>, in the account's tenant at the email
+		// provider, with the DNS records MailCheap published for it on the shared domain (lib/shared-sender.js).
+		sharedSender: {
+			domain: { type: String, lowercase: true, trim: true },
+			provider: { type: String },
+			providerDomainId: { type: String },
+			verified: { type: Boolean },
+			dnsRecordIds: { type: [String], default: undefined },
+			createdAt: { type: Date },
+			checkedAt: { type: Date },
+			verifiedAt: { type: Date },
+		},
 		description: { type: String, trim: true },
 		socialLinks: [{ type: String, trim: true }],
 		// The archive's author page; the author's name is fromName.
@@ -40,5 +57,9 @@ const newsletterSchema = new mongoose.Schema(
 	},
 	{ timestamps: true }
 );
+
+newsletterSchema.plugin(accountScoped);
+newsletterSchema.index({ accountId: 1, createdAt: 1 });
+newsletterSchema.index({ archiveHost: 1 }, { unique: true, partialFilterExpression: { archiveHost: { $type: "string" } } });
 
 export default mongoose.models.Newsletter || mongoose.model("Newsletter", newsletterSchema);

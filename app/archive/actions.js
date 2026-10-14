@@ -4,13 +4,13 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { sendAlert } from "@/lib/alerts";
 import { isSendingEnabled } from "@/lib/config";
-import { upsertContact } from "@/lib/contacts";
+import { getSignupProblem, upsertContact } from "@/lib/contacts";
 import { connectDb } from "@/lib/db";
 import { getInbox } from "@/lib/inbox-links";
+import { findSignupNewsletter } from "@/lib/public-newsletters";
 import { getClientIp, isRateLimited } from "@/lib/rate-limit";
 import { queueConfirmationEmail, queueWelcomeEmail } from "@/lib/sending";
 import { normalizeEmail } from "@/lib/validation";
-import Newsletter from "@/models/Newsletter";
 
 const PER_IP = { name: "subscribe-ip", limit: 5, window: "10 m" };
 // Only alerts: refusing signups past a shared limit would let one flooder block every real signup.
@@ -27,17 +27,20 @@ export async function subscribe(_state, formData) {
 	if (await isRateLimited({ ...PER_IP, key: getClientIp(await headers()) })) {
 		return { error: "Too many signups from your network. Try again in a few minutes." };
 	}
+	const emailProblem = await getSignupProblem(email);
+	if (emailProblem) return { error: emailProblem };
 
 	await connectDb();
-	const newsletter = await Newsletter.findOne({
+	const newsletter = await findSignupNewsletter({
 		slug: String(formData.get("newsletter") ?? ""),
 		archiveEnabled: true,
-	}).lean();
+	});
 	if (!newsletter) return { error: "This newsletter is not taking signups" };
 
 	if (await isRateLimited({ ...PER_NEWSLETTER, key: newsletter.slug })) {
 		after(() =>
 			sendAlert({
+				accountId: newsletter.accountId,
 				key: `signup-flood:${newsletter.slug}`,
 				title: "Website signup flood",
 				detail: `Over ${PER_NEWSLETTER.limit} signups to ${newsletter.name} in 10 minutes. They still go through (${PER_IP.limit} per visitor per 10 minutes); check new contacts for junk.`,

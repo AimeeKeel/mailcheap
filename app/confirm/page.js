@@ -4,7 +4,7 @@ import FormConfirm from "@/components/FormConfirm";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 import { verifyConfirmToken } from "@/lib/confirmation";
 import { connectDb } from "@/lib/db";
-import Newsletter from "@/models/Newsletter";
+import { findOpenNewsletter } from "@/lib/public-newsletters";
 
 // The URL carries the confirmation token: keep it out of search results and referrer headers.
 export const metadata = {
@@ -41,9 +41,7 @@ export default async function ConfirmPage({ searchParams }) {
 async function getNewsletter(newsletterId) {
 	try {
 		await connectDb();
-		return await Newsletter.findById(newsletterId)
-			.select({ name: 1, slug: 1, fromName: 1, fromEmail: 1, archiveEnabled: 1 })
-			.lean();
+		return await findOpenNewsletter({ _id: newsletterId });
 	} catch (error) {
 		console.error("[confirm] Could not load the newsletter:", error.message);
 		return null;

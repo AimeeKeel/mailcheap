@@ -14,37 +14,41 @@ const RECENT_CAMPAIGNS = 5;
 const RATE_LIMIT = { name: "unsubscribe", limit: 60, window: "1 m" };
 
 // Links don't carry the campaign, so the unsubscribe counts for the latest campaign sent to them.
-async function creditLatestCampaign({ contactId, newsletterId }) {
-	const campaigns = await Campaign.find({ newsletterId, startedAt: { $ne: null } })
+async function creditLatestCampaign({ accountId, contactId, newsletterId }) {
+	const campaigns = await Campaign.find({ accountId, newsletterId, startedAt: { $ne: null } })
 		.sort({ startedAt: -1 })
 		.limit(RECENT_CAMPAIGNS)
 		.select({ _id: 1 })
 		.lean();
 	for (const { _id } of campaigns) {
 		const wasSent = await Message.exists({
+			accountId,
 			kind: "campaign",
 			campaignId: _id,
 			contactId,
 			sentAt: { $ne: null },
 		});
 		if (!wasSent) continue;
-		await Campaign.updateOne({ _id }, { $inc: { "stats.unsubscribed": 1 } });
+		await Campaign.updateOne({ accountId, _id }, { $inc: { "stats.unsubscribed": 1 } });
 		return;
 	}
 }
 
+// The token is signed, so the contact it names is found whatever the account. Unsubscribing always works,
+// even for an account that canceled.
 async function unsubscribe({ contactId, newsletterId }) {
 	await connectDb();
 	const previous = await Contact.findOneAndUpdate(
 		{ _id: contactId, newsletterId, status: { $in: SUBSCRIBED_STATUSES } },
 		{ $set: { status: "unsubscribed", unsubscribedAt: new Date() } }
 	)
-		.select({ _id: 1 })
+		.setOptions({ crossAccount: true })
+		.select({ _id: 1, accountId: 1 })
 		.lean();
 	if (!previous) return;
 
 	console.log(`[unsubscribe] Contact ${contactId} unsubscribed from newsletter ${newsletterId}`);
-	await creditLatestCampaign({ contactId, newsletterId }).catch((error) =>
+	await creditLatestCampaign({ accountId: previous.accountId, contactId, newsletterId }).catch((error) =>
 		console.error("[unsubscribe] Could not credit the campaign:", error.message)
 	);
 }
