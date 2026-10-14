@@ -36,9 +36,11 @@ test("links signed with another secret don't open", () => {
 	}
 });
 
-test("CSV cells are quoted when needed and never start a formula", () => {
+test("CSV cells are quoted when needed and never start a formula, the email included", () => {
+	// A valid address can begin with a formula character (=cmd|'…'!A1 needs no parentheses), so a
+	// contact signed up through the archive form can't carry a formula into the owner's spreadsheet.
 	const contact = {
-		email: "-odd+tag@example.org",
+		email: "=cmd|'calc'!a1@example.com",
 		status: "active",
 		newsletterId: NEWSLETTER,
 		source: '=HYPERLINK("http://x","click")',
@@ -46,7 +48,10 @@ test("CSV cells are quoted when needed and never start a formula", () => {
 		stats: { sent: 3, opens: 2, clicks: 1 },
 	};
 	const row = toCsvRow(contact, new Map([[NEWSLETTER, "weekly"]]));
-	assert.equal(row, `-odd+tag@example.org,active,weekly,"'=HYPERLINK(""http://x"",""click"")",2026-01-02T03:04:05.000Z,,,,,,3,2,1\r\n`);
+	assert.equal(row, `'=cmd|'calc'!a1@example.com,active,weekly,"'=HYPERLINK(""http://x"",""click"")",2026-01-02T03:04:05.000Z,,,,,,3,2,1\r\n`);
+	assert.ok(!/^[=+\-@\t\r]/.test(row), "the email cell doesn't open a formula");
+	// A plain address is untouched, so an export still re-imports as it was.
+	assert.equal(toCsvRow({ email: "jane@example.com", status: "active" }).split(",")[0], "jane@example.com");
 });
 
 test("the export's columns are the ones the import reads", () => {

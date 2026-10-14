@@ -7,6 +7,7 @@ import { getIssueDate } from "@/lib/archive-issues";
 import { SHARE_IMAGE_SIZE } from "@/lib/archive-seo";
 import { getAppUrl } from "@/lib/config";
 import { formatDate, formatNumber } from "@/lib/format";
+import { readLogo } from "@/lib/og-image";
 
 const [geistRegular, geistSemiBold] = await Promise.all([
 	readFile(join(process.cwd(), "assets/fonts/Geist-Regular.ttf")),
@@ -17,24 +18,6 @@ const FONTS = [
 	{ name: "Geist", data: geistSemiBold, weight: 600, style: "normal" },
 ];
 const COLORS = { foreground: "#0a0a0a", muted: "#737373", border: "#e5e5e5" };
-
-async function loadImage(url) {
-	const buffer = url.startsWith("/")
-		? await readFile(join(process.cwd(), "public", url)).catch(() => null)
-		: await fetch(url, { signal: AbortSignal.timeout(5000) })
-				.then((response) => (response.ok ? response.arrayBuffer() : null))
-				.then((data) => data && Buffer.from(data))
-				.catch(() => null);
-	if (!buffer) return null;
-	const type = buffer[0] === 0x89 && buffer[1] === 0x50 ? "png" : buffer[0] === 0xff && buffer[1] === 0xd8 ? "jpeg" : null;
-	return type && `data:image/${type};base64,${buffer.toString("base64")}`;
-}
-
-// The card renderer can't decode WebP, so a WebP logo uses the PNG saved next to it.
-async function readLogo(imageUrl) {
-	if (!imageUrl) return null;
-	return (await loadImage(imageUrl.replace(/\.webp$/i, ".png"))) ?? loadImage(imageUrl);
-}
 
 // Each issue gets its own soft tint, so archive cards stand out from the page and a row of them
 // doesn't look like one card repeated.
