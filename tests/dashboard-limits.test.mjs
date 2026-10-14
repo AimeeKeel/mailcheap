@@ -4,7 +4,7 @@ import { activate, as, callApi, catchRedirect, form, mockStripe, signIn, startTe
 import { flushAfter } from "./stubs/next-server.mjs";
 
 // The dashboard counts the API's hourly limits per account on what costs something each call: test emails and
-// sends, imports, uploads, domains and Stripe. Each account counts on its own, and each of its API keys too.
+// sends, imports, uploads, domains and Stripe. Each account counts on its own, and its API keys count against it too.
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
 let app;
 let m;
@@ -100,7 +100,11 @@ describe("test emails", () => {
 		assert.equal(await m.Message.countDocuments({ accountId: user.accountId, kind: "test" }), 50);
 
 		const viaKey = await callApi("POST", `/api/v1/campaigns/${id}/test`, { key });
-		assert.deepEqual([viaKey.status, viaKey.body.sentTo], [200, "tester@example.com"], "each API key counts on its own");
+		assert.deepEqual(
+			[viaKey.status, viaKey.body.error],
+			[429, { code: "rate_limited", message: "Too many send_test_email calls on this account, try again later" }],
+			"an API key gets what the account has left"
+		);
 		const other = await customer("other-tester@example.com");
 		const otherId = await draft(other);
 		assert.deepEqual(await as(other, () => m.campaigns.sendTestCampaign(otherId)), { ok: true }, "and so does each account");
@@ -124,7 +128,7 @@ describe("contacts", () => {
 		const user = await customer("by-hand@example.com");
 		const add = (email) => as(user, () => m.contacts.addContact(null, form({ newsletterId: user.newsletterId, email, consent: "on" })));
 		await repeat(600, async (index) => assert.equal((await add(`hand${index}@example.org`)).status, "active", String(index)));
-		assert.deepEqual(await add("one-more@example.org"), { error: "You can add 600 contacts an hour by hand. Try again later." });
+		assert.deepEqual(await add("one-more@example.org"), { error: "You can add 600 contacts an hour. Try again later." });
 		await flushAfter();
 		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId }), 600);
 	});
