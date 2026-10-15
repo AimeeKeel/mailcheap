@@ -275,7 +275,8 @@ describe("copy", () => {
 		for (const file of files) assert.doesNotMatch(await readFile(join(ROOT, file), "utf8"), PROVIDERS, file);
 
 		const intro = m.docs.getLlmsIndex(SITE_URL).split("## Docs")[0];
-		assert.match(intro, /^> The affordable newsletter for the agentic era: run your newsletter on autopilot with AI agents\./m);
+		assert.match(intro, /^> The affordable newsletter for the agentic era: a newsletter app where you pay for the emails you send, not for dormant subscribers,/m);
+		assert.doesNotMatch(intro, /autopilot/);
 		assert.doesNotMatch(intro, PROVIDERS);
 	});
 });
