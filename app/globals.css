@@ -197,6 +197,17 @@ html:has([data-plan-bar]) {
   }
 }
 
+/* MailCheap Cloud's support chat keeps its button in the bottom right corner of the dashboard, 54px wide and 14px to
+   24px from the edge, wherever SupportChat (components/SiteExtensions.jsx) renders [data-support-chat]: the get-started
+   panel and the save bar's buttons stay to its left. */
+html {
+  --chat-button-width: 0px;
+}
+
+html:has([data-support-chat]) {
+  --chat-button-width: 4.25rem;
+}
+
 @keyframes enter {
   from {
     opacity: 0;

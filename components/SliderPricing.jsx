@@ -197,5 +197,5 @@ const INCLUDED = [
 	"Imports",
 	"Stats",
 	"AI agents and API",
-	"Email support",
+	"Chat support",
 ];

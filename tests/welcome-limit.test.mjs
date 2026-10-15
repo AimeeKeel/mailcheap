@@ -128,6 +128,7 @@ before(async () => {
 		Account: (await import("../models/Account.js")).default,
 		Contact: (await import("../models/Contact.js")).default,
 		Message: (await import("../models/Message.js")).default,
+		siteExtensions: (await import("@/lib/site-extensions")).siteExtensions,
 	};
 	admin = await signIn("admin@example.com");
 });
@@ -236,12 +237,14 @@ describe("the owner", () => {
 		const current = await usage(user);
 		assert.deepEqual(notice.to, ["notice@example.com"]);
 		assert.equal(notice.subject, "[MailCheap] Welcome emails paused: you've used this month's 2 emails");
+		const { supportChatPath } = m.siteExtensions;
 		assert.equal(
 			notice.text,
 			[
 				"Welcome emails paused: you've used this month's 2 emails",
 				`They resume when your emails reset on ${formatDate(current.periodEnd)}, or as soon as you upgrade. Subscribers who join before then won't get one later. Confirmation emails still go out.`,
 				"http://localhost:3000/billing",
+				...(supportChatPath ? ["", `Questions? Chat with us: http://localhost:3000${supportChatPath}`] : []),
 			].join("\n")
 		);
 		assert.ok(current.welcomePausedAt);

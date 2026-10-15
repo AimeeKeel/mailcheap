@@ -108,7 +108,7 @@ describe("the account menu", () => {
 		assert.deepEqual(m.state.getSendingStatus(paid), { label: "Sending on", hint: null, tone: "green" });
 		assert.deepEqual(m.state.getSendingStatus({ ...paid, status: "paused", pauseReason: "Review" }), {
 			label: "Account blocked",
-			hint: "This account is blocked: Review. Contact hello@mailcheap.ai to unblock it.",
+			hint: "This account is blocked: Review. Chat with us to unblock it.",
 			tone: "red",
 		});
 		assert.equal(await withEnv({ SENDING_ENABLED: "false" }, () => m.state.getSendingStatus(paid).label), "Sending off");
@@ -116,18 +116,22 @@ describe("the account menu", () => {
 
 	test("asks before signing out, like every sign-out button, and nothing signs out without asking", async () => {
 		const asked = [];
+		const events = [];
 		let answer = false;
 		globalThis.window = {
 			confirm(question) {
 				asked.push(question);
 				return answer;
 			},
+			dispatchEvent: (event) => events.push(event.type),
 		};
 		try {
 			assert.equal(m.signOut.askToSignOut(), false);
+			assert.deepEqual(events, [], "a no tells nobody");
 			answer = true;
 			assert.equal(m.signOut.askToSignOut(), true);
 			assert.deepEqual(asked, ["Sign out of MailCheap?", "Sign out of MailCheap?"]);
+			assert.deepEqual(events, [m.signOut.SIGN_OUT_EVENT], "a yes tells the page, for the support chat");
 		} finally {
 			delete globalThis.window;
 		}

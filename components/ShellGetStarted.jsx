@@ -82,7 +82,7 @@ function Dock({ done, total, isFinished, children }) {
 	}
 
 	return (
-		<div className="pointer-events-none fixed inset-x-4 bottom-4 z-40 mb-(--save-bar-height) flex justify-end sm:inset-x-auto sm:right-6 sm:bottom-6">
+		<div className="pointer-events-none fixed inset-x-4 bottom-4 z-40 mr-(--chat-button-width) mb-(--save-bar-height) flex justify-end sm:inset-x-auto sm:right-6 sm:bottom-6">
 			<button
 				ref={pillRef}
 				type="button"

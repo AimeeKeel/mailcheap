@@ -109,7 +109,7 @@ test("every send needs a plan and an account that isn't blocked", () => {
 	assert.equal(getAccountSendProblem({ subscriptionStatus: "canceled" }).code, "subscription_required");
 	const blocked = getAccountSendProblem({ subscriptionStatus: "active", status: "paused", pauseReason: "An email reached a spam trap." });
 	assert.equal(blocked.code, "account_blocked");
-	assert.equal(blocked.message, "This account is blocked: An email reached a spam trap. Contact hello@mailcheap.ai to unblock it.");
+	assert.equal(blocked.message, "This account is blocked: An email reached a spam trap. Chat with us to unblock it.");
 	assert.equal(getAccountSendProblem({ status: "paused" }).code, "account_blocked", "the block comes before the plan");
 	assert.equal(getAccountSendProblem({ subscriptionStatus: "active", status: "active" }), null);
 });

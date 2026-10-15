@@ -469,7 +469,7 @@ export default function FormNewsletter({ newsletter, domains, sharedDomain, isSe
 
 			<div
 				data-save-bar
-				className="sticky bottom-0 -mx-4 mt-2 -mb-6 flex h-(--save-bar-height) items-center justify-end gap-3 bg-background/80 px-4 backdrop-blur-md md:-mx-10 md:-mb-10 md:px-10"
+				className="sticky bottom-0 -mx-4 mt-2 -mb-6 flex h-(--save-bar-height) items-center justify-end gap-3 bg-background/80 pr-[calc(1rem+var(--chat-button-width))] pl-4 backdrop-blur-md md:-mx-10 md:-mb-10 md:pr-[calc(2.5rem+var(--chat-button-width))] md:pl-10"
 			>
 				<StatusSaved savedAt={isPending ? null : state?.savedAt} />
 				<Button type="submit" disabled={isPending} className="min-w-20">

@@ -156,6 +156,7 @@ before(async () => {
 		Contact: (await import("../models/Contact.js")).default,
 		Message: (await import("../models/Message.js")).default,
 		Newsletter: (await import("../models/Newsletter.js")).default,
+		siteExtensions: (await import("@/lib/site-extensions")).siteExtensions,
 	};
 	admin = await signIn("admin@example.com");
 });
@@ -181,7 +182,8 @@ describe("what blocks an account", () => {
 		assert.match(toAdmins.text, /blocked by a spam trap/);
 		assert.ok(toAdmins.text.includes(`${hard.email} bounced: Hard bounce: 550 5.1.1 This address is a spam trap`));
 		assert.ok(!toOwner.text.includes(hard.email), "the trap's address stays with the admins");
-		assert.match(toOwner.text, /welcome emails included.*Contact hello@mailcheap.ai to unblock it/s);
+		assert.ok(toOwner.text.endsWith(`welcome emails included, and imports and changes are off. Chat with us to unblock it.\nhttp://localhost:3000${m.siteExtensions.supportChatPath ?? "/"}`), toOwner.text);
+		assert.ok(!toOwner.text.includes("hello@mailcheap.ai"), "the chat, not email");
 	});
 
 	test("over 7 days: 1 complaint does nothing, 2 warn the owner, 3 over 0.3% block, each counted at once", async () => {
@@ -278,7 +280,7 @@ describe("a blocked account", () => {
 		assert.equal((await loadCampaign(user, later)).status, "draft", "a scheduled send goes back to draft");
 
 		const test = await as(user, () => m.campaigns.sendTestCampaign(sending));
-		assert.deepEqual(test, { error: "This account is blocked: Review. Contact hello@mailcheap.ai to unblock it.", code: "account_blocked" });
+		assert.deepEqual(test, { error: "This account is blocked: Review. Chat with us to unblock it.", code: "account_blocked" });
 		assert.equal((await as(user, () => m.newsletters.sendWelcomeTest(user.newsletterId))).code, "account_blocked");
 
 		const newsletter = await m.Newsletter.findOne({ accountId: user.accountId, _id: user.newsletterId }).lean();
@@ -301,7 +303,7 @@ describe("a blocked account", () => {
 		await as(user, () => m.campaigns.scheduleCampaign(scheduled, { scheduledAt: new Date(Date.now() + 86_400_000).toISOString() }));
 		await m.blocks.blockAccount(user.accountId, { reason: "Review" });
 
-		const refused = { error: "This account is blocked: Review. Contact hello@mailcheap.ai to unblock it.", code: "account_blocked" };
+		const refused = { error: "This account is blocked: Review. Chat with us to unblock it.", code: "account_blocked" };
 		const rows = [{ email: "new@example.org", status: "active" }];
 		assert.deepEqual(await as(user, () => m.contacts.importContacts({ newsletterId: user.newsletterId, consent: true, rows })), refused);
 		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(id, {})), refused);
@@ -314,6 +316,9 @@ describe("a blocked account", () => {
 		const signup = await callApi("POST", "/api/v1/contacts", { key: signupsKey, body: { newsletter: user.slug, email: "visitor@example.org" } });
 		await flushAfter();
 		assertError(signup, 403, "account_blocked");
+		const { supportChatPath } = m.siteExtensions;
+		const hint = supportChatPath ? `Chat with us to unblock it: http://localhost:3000${supportChatPath}` : "Chat with us to unblock it.";
+		assert.equal(signup.body.error.message, `This account is blocked: Review. ${hint}`, "the API gives the chat's address, having no button for it");
 		assertError(await callApi("POST", "/api/v1/contacts", { key: user.key, body: { newsletter: user.slug, email: "visitor@example.org" } }), 403, "account_blocked");
 		assertError(await callApi("POST", "/api/v1/contacts/import", { key: user.key, body: { newsletter: user.slug, consent: true, contacts: rows } }), 403, "account_blocked");
 		assertError(await callApi("POST", "/api/v1/campaigns", { key: user.key, body: { subject: "New" } }), 403, "account_blocked");

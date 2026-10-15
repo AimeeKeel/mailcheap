@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import FormOnboarding from "@/components/FormOnboarding";
-import { SiteAnalytics } from "@/components/SiteExtensions";
+import { SiteAnalytics, SupportChat } from "@/components/SiteExtensions";
 import { requireAccount } from "@/lib/auth";
 import { getSharedDomain } from "@/lib/config";
 import { LIST_SIZES, LIST_SOURCES, needsOnboarding } from "@/lib/onboarding";
@@ -22,6 +23,11 @@ export default async function WelcomePage() {
 				listSizes={LIST_SIZES}
 				listSources={LIST_SOURCES}
 			/>
+			{SupportChat && (
+				<Suspense fallback={null}>
+					<SupportChat user={user} account={account} />
+				</Suspense>
+			)}
 			{SiteAnalytics && <SiteAnalytics goal="onboarding_started" />}
 		</>
 	);
