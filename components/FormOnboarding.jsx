@@ -5,25 +5,25 @@ import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { signOut } from "@/app/signin/actions";
 import { completeOnboarding } from "@/app/welcome/actions";
 import ButtonSignout from "@/components/ButtonSignout";
+import IconBrand from "@/components/IconBrand";
 import LayoutSplit from "@/components/LayoutSplit";
 import LogoWordmark from "@/components/LogoWordmark";
 import PreviewNewsletter from "@/components/PreviewNewsletter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/newsletters";
-import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 
 // A new account's first stop: a few questions that need no DNS or verification, one at a time, with the
 // newsletter taking shape on the right. The last one sends everything; the earlier ones only move on.
-// image: the user's picture (Google sign-in's), which the preview shows as the sender's.
-export default function FormOnboarding({ defaultFromName, image, sharedDomain, listSizes, listSources }) {
+// image: the user's picture (Google sign-in's), which the preview shows as the sender's. listSources get a button
+// each, with their brand's icon; otherListSource is the link under them.
+export default function FormOnboarding({ defaultFromName, image, listSizes, listSources, otherListSource }) {
 	const [state, action, isPending] = useActionState(completeOnboarding, null);
 	const [step, setStep] = useState(0);
 	const [values, setValues] = useState({ name: "", description: "", fromName: defaultFromName, listSize: "" });
 	const current = STEPS[step];
 	const isLast = step === STEPS.length - 1;
-	const address = `hello@${slugify(values.name) || "your-newsletter"}.${sharedDomain}`;
 
 	function update(key) {
 		return (event) => setValues((previous) => ({ ...previous, [key]: event.target.value }));
@@ -36,7 +36,7 @@ export default function FormOnboarding({ defaultFromName, image, sharedDomain, l
 	}
 
 	return (
-		<LayoutSplit aside={<PreviewNewsletter {...values} image={image} address={address} activeField={current.key} />}>
+		<LayoutSplit aside={<PreviewNewsletter {...values} image={image} activeField={current.key} />}>
 			<header className="flex h-9 items-center justify-between gap-3">
 				<LogoWordmark />
 				<form action={signOut}>
@@ -80,21 +80,16 @@ export default function FormOnboarding({ defaultFromName, image, sharedDomain, l
 
 						<div className="mt-8">
 							{current.key === "name" && (
-								<>
-									<Input
-										value={values.name}
-										onChange={update("name")}
-										placeholder="Field notes"
-										aria-label="Newsletter name"
-										maxLength={100}
-										required
-										autoFocus
-										className="h-12 text-lg md:text-lg"
-									/>
-									<p className="mt-3 truncate text-sm text-muted-foreground">
-										It sends from <span className="font-medium text-foreground">{address}</span>
-									</p>
-								</>
+								<Input
+									value={values.name}
+									onChange={update("name")}
+									placeholder="Field notes"
+									aria-label="Newsletter name"
+									maxLength={100}
+									required
+									autoFocus
+									className="h-12 text-lg md:text-lg"
+								/>
 							)}
 							{current.key === "description" && (
 								<>
@@ -142,11 +137,21 @@ export default function FormOnboarding({ defaultFromName, image, sharedDomain, l
 									{values.listSize && values.listSize !== "none" && (
 										<fieldset className="flex flex-col gap-3 animate-enter">
 											<legend className="mb-3 text-sm font-medium">Where are they now?</legend>
-											<div className="flex flex-wrap gap-2">
+											<div className="grid grid-cols-3 gap-2">
 												{listSources.map((source) => (
-													<OptionChoice key={source} name="listSource" value={source} label={source} isCompact />
+													<OptionChoice
+														key={source}
+														name="listSource"
+														value={source}
+														label={source}
+														icon={<IconBrand brand={source.toLowerCase()} className="size-6" />}
+													/>
 												))}
 											</div>
+											<label className="cursor-pointer self-start rounded-sm text-sm text-muted-foreground underline decoration-foreground/20 underline-offset-4 transition-colors duration-150 select-none hover:text-foreground has-checked:font-medium has-checked:text-foreground has-checked:decoration-foreground has-focus-visible:ring-3 has-focus-visible:ring-ring/50">
+												<input type="radio" name="listSource" value={otherListSource} className="sr-only" />
+												{otherListSource}
+											</label>
 										</fieldset>
 									)}
 								</div>
@@ -176,15 +181,17 @@ export default function FormOnboarding({ defaultFromName, image, sharedDomain, l
 	);
 }
 
-function OptionChoice({ name, value, label, checked, onChange, required, isCompact }) {
+// With an icon, three fit a row on any phone: the icon sits above the label until there's room beside it.
+function OptionChoice({ name, value, label, icon, checked, onChange, required }) {
 	return (
 		<label
 			className={cn(
 				"flex cursor-pointer items-center rounded-xl text-sm font-medium shadow-border transition-[box-shadow,background-color,color] duration-150 select-none hover:bg-muted/60 has-checked:bg-foreground has-checked:text-background has-checked:shadow-none has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-				isCompact ? "h-9 px-3.5" : "h-12 px-4"
+				icon ? "flex-col justify-center gap-2 py-3 sm:h-12 sm:flex-row sm:justify-start sm:gap-2.5 sm:px-3 sm:py-0" : "h-12 px-4"
 			)}
 		>
 			<input type="radio" name={name} value={value} checked={checked} onChange={onChange} required={required} className="sr-only" />
+			{icon}
 			{label}
 		</label>
 	);

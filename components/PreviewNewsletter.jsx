@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // The setup's right side: the newsletter's first issue in a Gmail inbox and opened, filled in as the form is,
 // from the user's picture (image). activeField marks what the current question changes.
-export default function PreviewNewsletter({ name, description, fromName, image, address, activeField }) {
+export default function PreviewNewsletter({ name, description, fromName, image, activeField }) {
 	const title = name || "Your newsletter";
 	const sender = fromName || name || "Your name";
 
@@ -62,7 +62,6 @@ export default function PreviewNewsletter({ name, description, fromName, image, 
 							<Mark isActive={activeField === "fromName"} isEmpty={!fromName && !name} className="block truncate font-medium">
 								{sender}
 							</Mark>
-							<span className="block truncate text-muted-foreground">{address}</span>
 						</div>
 					</div>
 					<h2 className="mt-5 font-display text-[1.9rem] leading-[1.1] font-[480] tracking-[-0.025em] text-balance">

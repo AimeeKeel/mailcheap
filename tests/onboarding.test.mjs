@@ -120,6 +120,23 @@ describe("/welcome", () => {
 		for (const listSize of [undefined, "", "Under 10,000", "enterprise"]) assert.equal(suggest(listSize), "starter", String(listSize));
 		assert.equal(m.onboarding.getRecommendedPlanId({}), "starter", "an account from before onboarding asked");
 	});
+
+	test("the list's source is beehiiv, Mailchimp, Substack or somewhere else, and a source saved from earlier choices stays", async () => {
+		assert.deepEqual([...m.onboarding.LIST_SOURCES, m.onboarding.OTHER_LIST_SOURCE], ["beehiiv", "Mailchimp", "Substack", "Somewhere else"]);
+		const user = await signIn("elsewhere@example.com");
+		assert.equal(await welcome(user, { name: "Elsewhere", listSize: "starter", listSource: "Somewhere else" }), "/");
+		assert.equal((await loadAccount(user)).onboarding.listSource, "Somewhere else");
+
+		const earlier = await signIn("from-kit@example.com");
+		assert.equal(await welcome(earlier, { name: "From Kit", listSize: "growth", listSource: "Kit" }), "/");
+		assert.equal((await loadAccount(earlier)).onboarding.listSource, undefined, "Kit isn't a choice anymore");
+		await m.Account.updateOne({ _id: earlier.accountId }, { $set: { "onboarding.listSource": "Kit" } });
+		await assert.doesNotReject((await m.Account.findById(earlier.accountId)).validate(), "an answer saved before still validates");
+		assert.equal(await welcome(earlier, { name: "From Kit" }), "/", "sent again, it only finishes");
+		const account = await loadAccount(earlier);
+		assert.equal(account.onboarding.listSource, "Kit", "and leaves the saved answer as it was");
+		assert.equal(m.onboarding.getRecommendedPlanId(account), "growth");
+	});
 });
 
 describe("without a plan", () => {

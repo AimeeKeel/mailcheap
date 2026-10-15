@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { runDashboardAction, toFormError } from "@/lib/actions/dashboard";
 import { requireAccount } from "@/lib/auth";
-import { LIST_SIZES, LIST_SOURCES, findFreeSlug, needsOnboarding } from "@/lib/onboarding";
+import { LIST_SIZES, LIST_SOURCES, OTHER_LIST_SOURCE, findFreeSlug, needsOnboarding } from "@/lib/onboarding";
 import { siteExtensions } from "@/lib/site-extensions";
 import Account from "@/models/Account";
 
@@ -35,7 +35,7 @@ export async function completeOnboarding(_state, formData) {
 	}
 
 	const listSize = readChoice(formData, "listSize", LIST_SIZES.map(({ id }) => id));
-	const listSource = listSize && listSize !== "none" ? readChoice(formData, "listSource", LIST_SOURCES) : null;
+	const listSource = listSize && listSize !== "none" ? readChoice(formData, "listSource", [...LIST_SOURCES, OTHER_LIST_SOURCE]) : null;
 	await Account.updateOne(
 		{ _id: account._id },
 		{

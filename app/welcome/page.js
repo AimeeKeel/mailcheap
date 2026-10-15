@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import FormOnboarding from "@/components/FormOnboarding";
 import { SiteAnalytics, SupportChat } from "@/components/SiteExtensions";
 import { requireAccount } from "@/lib/auth";
-import { getSharedDomain } from "@/lib/config";
-import { LIST_SIZES, LIST_SOURCES, needsOnboarding } from "@/lib/onboarding";
+import { LIST_SIZES, LIST_SOURCES, OTHER_LIST_SOURCE, needsOnboarding } from "@/lib/onboarding";
 
 export const metadata = { title: "Set up your newsletter" };
 
@@ -19,9 +18,9 @@ export default async function WelcomePage() {
 			<FormOnboarding
 				defaultFromName={name.includes("@") ? "" : name}
 				image={user.image || null}
-				sharedDomain={getSharedDomain()}
 				listSizes={LIST_SIZES}
 				listSources={LIST_SOURCES}
+				otherListSource={OTHER_LIST_SOURCE}
 			/>
 			{SupportChat && (
 				<Suspense fallback={null}>
