@@ -41,6 +41,7 @@ MailCheap is a newsletter app: write an issue, send it to your list, publish it 
   - warm-up: contacts the account never emailed go out as a 5% slice first, and the rest 3 hours later if the slice's bounces and complaints stay low. On MailCheap Cloud, an account's sends also speed up as it proves clean volume;
   - list cleanup, on by default: readers who ignored several issues get one "do you still want this?" email, then stop getting issues;
   - contact cleaning: imports leave out invalid, misspelled (gmial.com), spam trap, role, throwaway and duplicate addresses, domains that can't receive email, and anyone who unsubscribed, bounced or complained before;
+  - one never-email list for the whole server: an address the email provider says doesn't exist (for 180 days) or that turned out to be a spam trap (for good) is left out of every account's imports, signups and sends, and only a keyed hash of it is kept;
   - spam and bounce limits: a send pauses past 2% hard bounces or 0.08% complaints, and the account is blocked past 5% or 0.3%, or on a spam trap hit;
   - one-click unsubscribe (RFC 8058) and a signed unsubscribe link in every email, and confirmed opt-in, on by default.
 - **Several newsletters**: up to 3 per account, each with its own contacts, campaigns and website.
@@ -70,7 +71,7 @@ With your own sending account, you pay your provider for the emails you send: 10
 
 ## Self-hosting
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap&project-name=mailcheap&repository-name=mailcheap&env=MONGODB_URI,BETTER_AUTH_SECRET,ADMIN_EMAILS,EMAIL_FROM&envDescription=Database%2C%20signing%20secret%20%2832%2B%20characters%3A%20openssl%20rand%20-base64%2048%29%2C%20your%20email%20to%20sign%20in%20with%2C%20and%20the%20from%20address%20of%20sign-in%20codes.%20Add%20RESEND_API_KEY%2C%20or%20set%20up%20SES%20or%20PostShiba%2C%20so%20the%20codes%20can%20reach%20you.&envLink=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap%23environment-variables)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap&project-name=mailcheap&repository-name=mailcheap&env=MONGODB_URI,BETTER_AUTH_SECRET,SUPPRESSION_HASH_KEY,ADMIN_EMAILS,EMAIL_FROM&envDescription=Database%2C%20a%20signing%20secret%20and%20a%20hash%20key%20%2832%2B%20characters%20each%3A%20openssl%20rand%20-base64%2048%29%2C%20your%20email%20to%20sign%20in%20with%2C%20and%20the%20from%20address%20of%20sign-in%20codes.%20Add%20RESEND_API_KEY%2C%20or%20set%20up%20SES%20or%20PostShiba%2C%20so%20the%20codes%20can%20reach%20you.&envLink=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap%23environment-variables)
 
 Plan for about an hour, most of it waiting for DNS and for your provider to approve production sending. Self-hosting comes without support: issues are off and setup questions go unanswered.
 
@@ -94,6 +95,7 @@ Without Redis, MailCheap counts the same rate limits in each server instance's m
 | --- | --- |
 | `MONGODB_URI` | MongoDB connection string with a database name |
 | `BETTER_AUTH_SECRET` | Signs sessions and every link in sent emails. 32+ random characters (`openssl rand -base64 48`), or the server refuses to start. Rotating it signs everyone out and breaks links in emails already sent |
+| `SUPPRESSION_HASH_KEY` | Keys the hashes of the never-email list every account shares. 32+ random characters of its own, never `BETTER_AUTH_SECRET`, or the server refuses to start, after an upgrade too. Changing it empties the list |
 | `ADMIN_EMAILS` | Comma-separated emails that can sign in and open `/admin` |
 | `ALLOWED_EMAILS` | Who else can sign in: addresses and `@domain` entries, comma-separated |
 | `EMAIL_FROM` | From address of sign-in codes and alerts, on a domain your Resend account or email provider verified |
@@ -115,7 +117,7 @@ Without Redis, MailCheap counts the same rate limits in each server instance's m
 ### 2. Deploy
 
 1. Click **Deploy** above.
-2. Fill in `MONGODB_URI`, `BETTER_AUTH_SECRET` (at least 32 characters; generate it with `openssl rand -base64 48`), `ADMIN_EMAILS` (your email) and `EMAIL_FROM` (like `MailCheap <login@mail.example.com>`, on a domain your Resend account or email provider verified). With a short secret, MailCheap refuses to start and the logs say why.
+2. Fill in `MONGODB_URI`, `BETTER_AUTH_SECRET` (at least 32 characters; generate it with `openssl rand -base64 48`), `SUPPRESSION_HASH_KEY` (generated the same way, another value), `ADMIN_EMAILS` (your email) and `EMAIL_FROM` (like `MailCheap <login@mail.example.com>`, on a domain your Resend account or email provider verified). With a short secret, MailCheap refuses to start and the logs say why.
 3. Sign-in codes need a way to reach you. The quickest is [Resend](https://resend.com): verify `EMAIL_FROM`'s domain there and add `RESEND_API_KEY`. Without it, codes go through SES or PostShiba once step 4 is done.
 4. Open `https://<your-project>.vercel.app/signin` and sign in with your email.
 
@@ -309,7 +311,7 @@ You need Node.js 22+ and MongoDB:
 ```bash
 git clone https://github.com/marclou/mailcheap.git && cd mailcheap
 npm install
-cp .env.example .env.local   # set MONGODB_URI, BETTER_AUTH_SECRET, ADMIN_EMAILS
+cp .env.example .env.local   # set MONGODB_URI, BETTER_AUTH_SECRET, SUPPRESSION_HASH_KEY, ADMIN_EMAILS
 npm run dev
 ```
 

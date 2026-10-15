@@ -25,6 +25,7 @@ const contactImportSchema = new mongoose.Schema(
 			disposable: counter,
 			duplicate: counter,
 			suppressed: counter,
+			undeliverable: counter,
 			noMail: counter,
 		},
 	},

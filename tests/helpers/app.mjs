@@ -75,6 +75,7 @@ export async function startTestApp(env = {}) {
 		MAILCHEAP_CLOUD: "true",
 		MONGODB_URI: mongo.uri,
 		BETTER_AUTH_SECRET: "test-secret-for-integration-tests-0123456789",
+		SUPPRESSION_HASH_KEY: "test-suppression-hash-key-0123456789abcdef",
 		APP_URL: "http://localhost:3000",
 		RESEND_API_KEY: "re_test",
 		SENDING_ENABLED: "true",

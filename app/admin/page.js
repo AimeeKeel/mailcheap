@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Users } from "lucide-react";
 import CardStat from "@/components/CardStat";
+import CardUndeliverable from "@/components/CardUndeliverable";
 import HeaderPage from "@/components/HeaderPage";
 import { SkeletonSesAccount } from "@/components/SkeletonOverview";
 import StateEmpty from "@/components/StateEmpty";
@@ -13,6 +14,7 @@ import { requireAdmin } from "@/lib/auth";
 import { isCloud } from "@/lib/config";
 import { getEmailProvider } from "@/lib/email-provider";
 import { formatNumber } from "@/lib/format";
+import { countGlobalSuppressions } from "@/lib/global-suppressions";
 import { isOnFreePlan } from "@/lib/plans";
 import { serialize } from "@/lib/serialize";
 import { cn } from "@/lib/utils";
@@ -21,7 +23,7 @@ export const metadata = { title: "Accounts" };
 
 export default async function AdminPage() {
 	await requireAdmin();
-	const accounts = await listAccountsForAdmin();
+	const [accounts, undeliverable] = await Promise.all([listAccountsForAdmin(), countGlobalSuppressions()]);
 	// Self-hosted, every account counts as paying.
 	const withPlan = accounts.filter(hasActiveSubscription);
 	const onFreePlan = withPlan.filter((account) => isOnFreePlan(account));
@@ -60,6 +62,11 @@ export default async function AdminPage() {
 				</section>
 
 				<section style={{ "--stagger": 2 }} className="flex flex-col gap-3 animate-enter">
+					<h2 className="text-sm font-medium text-muted-foreground">Undeliverable addresses</h2>
+					<CardUndeliverable bounces={undeliverable.bounces} traps={undeliverable.traps} />
+				</section>
+
+				<section style={{ "--stagger": 3 }} className="flex flex-col gap-3 animate-enter">
 					<h2 className="text-sm font-medium text-muted-foreground">{provider.name}</h2>
 					<Suspense fallback={<SkeletonSesAccount />}>{provider.id === "ses" ? <StripSesAccount /> : <StripPostshibaClusters />}</Suspense>
 				</section>

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { getAdminEmails, getConfigProblems, isEmailAllowed } from "../lib/config.js";
 import { register } from "../instrumentation.js";
 
-const STRONG = { BETTER_AUTH_SECRET: "s".repeat(32) };
+const STRONG = { BETTER_AUTH_SECRET: "s".repeat(32), SUPPRESSION_HASH_KEY: "k".repeat(32) };
 const CLOUD = { ...STRONG, MAILCHEAP_CLOUD: "true", STRIPE_SECRET_KEY: "sk_live_x", STRIPE_WEBHOOK_SECRET: "whsec_x", RESEND_API_KEY: "re_x" };
 
 async function withEnv(values, run) {
@@ -17,15 +17,23 @@ async function withEnv(values, run) {
 	}
 }
 
-test("BETTER_AUTH_SECRET needs 32 characters", () => {
+test("BETTER_AUTH_SECRET and SUPPRESSION_HASH_KEY need 32 characters each", () => {
 	assert.deepEqual(getConfigProblems(STRONG), []);
-	assert.match(getConfigProblems({ BETTER_AUTH_SECRET: "s".repeat(31) }).join(), /BETTER_AUTH_SECRET must be at least 32/);
-	assert.equal(getConfigProblems({}).length, 1, "missing counts as too short");
+	assert.deepEqual(getConfigProblems({ ...STRONG, BETTER_AUTH_SECRET: "s".repeat(31) }), [
+		"BETTER_AUTH_SECRET must be at least 32 characters (generate one with: openssl rand -base64 48).",
+	]);
+	assert.deepEqual(getConfigProblems({ ...STRONG, SUPPRESSION_HASH_KEY: "k".repeat(31) }), [
+		"SUPPRESSION_HASH_KEY must be at least 32 characters (generate one with: openssl rand -base64 48).",
+	]);
+	assert.equal(getConfigProblems({}).length, 2, "missing counts as too short");
 });
 
-test("the server doesn't start with a short secret", () =>
+test("the server doesn't start with a short secret or hash key", () =>
 	withEnv(STRONG, () => {
 		assert.doesNotThrow(register);
+		process.env.SUPPRESSION_HASH_KEY = "short";
+		assert.throws(register, /MailCheap can't start\. SUPPRESSION_HASH_KEY must be at least 32 characters/);
+		process.env.SUPPRESSION_HASH_KEY = STRONG.SUPPRESSION_HASH_KEY;
 		process.env.BETTER_AUTH_SECRET = "short";
 		assert.throws(register, /MailCheap can't start\. BETTER_AUTH_SECRET must be at least 32 characters/);
 	}));

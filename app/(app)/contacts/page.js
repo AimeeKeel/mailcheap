@@ -146,7 +146,7 @@ export default async function ContactsPage({ searchParams }) {
 											</span>
 										</TableCell>
 										<TableCell>
-											<BadgeStatus status={contact.status} />
+											<BadgeStatus status={contact.status} label={contact.undeliverableAt && "Undeliverable"} />
 										</TableCell>
 										<TableCell className="hidden text-right lg:table-cell">
 											{engagement(contact, "opens", "openRate")}

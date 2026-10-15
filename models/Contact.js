@@ -27,6 +27,8 @@ const contactSchema = new mongoose.Schema(
 		ignoredIssues: { type: Number },
 		lastEngagedAt: { type: Date },
 		lastChanceAt: { type: Date },
+		// Bounced without a send of this account: a send skipped it, on the never-email list (lib/global-suppressions.js).
+		undeliverableAt: { type: Date },
 		stats: {
 			sent: { type: Number, default: 0 },
 			opens: { type: Number, default: 0 },
@@ -55,5 +57,7 @@ contactSchema.index({ newsletterId: 1, subscribedAt: -1, _id: -1 });
 contactSchema.index({ newsletterId: 1, status: 1, subscribedAt: -1, _id: -1 });
 // The list cleanup totals in newsletter settings.
 contactSchema.index({ newsletterId: 1, lastChanceAt: 1 }, { partialFilterExpression: { lastChanceAt: { $exists: true } } });
+// An admin taking an address off the never-email list finds the contacts it stopped, in every account.
+contactSchema.index({ email: 1 }, { partialFilterExpression: { undeliverableAt: { $exists: true } } });
 
 export default mongoose.models.Contact || mongoose.model("Contact", contactSchema);
