@@ -12,6 +12,7 @@ const TWITTER_CREATOR = isCloud() ? siteExtensions.twitterCreator : null;
 export const metadata = {
 	metadataBase: new URL(getAppUrl()),
 	robots: { index: true, follow: true },
+	manifest: "/site.webmanifest",
 	openGraph: SITE_OPEN_GRAPH,
 	twitter: { card: "summary_large_image", ...(TWITTER_CREATOR && { creator: TWITTER_CREATOR }) },
 };

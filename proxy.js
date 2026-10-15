@@ -14,7 +14,7 @@ const NOT_FOUND_PATH = "/_not-on-this-server";
 const PUBLIC_PATHS = [
 	/^\/api\/health$/,
 	/^\/favicon\.ico$/,
-	/^\/(robots\.txt|sitemap\.xml)$/,
+	/^\/(robots\.txt|sitemap\.xml|site\.webmanifest)$/,
 	/^\/opengraph-image(-\w+)?$/,
 	/^\/signin$/,
 	/^\/oauth\/consent$/,

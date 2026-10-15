@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { access, readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { after, before, beforeEach, describe, test } from "node:test";
-import { fileURLToPath } from "node:url";
-import { activate, anonymous, as, catchRedirect, form, mockStripe, platformEmails, signIn, startTestApp } from "./helpers/app.mjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { activate, anonymous, as, catchRedirect, form, mockStripe, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 
 // The public side of the app on every server: where / sends signed-out visitors, which paths open without a session,
-// the plan buttons' way through sign-in to Checkout, the header's plane, and what the sitemap and robots.txt tell
-// search engines.
+// the plan buttons' way through sign-in to Checkout, the header's plane, and what the pages, the sitemap, robots.txt
+// and the web manifest tell search engines and browsers.
 // MailCheap Cloud's marketing site adds to it through the site extensions (tests/marketing/site.test.mjs).
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const SITE_URL = "https://mailcheap.ai";
@@ -79,6 +79,54 @@ async function exists(path) {
 	);
 }
 
+function importFile(path) {
+	return import(pathToFileURL(join(ROOT, path)).href);
+}
+
+// Each page of app/(site) with the paths it renders: route groups leave no trace in a path, and a [slug] folder
+// stands for any one segment. Static folders come first, as Next.js matches them.
+async function listSitePages() {
+	const files = (await readdir(join(ROOT, "app/(site)"), { recursive: true })).filter((file) => /(^|\/)page\.js$/.test(file));
+	return files
+		.map((file) => {
+			const route = `/${file}`.replace(/\/page\.js$/, "").replace(/\/\([^)]+\)/g, "") || "/";
+			return { file: `app/(site)/${file}`, pattern: new RegExp(`^${route.replace(/\[(\w+)\]/g, "(?<$1>[^/]+)")}$`), isDynamic: route.includes("[") };
+		})
+		.sort((a, b) => a.isDynamic - b.isDynamic);
+}
+
+// Where the app's own pages and routes start: everything outside app/(site), up to its first [segment]. The
+// dashboard's / is left out, since signed-out visitors get the landing page there.
+async function listAppRoutes() {
+	const files = (await readdir(join(ROOT, "app"), { recursive: true })).filter((file) => /(^|\/)(page|route)\.js$/.test(file) && !file.startsWith("(site)/"));
+	const routes = files.map((file) => `/${file}`.replace(/\/(page|route)\.js$/, "").replace(/\/\([^)]+\)/g, "").replace(/\/\[.*$/, ""));
+	return [...new Set(routes)].filter(Boolean);
+}
+
+// A public path's page and metadata, with the landing page rendered at landingPath (proxy.js).
+async function readPage(path) {
+	const renderedAt = path === "/" ? m.siteExtensions.landingPath : path;
+	for (const { file, pattern } of await listSitePages()) {
+		const match = pattern.exec(renderedAt);
+		if (!match) continue;
+		const page = await importFile(file);
+		return { file, metadata: page.metadata ?? (await page.generateMetadata({ params: Promise.resolve({ ...match.groups }) })) };
+	}
+	assert.fail(`No page in app/(site) renders ${path}`);
+}
+
+// The title as Next.js writes it: in the template of the nearest layout above the page's folder, since a layout's
+// template doesn't reach the page next to it.
+async function resolveTitle(file, title) {
+	if (title?.absolute) return title.absolute;
+	for (let folder = dirname(dirname(file)); folder !== "."; folder = dirname(folder)) {
+		const layout = `${folder}/layout.js`;
+		const template = (await exists(layout)) && (await importFile(layout)).metadata?.title?.template;
+		if (template) return template.replace("%s", title);
+	}
+	return title;
+}
+
 before(async () => {
 	app = await startTestApp();
 	m = {
@@ -89,6 +137,7 @@ before(async () => {
 		sitemap: (await import("../app/sitemap.js")).default,
 		robots: (await import("../app/robots.js")).default,
 		auth: await import("../lib/auth.js"),
+		config: await import("../lib/config.js"),
 		docs: await import("../lib/docs/llms.js"),
 		format: await import("../lib/format.js"),
 		plans: await import("../lib/plans.js"),
@@ -275,9 +324,10 @@ describe("search engines", () => {
 			folders.push(...entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith("(")).map(({ name }) => `/${name}`));
 		}
 		assert.ok(folders.includes("/campaigns") && folders.includes("/billing"));
-		for (const path of [...folders, "/admin", "/api/", "/mcp"]) assert.ok(rules.disallow.includes(path), `${path} is crawlable`);
+		for (const path of [...folders, "/admin", "/api/", "/mcp", "/welcome", "/oauth/"]) assert.ok(rules.disallow.includes(path), `${path} is crawlable`);
 
-		const publicPaths = [...m.siteExtensions.publicPages, ...m.docs.DOC_PAGES.map(({ href }) => href)];
+		// Sign-in stays crawlable, so search engines that follow the public pages' links to it read its noindex.
+		const publicPaths = [...m.siteExtensions.publicPages, ...m.docs.DOC_PAGES.map(({ href }) => href), "/signin"];
 		for (const path of publicPaths) {
 			assert.ok(!rules.disallow.some((rule) => path.startsWith(rule)), `${path} is blocked`);
 		}
@@ -286,5 +336,65 @@ describe("search engines", () => {
 	test("public pages name their canonical URL", () => {
 		assert.deepEqual(m.site.getPageMetadata({ title: "Errors", description: "Codes", path: "/docs/errors" }).alternates, { canonical: "/docs/errors" });
 		assert.deepEqual(m.docs.getDocsPageMetadata("/docs/mcp").alternates, { canonical: "/docs/mcp" });
+	});
+
+	test("every public page has a title, a description and a canonical URL of its own", async () => {
+		const paths = [...m.siteExtensions.publicPages, ...m.docs.DOC_PAGES.map(({ href }) => href)];
+		const titles = new Set();
+		const descriptions = new Set();
+		for (const path of paths) {
+			const { file, metadata } = await readPage(path);
+			const title = await resolveTitle(file, metadata.title);
+			assert.match(title, /MailCheap/, `${path}: ${title}`);
+			assert.ok(metadata.description?.length >= 50 && metadata.description.length <= 200, `${path}: ${metadata.description}`);
+			assert.equal(metadata.alternates?.canonical, path, path);
+			// A page's openGraph would replace its layouts' whole: the share image and the page's address with it.
+			assert.equal(metadata.openGraph, undefined, `${path} sets an openGraph of its own`);
+			assert.doesNotMatch(`${title} ${metadata.description}`, PROVIDERS, path);
+			titles.add(title);
+			descriptions.add(metadata.description);
+		}
+		assert.equal(titles.size, paths.length, "two pages share a title");
+		assert.equal(descriptions.size, paths.length, "two pages share a description");
+	});
+
+	test("public pages are indexed on the app's address, with large social cards that name each page", async () => {
+		const { metadata } = await importFile("app/(site)/layout.js");
+		assert.equal(metadata.metadataBase.href, new URL("/", m.config.getAppUrl()).href);
+		assert.deepEqual(metadata.robots, { index: true, follow: true });
+		assert.deepEqual(metadata.openGraph, { type: "website", siteName: "MailCheap", locale: "en_US", url: "./" });
+		assert.equal(metadata.twitter.card, "summary_large_image");
+		assert.deepEqual((await importFile("app/layout.js")).metadata.robots, { index: false, follow: false }, "the app's own pages stay out of search");
+	});
+
+	test("the sitemap lists public pages only, never one of the app's", async () => {
+		const urls = await withEnv({ APP_URL: SITE_URL }, () => m.sitemap().map(({ url }) => url));
+		const sitePages = await listSitePages();
+		const appRoutes = await listAppRoutes();
+		assert.ok(["/signin", "/admin", "/api/v1", "/campaigns", "/billing", "/welcome", "/archive"].every((route) => appRoutes.includes(route)), appRoutes.join());
+		for (const url of urls) {
+			const path = url === SITE_URL ? "/" : new URL(url).pathname;
+			assert.ok(url === SITE_URL || url.startsWith(`${SITE_URL}/`), url);
+			const renderedAt = path === "/" ? m.siteExtensions.landingPath : path;
+			assert.ok(sitePages.some(({ pattern }) => pattern.test(renderedAt)), `${url} isn't a page of app/(site)`);
+			assert.ok(!appRoutes.some((route) => path === route || path.startsWith(`${route}/`)), `${url} is one of the app's routes`);
+			assert.deepEqual(outcome(await visit(path)), path === "/" ? { rewrite: renderedAt } : { next: true }, url);
+		}
+	});
+
+	test("public pages link a web manifest with the app's icons at 192 and 512 pixels", async () => {
+		assert.equal((await importFile("app/(site)/layout.js")).metadata.manifest, "/site.webmanifest");
+		assert.deepEqual(outcome(await visit("/site.webmanifest")), { next: true });
+		const response = (await importFile("app/site.webmanifest/route.js")).GET();
+		assert.equal(response.headers.get("content-type"), "application/manifest+json");
+		const manifest = await response.json();
+		assert.equal(manifest.name, "MailCheap");
+		assert.equal(manifest.start_url, "/");
+		assert.deepEqual(manifest.icons.map(({ sizes }) => sizes), ["192x192", "512x512"]);
+		for (const { src, sizes, type } of manifest.icons) {
+			const png = await readFile(join(ROOT, "public", src));
+			assert.equal(type, "image/png", src);
+			assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, sizes, src);
+		}
 	});
 });
