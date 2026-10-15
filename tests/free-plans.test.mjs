@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 import Stripe from "stripe";
-import { activate, anonymous, as, callApi, catchNotFound, catchRedirect, form, jsonRequest, mockStripe, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, anonymous, as, callApi, catchNotFound, catchRedirect, form, jsonRequest, listPlanPrices, mockStripe, signIn, startTestApp } from "./helpers/app.mjs";
 import { published } from "./stubs/qstash.mjs";
 import { state } from "./stubs/ses.mjs";
 
@@ -28,9 +28,7 @@ const GROWTH_MONTHLY = {
 
 function stripeApi({ method, path, query }) {
 	calls.push({ method, path });
-	if (method === "GET" && path === "/v1/prices") {
-		return { object: "list", data: query.get("lookup_keys[0]") === GROWTH_MONTHLY.lookup_key ? [GROWTH_MONTHLY] : [], has_more: false };
-	}
+	if (method === "GET" && path === "/v1/prices") return listPlanPrices(query);
 	if (method === "GET" && path.startsWith("/v1/subscriptions/")) {
 		return subscriptions.get(path.split("/").at(-1)) ?? { status: 404, error: { type: "invalid_request_error", message: "No such subscription" } };
 	}

@@ -8,7 +8,7 @@ import {
 	hasActiveSubscription,
 	isPaidStatus,
 } from "../lib/account-state.js";
-import { PLANS, getAccountLimits, getAccountPlan, getLookupKey, getPrice, isOnFreePlan, parseLookupKey, readInterval } from "../lib/plans.js";
+import { PLANS, getAccountLimits, getAccountPlan, getLookupKey, getPlan, getPrice, isOnFreePlan, parseLookupKey, readInterval } from "../lib/plans.js";
 
 // Plans and the paywall are MailCheap Cloud's; the last test is a self-hosted server.
 process.env.MAILCHEAP_CLOUD = "true";
@@ -22,21 +22,25 @@ function selfHosted(run) {
 	}
 }
 
-test("the four plans match the spec: prices, emails a month and subscribers", () => {
+test("the five plans match the spec: prices, emails a month and subscribers, yearly at 10 months", () => {
 	assert.deepEqual(
-		PLANS.map((plan) => [plan.name, getPrice(plan, "month"), getPrice(plan, "year"), plan.emailsPerMonth, plan.subscribers]),
+		PLANS.map((plan) => [plan.id, plan.name, getPrice(plan, "month"), getPrice(plan, "year"), plan.emailsPerMonth, plan.subscribers]),
 		[
-			["Starter", 19, 190, 20_000, 10_000],
-			["Growth", 39, 390, 75_000, 40_000],
-			["Pro", 79, 790, 200_000, 100_000],
-			["Scale", 149, 1_490, 500_000, 250_000],
+			["starter", "Starter", 19, 190, 20_000, 10_000],
+			["growth", "Growth", 39, 390, 75_000, 40_000],
+			["pro", "Pro", 79, 790, 200_000, 100_000],
+			["scale", "Scale", 149, 1_490, 500_000, 250_000],
+			["max", "Max", 349, 3_490, 2_000_000, 1_000_000],
 		]
 	);
+	assert.equal(getPlan("max").name, "Max");
 });
 
 test("Stripe lookup keys name the plan and the interval, both ways", () => {
 	assert.equal(getLookupKey("growth", "month"), "mailcheap_growth_monthly");
 	assert.equal(getLookupKey("scale", "year"), "mailcheap_scale_yearly");
+	assert.equal(getLookupKey("max", "month"), "mailcheap_max_monthly");
+	assert.deepEqual(parseLookupKey("mailcheap_max_yearly"), { plan: "max", interval: "year" });
 	for (const plan of PLANS) {
 		for (const interval of ["month", "year"]) {
 			assert.deepEqual(parseLookupKey(getLookupKey(plan.id, interval)), { plan: plan.id, interval });
@@ -51,6 +55,8 @@ test("Stripe lookup keys name the plan and the interval, both ways", () => {
 
 test("an admin's numbers replace the plan's", () => {
 	assert.deepEqual(getAccountLimits({ plan: "pro" }), { emails: 200_000, subscribers: 100_000 });
+	assert.deepEqual(getAccountLimits({ plan: "max" }), { emails: 2_000_000, subscribers: 1_000_000 });
+	assert.deepEqual(getAccountLimits({ plan: "max", limitOverrides: { emailsPerMonth: 3_000_000 } }), { emails: 3_000_000, subscribers: 1_000_000 });
 	assert.deepEqual(getAccountLimits({ plan: "pro", limitOverrides: { emailsPerMonth: 1_000 } }), {
 		emails: 1_000,
 		subscribers: 100_000,
@@ -101,7 +107,8 @@ test("a free plan from an admin works like a paid one until its end; a paid plan
 	assert.deepEqual(getAccountLimits(ended), { emails: 0, subscribers: 0 });
 	assert.equal(hasActiveSubscription({ comp: { ...comp, until: new Date(Date.now() + day) } }), true, "an end date still ahead");
 	assert.equal(hasActiveSubscription({ comp, deletion: { requestedAt: new Date() } }), false, "an account waiting to be deleted");
-	assert.equal(hasActiveSubscription({ comp: { ...comp, plan: "enterprise" } }), false, "only the four plans");
+	assert.equal(hasActiveSubscription({ comp: { ...comp, plan: "enterprise" } }), false, "only the five plans");
+	assert.deepEqual(getAccountLimits({ comp: { ...comp, plan: "max" } }), { emails: 2_000_000, subscribers: 1_000_000 }, "a free Max");
 });
 
 test("every send needs a plan and an account that isn't blocked", () => {
@@ -131,6 +138,16 @@ test("a send is blocked when it would pass the month's emails or the account is 
 	const overridden = { ...account, limitOverrides: { emailsPerMonth: 30_000 } };
 	assert.equal(getPlanLimitProblem({ ...fits, account: overridden, recipients: 15_000 }), null);
 	assert.equal(getPlanLimitProblem({ ...fits, emailsSent: 25_000 }).message.includes("has 0 left"), true, "never negative");
+});
+
+test("Max sends 2,000,000 emails a month to up to 1,000,000 subscribers: a weekly issue to about 460,000", () => {
+	const account = { plan: "max", subscriptionStatus: "active" };
+	const fits = { account, emailsSent: 1_500_000, queued: 0, recipients: 500_000, activeContacts: 1_000_000 };
+	assert.equal(getPlanLimitProblem(fits), null, "exactly the emails left, exactly the subscriber limit");
+	assert.equal(getPlanLimitProblem({ ...fits, recipients: 500_001 }).code, ERROR_CODES.planLimitEmails);
+	assert.equal(getPlanLimitProblem({ ...fits, recipients: 1, activeContacts: 1_000_001 }).code, ERROR_CODES.planLimitSubscribers);
+	assert.ok(Math.ceil(460_000 * 4.33) <= getAccountLimits(account).emails, "about 4.33 issues a month to 460,000");
+	assert.ok(Math.ceil(470_000 * 4.33) > getAccountLimits(account).emails, "not to 470,000");
 });
 
 test("self-hosted, without MAILCHEAP_CLOUD: no paywall, no plan limits, every account active unless blocked", () => {

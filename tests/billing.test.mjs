@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 import Stripe from "stripe";
-import { activate, as, callApi, catchRedirect, form, mockStripe, platformEmails, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, as, callApi, catchRedirect, form, mockStripe, platformEmails, readLookupKeys, signIn, startTestApp } from "./helpers/app.mjs";
 
 // Stripe's API is answered by the handler each test gives mockStripe; events are signed like Stripe signs them.
 let app;
@@ -16,11 +16,16 @@ function price(lookupKey, unitAmount, interval) {
 	return { id: `price_${lookupKey}`, object: "price", lookup_key: lookupKey, unit_amount: unitAmount, currency: "usd", recurring: { interval } };
 }
 
+// Scale has no prices in this Stripe, and Pro's monthly one is $99 instead of $79: neither is on sale.
 const PRICES = {
 	mailcheap_starter_monthly: price("mailcheap_starter_monthly", 1900, "month"),
+	mailcheap_starter_yearly: price("mailcheap_starter_yearly", 19_000, "year"),
 	mailcheap_growth_monthly: price("mailcheap_growth_monthly", 3900, "month"),
 	mailcheap_growth_yearly: price("mailcheap_growth_yearly", 39_000, "year"),
 	mailcheap_pro_monthly: price("mailcheap_pro_monthly", 9900, "month"),
+	mailcheap_pro_yearly: price("mailcheap_pro_yearly", 79_000, "year"),
+	mailcheap_max_monthly: price("mailcheap_max_monthly", 34_900, "month"),
+	mailcheap_max_yearly: price("mailcheap_max_yearly", 349_000, "year"),
 };
 
 function subscription({ id, accountId, customer, status = "active", lookupKey = "mailcheap_starter_monthly", start = NOW, end = NOW + 30 * DAY, ...rest }) {
@@ -43,8 +48,7 @@ function subscription({ id, accountId, customer, status = "active", lookupKey = 
 function stripeApi({ method, path, query, body }) {
 	calls.push({ method, path, query, body });
 	if (method === "GET" && path === "/v1/prices") {
-		const found = PRICES[query.get("lookup_keys[0]")];
-		return { object: "list", data: found ? [found] : [], has_more: false };
+		return { object: "list", data: readLookupKeys(query).flatMap((lookupKey) => PRICES[lookupKey] ?? []), has_more: false };
 	}
 	if (method === "GET" && path.startsWith("/v1/subscriptions/")) {
 		const found = subscriptions.get(path.split("/").at(-1));
@@ -98,6 +102,8 @@ before(async () => {
 		checkoutRoute: await import("../app/(account)/billing/checkout/route.js"),
 		returnRoute: await import("../app/(account)/billing/return/route.js"),
 		auth: await import("../lib/auth.js"),
+		plans: await import("../lib/plans.js"),
+		stripe: await import("../lib/stripe.js"),
 		Account: (await import("../models/Account.js")).default,
 		checkoutSessions: new Map(),
 	};
@@ -173,13 +179,32 @@ describe("checkout", () => {
 		assert.deepEqual(checkoutMetadata(), { accountId: String(user.accountId) });
 	});
 
-	test("a Stripe price that doesn't match the plan file never reaches Checkout", async () => {
+	test("a Stripe price that doesn't match the plan file, or a plan without its prices, is never offered nor reaches Checkout", async () => {
 		const user = await signIn("mismatch@example.com");
 		const real = PRICES.mailcheap_pro_monthly;
-		const url = await as(user, () => catchRedirect(m.billing.choosePlan(form({ plan: "pro", interval: "month" }))));
 		assert.equal(real.unit_amount, 9900, "Stripe says $99, the plan says $79");
-		assert.equal(url, "/billing?interval=month&error=stripe");
+		for (const plan of ["pro", "scale"]) {
+			const url = await as(user, () => catchRedirect(m.billing.choosePlan(form({ plan, interval: "year" }))));
+			assert.equal(url, "/billing", `${plan}: the billing page, which shows the plans on sale`);
+			const link = await as(user, () => catchRedirect(m.checkoutRoute.GET(new Request(`http://localhost:3000/billing/checkout?plan=${plan}`))));
+			assert.equal(link, "/billing?interval=month", `${plan}: the plan buttons too`);
+		}
 		assert.equal(calls.some(({ path }) => path === "/v1/checkout/sessions"), false);
+		assert.deepEqual(
+			(await m.stripe.findPlansOnSale()).map(({ id }) => id),
+			["starter", "growth", "max"]
+		);
+	});
+
+	test("Max opens Checkout with its own prices, like any plan on sale", async () => {
+		const user = await signIn("max-checkout@example.com");
+		for (const [interval, lookupKey] of [
+			["year", "mailcheap_max_yearly"],
+			["month", "mailcheap_max_monthly"],
+		]) {
+			assert.equal(await as(user, () => catchRedirect(m.billing.choosePlan(form({ plan: "max", interval })))), "https://checkout.stripe.com/c/pay/cs_test_1");
+			assert.equal(calls.findLast(({ path }) => path === "/v1/checkout/sessions").body.get("line_items[0][price]"), `price_${lookupKey}`);
+		}
 	});
 
 	test("checkout.session.completed turns the plan on and starts the month", async () => {
@@ -311,6 +336,26 @@ describe("subscription changes", () => {
 		const response = await callApi("POST", "/api/v1/contacts", { key, body: { newsletter: "x", email: "a@example.com" } });
 		assert.equal(response.status, 402);
 		assert.deepEqual(response.body, { error: { code: "subscription_required", message: "The account has no active plan" } });
+	});
+});
+
+describe("Max", () => {
+	test("a subscription to Max's prices gives the account Max and its limits, and get_billing says so", async () => {
+		const user = await signIn("max-webhook@example.com");
+		subscriptions.set("sub_max", subscription({ id: "sub_max", accountId: user.accountId, customer: "cus_max", lookupKey: "mailcheap_max_yearly", end: NOW + 365 * DAY }));
+		assert.deepEqual(await deliver("customer.subscription.created", { id: "sub_max" }), { status: 200, body: { received: true, updated: true, status: "active" } });
+
+		const paid = await account(user);
+		assert.deepEqual([paid.plan, paid.interval, paid.subscriptionStatus], ["max", "year", "active"]);
+		assert.deepEqual(m.plans.getAccountLimits(paid), { emails: 2_000_000, subscribers: 1_000_000 });
+		const { key } = await createKey(user, "Max");
+		const billing = await callApi("GET", "/api/v1/billing", { key });
+		assert.deepEqual(billing.body.plan, { id: "max", name: "Max", interval: "year", price: 3490 });
+		assert.deepEqual([billing.body.usage.emailsLimit, billing.body.usage.subscribersLimit], [2_000_000, 1_000_000]);
+
+		subscriptions.set("sub_max", subscription({ id: "sub_max", accountId: user.accountId, customer: "cus_max", lookupKey: "mailcheap_growth_monthly" }));
+		await deliver("customer.subscription.updated", { id: "sub_max" });
+		assert.equal((await account(user)).plan, "growth", "and a change away from it too");
 	});
 });
 

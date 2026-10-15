@@ -45,6 +45,23 @@ export function mockStripe(handler) {
 	stripeHandler = handler;
 }
 
+// The lookup keys a prices.list asks for, as Stripe gets them: lookup_keys[0], lookup_keys[1]…
+export function readLookupKeys(query) {
+	return [...query].filter(([name]) => name.startsWith("lookup_keys[")).map(([, value]) => value);
+}
+
+// Stripe's answer to a prices.list when it has both prices of every plan, at lib/plans.js's amounts.
+export async function listPlanPrices(query) {
+	const { getPlan, getPrice, parseLookupKey } = await import("../../lib/plans.js");
+	const data = readLookupKeys(query).flatMap((lookupKey) => {
+		const price = parseLookupKey(lookupKey);
+		if (!price) return [];
+		const amount = getPrice(getPlan(price.plan), price.interval) * 100;
+		return [{ id: `price_${lookupKey}`, object: "price", lookup_key: lookupKey, unit_amount: amount, currency: "usd", recurring: { interval: price.interval } }];
+	});
+	return { object: "list", data, has_more: false };
+}
+
 // Telegram answers this Response instead, while the function returns one.
 export function answerTelegram(answer) {
 	telegramAnswer = answer;

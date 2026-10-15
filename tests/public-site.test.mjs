@@ -3,7 +3,7 @@ import { access, readFile, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { after, before, beforeEach, describe, test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { activate, anonymous, as, catchRedirect, form, mockStripe, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
+import { activate, anonymous, as, catchRedirect, form, listPlanPrices, mockStripe, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 
 // The public side of the app on every server: where / sends signed-out visitors, which paths open without a session,
 // the plan buttons' way through sign-in to Checkout, the header's plane, and what the pages, the sitemap, robots.txt
@@ -21,13 +21,7 @@ let calls;
 
 function stripeApi({ method, path, query, body }) {
 	calls.push({ method, path, query, body });
-	if (method === "GET" && path === "/v1/prices") {
-		const lookupKey = query.get("lookup_keys[0]");
-		const [, plan, period] = lookupKey.split("_");
-		const amount = m.plans.getPrice(m.plans.getPlan(plan), period === "yearly" ? "year" : "month") * 100;
-		const price = { id: `price_${lookupKey}`, object: "price", lookup_key: lookupKey, unit_amount: amount, currency: "usd", recurring: { interval: period === "yearly" ? "year" : "month" } };
-		return { object: "list", data: [price], has_more: false };
-	}
+	if (method === "GET" && path === "/v1/prices") return listPlanPrices(query);
 	if (method === "POST" && path === "/v1/checkout/sessions") return { id: "cs_test_site", object: "checkout.session", url: "https://checkout.stripe.com/c/pay/cs_test_site" };
 	return { status: 404, error: { type: "invalid_request_error", message: `No mock for ${method} ${path}` } };
 }
@@ -264,8 +258,8 @@ describe("pricing", () => {
 	test("the price per 1,000 emails is a month's price over the plan's emails, yearly plans spread over 12 months", () => {
 		const { PLANS, getPricePerThousand } = m.plans;
 		const perThousand = (interval) => PLANS.map((plan) => m.format.formatUsdCents(getPricePerThousand(plan, interval)));
-		assert.deepEqual(perThousand("month"), ["$0.95", "$0.52", "$0.40", "$0.30"]);
-		assert.deepEqual(perThousand("year"), ["$0.79", "$0.43", "$0.33", "$0.25"]);
+		assert.deepEqual(perThousand("month"), ["$0.95", "$0.52", "$0.40", "$0.30", "$0.17"]);
+		assert.deepEqual(perThousand("year"), ["$0.79", "$0.43", "$0.33", "$0.25", "$0.15"]);
 	});
 });
 

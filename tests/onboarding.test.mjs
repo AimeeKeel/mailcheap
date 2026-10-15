@@ -15,6 +15,7 @@ before(async () => {
 	m = {
 		welcome: await import("../app/welcome/actions.js"),
 		onboarding: await import("../lib/onboarding.js"),
+		plans: await import("../lib/plans.js"),
 		sharedSender: await import("../lib/shared-sender.js"),
 		campaigns: await import("../app/(app)/campaigns/actions.js"),
 		contacts: await import("../app/(app)/contacts/actions.js"),
@@ -85,7 +86,7 @@ describe("/welcome", () => {
 		const account = await loadAccount(user);
 		assert.equal(account.onboarding.listSource, undefined, "no list, no source");
 		assert.equal(m.onboarding.getRecommendedPlanId(account), "starter");
-		assert.equal(m.onboarding.getRecommendedPlanId({ onboarding: { listSize: "more" } }), "scale");
+		assert.equal(m.onboarding.getRecommendedPlanId({ onboarding: { listSize: "more" } }), "max");
 	});
 
 	test("a name is needed, and answers that aren't choices aren't kept", async () => {
@@ -99,7 +100,7 @@ describe("/welcome", () => {
 		const suggest = (listSize) => m.onboarding.getRecommendedPlanId({ onboarding: { listSize } });
 		// About 4.33 emails per subscriber a month: 15,000 subscribers take 64,950 of Growth's 75,000, 45,000 take 194,850 of
 		// Pro's 200,000 and 100,000 take 433,000 of Scale's 500,000. Starter's 20,000 hold about 4,600, and Under 5,000 stays
-		// on it: most new lists are far smaller.
+		// on it: most new lists are far smaller. Max's 2,000,000 hold about 460,000.
 		assert.deepEqual(
 			m.onboarding.LIST_SIZES.map(({ id, label }) => [label, suggest(id)]),
 			[
@@ -108,15 +109,21 @@ describe("/welcome", () => {
 				["5,000 to 15,000", "growth"],
 				["15,000 to 45,000", "pro"],
 				["45,000 to 100,000", "scale"],
-				["Over 100,000", "scale"],
+				["Over 100,000", "max"],
 			]
 		);
+	});
+
+	test("while Max isn't on sale, Over 100,000 suggests the largest plan that is", () => {
+		const onSale = m.plans.PLANS.filter(({ id }) => id !== "max");
+		const suggest = (listSize) => m.onboarding.getRecommendedPlanId({ onboarding: { listSize } }, onSale);
+		assert.deepEqual(["none", "starter", "growth", "pro", "scale", "more"].map(suggest), ["starter", "starter", "growth", "pro", "scale", "scale"]);
 	});
 
 	test("an answer saved under earlier steps still names its plan, and one that names none starts on the smallest", () => {
 		const suggest = (listSize) => m.onboarding.getRecommendedPlanId({ onboarding: { listSize } });
 		// Accounts keep the id, whatever its label was when they picked it: starter was Under 10,000 for a while.
-		assert.deepEqual(["starter", "growth", "pro", "scale", "more"].map(suggest), ["starter", "growth", "pro", "scale", "scale"]);
+		assert.deepEqual(["starter", "growth", "pro", "scale", "more"].map(suggest), ["starter", "growth", "pro", "scale", "max"]);
 		for (const listSize of [undefined, "", "Under 10,000", "enterprise"]) assert.equal(suggest(listSize), "starter", String(listSize));
 		assert.equal(m.onboarding.getRecommendedPlanId({}), "starter", "an account from before onboarding asked");
 	});

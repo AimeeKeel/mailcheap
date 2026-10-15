@@ -7,9 +7,9 @@ import { getRecommendedPlanId } from "@/lib/onboarding";
 import { getPlan } from "@/lib/plans";
 
 // Across the top of the dashboard while the account has no plan: everything but sending is open, so this says how
-// to send.
-export default function BannerPlan({ account }) {
-	const plan = getPlan(getRecommendedPlanId(account));
+// to send. plans: the ones on sale.
+export default function BannerPlan({ account, plans }) {
+	const plan = getPlan(getRecommendedPlanId(account, plans));
 	const hasList = Boolean(account.onboarding?.listSize) && account.onboarding.listSize !== "none";
 	const price = `${formatUsd(plan.monthlyPrice)} a month`;
 	const offer = hasList ? `${plan.name} fits your list, at ${price}` : `From ${price}`;

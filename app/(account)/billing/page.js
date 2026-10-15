@@ -13,6 +13,7 @@ import { requireAccount } from "@/lib/auth";
 import { isCloud } from "@/lib/config";
 import { getRecommendedPlanId } from "@/lib/onboarding";
 import { isOnFreePlan, readInterval } from "@/lib/plans";
+import { findPlansOnSale } from "@/lib/stripe";
 import { getUsage, hasWelcomeEmailsOn } from "@/lib/usage";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +43,7 @@ export default async function BillingPage({ searchParams }) {
 					</p>
 				</div>
 				{notice && <TextNotice {...notice} className="mx-auto mb-8 max-w-xl text-center" />}
-				<ListPricing initialPlanId={getRecommendedPlanId(account)} initialPeriod={interval} />
+				<ListPricing initialPlanId={getRecommendedPlanId(account, await findPlansOnSale())} initialPeriod={interval} />
 			</div>
 		);
 	}

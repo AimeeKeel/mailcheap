@@ -6,7 +6,7 @@ import { getPlan, isOnFreePlan, readInterval } from "@/lib/plans";
 
 // The plans slider's Subscribe link, on the public pages, the paywall and billing: Stripe Checkout for that plan.
 // Accounts that already pay get the billing page, where a plan change is confirmed on Stripe; one on a free plan gets
-// Checkout.
+// Checkout. A plan that isn't on sale (change_plan's validation_failed) gets the billing page too.
 export async function GET(request) {
 	const url = new URL(request.url);
 	const plan = getPlan(url.searchParams.get("plan"));
@@ -16,5 +16,6 @@ export async function GET(request) {
 	if (!plan || (hasActiveSubscription(current.account) && !isOnFreePlan(current.account))) redirect(`/billing?interval=${interval}`);
 
 	const { output, failure } = await runDashboardAction("change_plan", { plan: plan.id, interval });
+	if (failure?.code === "validation_failed") redirect(`/billing?interval=${interval}`);
 	redirect(failure ? `/billing?interval=${interval}&error=${toBillingError(failure)}` : output.url);
 }
