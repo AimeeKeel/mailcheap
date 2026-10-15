@@ -50,6 +50,38 @@ async function customer(email, slug) {
 	return user;
 }
 
+// The Domains page as React renders it on the server: its own components called, client components left with their props.
+const PAGE_COMPONENTS = ["CardDomain", "TableRecords"];
+
+function renderPage(node) {
+	if (Array.isArray(node)) return node.map(renderPage);
+	if (!node || typeof node !== "object") return node;
+	if (PAGE_COMPONENTS.includes(node.type?.name)) return renderPage(node.type(node.props));
+	return { ...node, props: { ...node.props, children: renderPage(node.props?.children) } };
+}
+
+function findAll(node, match) {
+	if (Array.isArray(node)) return node.flatMap((child) => findAll(child, match));
+	if (!node || typeof node !== "object") return [];
+	return [...(match(node) ? [node] : []), ...findAll(node.props?.children, match)];
+}
+
+function textOf(node) {
+	if (Array.isArray(node)) return node.map(textOf).join("");
+	if (node === null || node === undefined || typeof node === "boolean") return "";
+	return typeof node === "object" ? textOf(node.props?.children) : String(node);
+}
+
+// Each record row as shown, and what each of its Copy buttons copies.
+function readRecordRows(card) {
+	return findAll(card, (node) => node.type === "tr" && findAll(node, ({ type }) => type === "td").length > 0).map((row) =>
+		findAll(row, ({ type }) => type === "td").map((cell) => {
+			const [copy] = findAll(cell, ({ type }) => type === m.ButtonCopy);
+			return copy ? { shown: textOf(cell), copied: copy.props.value } : textOf(cell);
+		})
+	);
+}
+
 before(async () => {
 	app = await startTestApp({ QSTASH_CURRENT_SIGNING_KEY: "sig-current", QSTASH_NEXT_SIGNING_KEY: "sig-next" });
 	m = {
@@ -57,6 +89,8 @@ before(async () => {
 		campaigns: await import("../app/(app)/campaigns/actions.js"),
 		contacts: await import("../app/(app)/contacts/actions.js"),
 		domains: await import("../app/(app)/domains/actions.js"),
+		domainsPage: await import("../app/(app)/domains/page.js"),
+		ButtonCopy: (await import("../components/ButtonCopy.jsx")).default,
 		apiKeys: await import("../app/(app)/api-keys/actions.js"),
 		sendBatchRoute: await import("../app/api/jobs/send-batch/route.js"),
 		billing: await import("../lib/billing.js"),
@@ -261,6 +295,50 @@ describe("own domains", () => {
 		assert.deepEqual([linked.body.domain, linked.body.archiveHost], ["linked-mail.com", "letters.linked-mail.com"]);
 		const plain = await callApi("POST", "/api/v1/domains", { key, body: { domain: "plain-mail.com" } });
 		assert.deepEqual([plain.status, plain.body.domain, plain.body.archiveHost], [201, "plain-mail.com", "news.plain-mail.com"], "a plain domain, as before");
+	});
+
+	test("the Domains page shows each record's host without the zone and copies what it shows; the API keeps the full name", async () => {
+		const user = await customer("hosts-page@example.com", "hosts-page");
+		await addVerifiedDomain(user, "apex-hosts.com");
+		await addVerifiedDomain(user, "mail.sub-hosts.co.uk");
+		const cards = findAll(renderPage(await as(user, () => m.domainsPage.default())), ({ type }) => type === "section");
+		assert.equal(cards.length, 2);
+
+		for (const card of cards) {
+			for (const table of findAll(card, ({ type }) => type === "table")) {
+				assert.deepEqual(findAll(table, ({ type }) => type === "th").map(textOf), ["Type", "Host", "Value"]);
+			}
+			for (const cell of readRecordRows(card).flat().filter((cell) => typeof cell === "object")) {
+				assert.equal(cell.copied, cell.shown, "each Copy button copies what its cell shows");
+			}
+		}
+		const shown = (card) => readRecordRows(card).map(([type, host, value]) => [type, host.shown, value.shown]);
+		assert.deepEqual(shown(cards[0]), [
+			["CNAME", "tok1._domainkey", "tok1.dkim.amazonses.com"],
+			["CNAME", "tok2._domainkey", "tok2.dkim.amazonses.com"],
+			["CNAME", "tok3._domainkey", "tok3.dkim.amazonses.com"],
+			["MX", "bounce", "10 feedback-smtp.us-east-1.amazonses.com"],
+			["TXT", "bounce", "v=spf1 include:amazonses.com ~all"],
+			["CNAME", "news", "cname.mailcheap.ai"],
+			["TXT", "_dmarc", "v=DMARC1; p=none;"],
+		]);
+		assert.deepEqual(
+			shown(cards[1]).map(([, host]) => host),
+			["tok1._domainkey.mail", "tok2._domainkey.mail", "tok3._domainkey.mail", "bounce.mail", "bounce.mail", "news.mail", "_dmarc.mail"],
+			"a subdomain of a co.uk domain: the zone is sub-hosts.co.uk"
+		);
+		assert.ok(textOf(cards[0]).includes("If your DNS provider asks for the full name, use tok1._domainkey.apex-hosts.com"));
+		assert.ok(textOf(cards[1]).includes("If your DNS provider asks for the full name, use tok1._domainkey.mail.sub-hosts.co.uk"));
+
+		const { key } = await as(user, () => m.apiKeys.createApiKey(null, form({ name: "Agent", level: "full" })));
+		const { body } = await callApi("GET", "/api/v1/domains", { key });
+		const records = body.domains.find(({ domain }) => domain === "mail.sub-hosts.co.uk").setup.flatMap(({ records }) => records);
+		assert.deepEqual(records.find(({ type }) => type === "MX"), {
+			type: "MX",
+			name: "bounce.mail.sub-hosts.co.uk",
+			host: "bounce.mail",
+			value: "10 feedback-smtp.us-east-1.amazonses.com",
+		});
 	});
 
 	test("the Domains page switches the newsletter to a verified domain, with the same checks as its settings", async () => {

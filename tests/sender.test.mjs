@@ -167,8 +167,8 @@ test("the domains page lists every record with its status in words", () => {
 	const steps = Object.fromEntries(getDomainSetup(domain, { cnameTarget: "cname.mailcheap.ai" }).map((step) => [step.key, step]));
 	assert.equal(steps.dkim.status.label, "Found");
 	assert.equal(steps["mail-from"].status.label, "Waiting for DNS");
-	assert.deepEqual(steps.archive.records, [{ type: "CNAME", name: "news.example.com", value: "cname.mailcheap.ai" }]);
-	assert.deepEqual(steps.dmarc.records, [{ type: "TXT", name: "_dmarc.example.com", value: "v=DMARC1; p=none;" }]);
+	assert.deepEqual(steps.archive.records, [{ type: "CNAME", name: "news.example.com", host: "news", value: "cname.mailcheap.ai" }]);
+	assert.deepEqual(steps.dmarc.records, [{ type: "TXT", name: "_dmarc.example.com", host: "_dmarc", value: "v=DMARC1; p=none;" }]);
 	assert.equal(getDomainSummary(domain).label, "Sending ready, archive waiting");
 	assert.equal(getDomainSummary({ ...domain, archiveHostVerified: true }).label, "Ready");
 	assert.equal(getDomainSummary({ ...domain, verified: false, dkimStatus: "FAILED" }).label, "Records not found");

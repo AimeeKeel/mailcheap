@@ -14,7 +14,7 @@ import { getArchiveCnameTarget, getSharedDomain } from "@/lib/config";
 import { getDomainSetup, getDomainSummary } from "@/lib/domain-records";
 import { refreshDomains } from "@/lib/domains";
 import { getEmailProvider } from "@/lib/email-provider";
-import { rootDomain } from "@/lib/favicon";
+import { rootDomain } from "@/lib/root-domain";
 import {
 	getEmailDomain,
 	getOwnDomainLocalPart,
@@ -134,6 +134,8 @@ function RowNote({ href, icon, label, detail, end, stagger }) {
 
 function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, stagger }) {
 	const summary = getDomainSummary(domain);
+	const setup = getDomainSetup(domain, { cnameTarget });
+	const fullNameExample = setup.flatMap(({ records }) => records).find(({ host, name }) => host !== name)?.name;
 	const id = String(domain._id);
 	return (
 		<section style={{ "--stagger": stagger }} className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
@@ -154,7 +156,7 @@ function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, s
 			</div>
 			{current && <RowsSender domain={domain} newsletters={newsletters} current={current} sharedDomain={sharedDomain} />}
 			<ol className="divide-y divide-border/60 border-t border-border/60">
-				{getDomainSetup(domain, { cnameTarget }).map((step) => (
+				{setup.map((step) => (
 					<li key={step.key} className="flex flex-col gap-3 px-4 py-4">
 						<div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
 							<div className="min-w-0 max-w-xl">
@@ -167,6 +169,11 @@ function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, s
 					</li>
 				))}
 			</ol>
+			{fullNameExample && (
+				<p className="border-t border-border/60 px-4 py-3 text-xs text-pretty text-muted-foreground">
+					If your DNS provider asks for the full name, use <span className="font-mono wrap-anywhere">{fullNameExample}</span>
+				</p>
+			)}
 		</section>
 	);
 }
@@ -209,6 +216,7 @@ function RowsSender({ domain, newsletters, current, sharedDomain }) {
 	);
 }
 
+// The host column fits ps1._domainkey on a 375 px phone; values get cut first, and their button copies them whole.
 function TableRecords({ records }) {
 	return (
 		<div className="overflow-x-auto rounded-lg shadow-border">
@@ -216,7 +224,7 @@ function TableRecords({ records }) {
 				<thead>
 					<tr className="text-left text-xs text-muted-foreground">
 						<th className="w-16 py-2 pl-3 font-normal">Type</th>
-						<th className="py-2 pr-2 font-normal">Name</th>
+						<th className="w-[46%] py-2 pr-2 font-normal">Host</th>
 						<th className="py-2 pr-3 font-normal">Value</th>
 					</tr>
 				</thead>
@@ -226,8 +234,8 @@ function TableRecords({ records }) {
 							<td className="py-2 pl-3 align-middle font-mono text-xs text-muted-foreground">{record.type}</td>
 							<td className="max-w-0 py-2 pr-2 align-middle">
 								<div className="flex items-center gap-1">
-									<span className="truncate font-mono text-xs">{record.name}</span>
-									<ButtonCopy value={record.name} label="Copy name" />
+									<span className="truncate font-mono text-xs">{record.host}</span>
+									<ButtonCopy value={record.host} label="Copy host" />
 								</div>
 							</td>
 							<td className="max-w-0 py-2 pr-3 align-middle">
