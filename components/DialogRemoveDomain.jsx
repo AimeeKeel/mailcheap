@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { Loader2, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { removeDomainAction } from "@/app/(app)/domains/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +14,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "@/lib/toast";
 
 export default function DialogRemoveDomain({ id, domain }) {
 	const [isOpen, setIsOpen] = useState(false);

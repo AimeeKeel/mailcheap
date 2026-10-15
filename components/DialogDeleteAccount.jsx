@@ -2,7 +2,6 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { deleteAccount, sendDeletionCode } from "@/app/(account)/account/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/lib/toast";
 
 const CODE_PATTERN = /^\d{6}$/;
 

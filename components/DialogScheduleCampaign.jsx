@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { scheduleCampaign, unscheduleCampaign } from "@/app/(app)/campaigns/actions";
 import InputAudienceLimit, { countRecipients } from "@/components/InputAudienceLimit";
 import PickerSendTime from "@/components/PickerSendTime";
@@ -24,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { FIRST_SEND } from "@/lib/first-send";
 import { formatCount, formatSendTime } from "@/lib/format";
 import { getScheduleProblem, getScheduleSuggestions } from "@/lib/schedule";
+import { toast } from "@/lib/toast";
 import { useToastError } from "@/lib/use-toast-error";
 import { useIsClient } from "@/lib/use-is-client";
 

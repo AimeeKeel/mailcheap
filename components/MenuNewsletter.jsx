@@ -4,7 +4,6 @@ import { useLayoutEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronsUpDown, Loader2, Plus, Settings } from "lucide-react";
-import { toast } from "sonner";
 import { selectNewsletter } from "@/app/(app)/newsletters/actions";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -19,6 +18,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ADD_NEWSLETTER_PARAM, MAX_NEWSLETTERS_PER_ACCOUNT, NEWSLETTER_COOKIE, NEWSLETTER_LIMIT_MESSAGE } from "@/lib/newsletters";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 // The sidebar and the phone's top bar each have this menu: one refresh does for both.

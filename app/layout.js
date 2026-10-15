@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import ProviderTheme from "@/components/ProviderTheme";
-import { Toaster } from "@/components/ui/sonner";
+import Toaster from "@/components/Toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_NAME } from "@/lib/config";
 import "./globals.css";
@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
 			<body className="min-h-dvh bg-background text-foreground">
 				<ProviderTheme>
 					<TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-					<Toaster position="bottom-right" />
+					<Toaster />
 				</ProviderTheme>
 			</body>
 		</html>

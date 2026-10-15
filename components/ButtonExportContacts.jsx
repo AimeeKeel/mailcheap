@@ -2,9 +2,9 @@
 
 import { useTransition } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { exportContacts } from "@/app/(app)/contacts/actions";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/toast";
 
 // The file downloads from a link valid for an hour, with the list's current filters.
 export default function ButtonExportContacts({ newsletterId, status, query, isDisabled }) {

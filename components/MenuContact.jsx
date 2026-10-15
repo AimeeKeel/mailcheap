@@ -2,7 +2,6 @@
 
 import { useTransition } from "react";
 import { MoreHorizontal, UserCheck, UserX } from "lucide-react";
-import { toast } from "sonner";
 import { setContactStatus } from "@/app/(app)/contacts/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +10,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "@/lib/toast";
 
 export default function MenuContact({ id, status }) {
 	const [isPending, startTransition] = useTransition();

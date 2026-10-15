@@ -160,23 +160,16 @@
   }
 }
 
-/* Dashboard: toasts stack 0.75rem above what floats in the bottom right corner (its variables are further down), from
-   where Sonner puts them: 24px from the bottom, 16px up to 600px wide. Sonner adds its own rules at runtime, hence html
-   in front. */
-html [data-sonner-toaster][data-y-position="bottom"] {
-  --toaster-bottom: 24px;
-  translate: 0 calc(-1 * max(0px, max(var(--chat-top), var(--get-started-top), var(--save-bar-top)) + 0.75rem - var(--toaster-bottom)));
-  transition:
-    transform 400ms ease,
-    translate 200ms cubic-bezier(0.23, 1, 0.32, 1);
-
-  @media (width <= 600px) {
-    --toaster-bottom: 16px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
+/* Toasts (components/Toaster.jsx): react-hot-toast's white pill in the theme's colors, radius and border. Its own
+   rules come in at runtime outside any layer, where they outrank Tailwind's utilities, hence a rule outside too. */
+.toast {
+  border-radius: var(--radius);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+    0 3px 10px rgb(0 0 0 / 0.1),
+    0 3px 3px rgb(0 0 0 / 0.05);
 }
 
 /* An account without a plan has BannerPlan across the top of the dashboard: what sticks to the top of the screen
@@ -221,9 +214,6 @@ html:has([data-wide-page]) {
 html {
   --dock-right: 1rem;
   --dock-bottom: 1rem;
-  --chat-top: 0px;
-  --get-started-top: 0px;
-  --save-bar-top: 0px;
 
   @media (width >= 40rem) {
     --dock-right: 1.5rem;
@@ -235,7 +225,6 @@ html:has([data-support-chat]) {
   --chat-right: 14px;
   --chat-bottom: 14px;
   --chat-clearance: calc(var(--chat-right) + 54px + 12px);
-  --chat-top: calc(var(--chat-bottom) + 54px);
   --dock-right: var(--chat-clearance);
   --dock-bottom: calc(var(--chat-bottom) + 7px);
 
@@ -245,17 +234,8 @@ html:has([data-support-chat]) {
   }
 }
 
-/* ShellGetStarted renders [data-get-started] while the pill or the panel shows, BarSave [data-save-bar][data-shown]
-   while a save bar does: the pill steps aside for it (the save-bar variant). */
-html:has([data-get-started]) {
-  --get-started-top: calc(var(--dock-bottom) + var(--get-started-height, 0px));
-}
-
-html:has([data-save-bar][data-shown]) {
-  --get-started-top: 0px;
-  --save-bar-top: calc(var(--dock-bottom) + 2.5rem);
-}
-
+/* BarSave renders [data-save-bar][data-shown] while a save bar shows: the get-started pill steps aside for it (the
+   save-bar variant). */
 @custom-variant save-bar (html:has([data-save-bar][data-shown]) &);
 
 @keyframes enter {

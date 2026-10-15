@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ChartColumn, Copy, ExternalLink, Link2, Loader2, MoreHorizontal, PenLine, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { duplicateCampaign } from "@/app/(app)/campaigns/actions";
 import DialogDiscardCampaign from "@/components/DialogDiscardCampaign";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "@/lib/toast";
 
 const EDITABLE_STATUSES = ["draft", "scheduled"];
 

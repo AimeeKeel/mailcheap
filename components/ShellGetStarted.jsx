@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
@@ -42,20 +42,6 @@ function Dock({ done, total, isFinished, children }) {
 	}
 	if (isFinished && !isClosed) setView("closed");
 
-	useLayoutEffect(() => {
-		const shown = isOpen ? panelRef.current : isMinimized ? pillRef.current : null;
-		if (!shown) return;
-		const { style } = document.documentElement;
-		const update = () => style.setProperty(HEIGHT_PROPERTY, `${shown.offsetHeight}px`);
-		update();
-		const observer = new ResizeObserver(update);
-		observer.observe(shown);
-		return () => {
-			observer.disconnect();
-			style.removeProperty(HEIGHT_PROPERTY);
-		};
-	}, [isOpen, isMinimized]);
-
 	// The layout doesn't render again on navigation, and steps also get done elsewhere: by an AI agent, by an
 	// app connected with OAuth, in the docs' tab. Coming back to the window brings them up to date.
 	useEffect(() => {
@@ -84,7 +70,6 @@ function Dock({ done, total, isFinished, children }) {
 
 	return (
 		<div
-			data-get-started={isClosed ? undefined : ""}
 			className="pointer-events-none fixed right-(--dock-right) bottom-(--dock-bottom) left-4 z-40 flex origin-bottom-right justify-end transition-[opacity,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none sm:left-auto save-bar:invisible save-bar:scale-95 save-bar:opacity-0"
 		>
 			<button
@@ -144,8 +129,6 @@ function getStartView(pathname) {
 const MINIMIZED_KEY = "mailcheap:get-started-minimized";
 const EDITOR_PATH = /^\/campaigns\/[^/]+/;
 const SMALL_SCREEN = "(max-width: 767px)";
-// Read by the toasts' position in globals.css.
-const HEIGHT_PROPERTY = "--get-started-height";
 // Opens and folds from the bottom right corner, where the pill sits. Hidden, it's inert rather than invisible:
 // a visibility transition leaves the panel unfocusable on the frame it opens.
 const MOTION =

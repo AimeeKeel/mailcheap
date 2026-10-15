@@ -2,7 +2,6 @@
 
 import { useCallback, useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState, useTransition } from "react";
 import { Check, CircleAlert, Copy, Eye, FlaskConical, ListChecksIcon, Loader2, MoreHorizontal, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
 import { duplicateCampaign, saveCampaign, sendTestCampaign } from "@/app/(app)/campaigns/actions";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
@@ -38,6 +37,7 @@ import { markdownToHtml } from "@/lib/markdown";
 import { getPresendChecks } from "@/lib/presend-checks";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
 import { slugify } from "@/lib/slug";
+import { toast } from "@/lib/toast";
 import { usePaywall } from "@/lib/use-paywall";
 import { useToastError } from "@/lib/use-toast-error";
 import { useAutosave } from "@/lib/use-autosave";

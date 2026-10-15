@@ -3,11 +3,11 @@
 import { Suspense, use, useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { Check, ImageUp, Images, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import { IMAGE_TYPES, fetchImages, loadImageLibrary, readImageSize, uploadImageFile } from "@/lib/upload-image";
 import { useImageDrop } from "@/lib/use-image-drop";
 import { cn } from "@/lib/utils";

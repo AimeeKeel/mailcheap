@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
-import { toast } from "sonner";
 import { addContact } from "@/app/(app)/contacts/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ERROR_CODES } from "@/lib/account-state";
+import { toast } from "@/lib/toast";
 import { usePaywall } from "@/lib/use-paywall";
 
 // Into the newsletter the page shows.

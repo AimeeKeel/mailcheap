@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { Ban, CircleOff, Gauge, Gift, Hourglass, Loader2, MoreHorizontal, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
 import { blockAccountAction, endFreePlan, giveFreePlan, saveLimits, setSpread, unblockAccountAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCompact, formatNumber } from "@/lib/format";
 import { PLANS } from "@/lib/plans";
+import { toast } from "@/lib/toast";
 
 // freePlan: { plan, until } while the account has a free plan running. blockedBy: who blocked it, while it's blocked.
 export default function MenuAccount({

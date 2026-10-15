@@ -6,11 +6,11 @@ import FileHandler from "@tiptap/extension-file-handler";
 import Image from "@tiptap/extension-image";
 import { Placeholder } from "@tiptap/extensions";
 import StarterKit from "@tiptap/starter-kit";
-import { toast } from "sonner";
 import DialogImagePicker from "@/components/DialogImagePicker";
 import MenuFormat from "@/components/MenuFormat";
 import { SlashCommand } from "@/components/MenuSlash";
 import { Callout } from "@/lib/editor-callout";
+import { toast } from "@/lib/toast";
 import { IMAGE_TYPES, getDisplaySize, prepareImage, uploadImage } from "@/lib/upload-image";
 
 const MIN_HEIGHT = "min-h-[560px]";

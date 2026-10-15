@@ -2,8 +2,8 @@
 
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/toast";
 
 // Revokes an API key or disconnects an app, after a confirmation. revoke: the server action, given the id.
 export default function ButtonRevoke({ id, revoke, confirmMessage, successMessage }) {

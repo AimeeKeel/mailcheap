@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, Loader2, Upload } from "lucide-react";
 import Papa from "papaparse";
-import { toast } from "sonner";
 import { importContacts } from "@/app/(app)/contacts/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MAX_IMPORT_ROWS_PER_REQUEST, mapColumns, normalizeImportRow } from "@/lib/csv-import";
 import { CONSENT_TEXT, DROP_REASONS, addDropped } from "@/lib/import-checks";
 import { formatNumber } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 // Into the newsletter the page shows.

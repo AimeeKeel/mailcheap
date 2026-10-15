@@ -2,11 +2,11 @@
 
 import { useActionState, useId, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
-import { toast } from "sonner";
 import { addDomainAction } from "@/app/(app)/domains/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { normalizeDomainInput, normalizeHostInput } from "@/lib/sender-rules";
+import { toast } from "@/lib/toast";
 
 const PLACEHOLDER_DOMAIN = "yourdomain.com";
 

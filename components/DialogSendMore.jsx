@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Send } from "lucide-react";
-import { toast } from "sonner";
 import { sendCampaignToMore } from "@/app/(app)/campaigns/actions";
 import InputAudienceLimit, { countRecipients } from "@/components/InputAudienceLimit";
 import ListCleanupPreview from "@/components/ListCleanupPreview";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { summarizePreview } from "@/lib/cleanup";
 import { formatCount, formatNumber } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import { useToastError } from "@/lib/use-toast-error";
 import { useCleanupPreview } from "@/lib/use-cleanup-preview";
 

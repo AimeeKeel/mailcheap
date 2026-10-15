@@ -2,9 +2,9 @@
 
 import { useActionState, useId, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { switchToDomainAction } from "@/app/(app)/domains/actions";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/toast";
 
 export default function FormSwitchToDomain({ newsletterId, newsletterName, domainId, domain, defaultLocalPart }) {
 	const id = useId();

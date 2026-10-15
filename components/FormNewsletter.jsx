@@ -2,7 +2,6 @@
 
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { ExternalLink, FlaskConical, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { saveNewsletter, sendWelcomeTest } from "@/app/(app)/newsletters/actions";
 import BarSave from "@/components/BarSave";
 import InputImage from "@/components/InputImage";
@@ -22,6 +21,7 @@ import { MAX_AUTHOR_BIO_LENGTH, MAX_DESCRIPTION_LENGTH } from "@/lib/newsletters
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail } from "@/lib/render-email";
 import { getSharedAddress } from "@/lib/sender-rules";
 import { slugify } from "@/lib/slug";
+import { toast } from "@/lib/toast";
 import { usePaywall } from "@/lib/use-paywall";
 import { cn } from "@/lib/utils";
 import { prefillWelcome } from "@/lib/welcome-content";

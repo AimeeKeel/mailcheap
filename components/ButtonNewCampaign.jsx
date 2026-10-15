@@ -3,10 +3,10 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { Loader2, Plus } from "lucide-react";
-import { toast } from "sonner";
 import { createCampaign } from "@/app/(app)/campaigns/actions";
 import { Button } from "@/components/ui/button";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
+import { toast } from "@/lib/toast";
 
 // A new draft in the open newsletter.
 export default function ButtonNewCampaign({ newsletterId, label = "New", size }) {

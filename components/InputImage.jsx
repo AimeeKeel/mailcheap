@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ImagePlus, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import DialogImagePicker, { CHECKERBOARD } from "@/components/DialogImagePicker";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/toast";
 import { uploadImageFile } from "@/lib/upload-image";
 import { useImageDrop } from "@/lib/use-image-drop";
 import { cn } from "@/lib/utils";
