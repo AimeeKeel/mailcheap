@@ -27,7 +27,7 @@ import { getAccountPlan } from "@/lib/plans";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
 import { getWarmup } from "@/lib/send-spread";
 import { TIME_ZONE_COOKIE, resolveTimeZone, timeZoneLabel } from "@/lib/time-zone";
-import { getUsage } from "@/lib/usage";
+import { getUsage, hasWelcomeEmailsOn } from "@/lib/usage";
 import { cn } from "@/lib/utils";
 
 // The open newsletter's numbers, then the plan its account's newsletters share. The page waits for the
@@ -48,13 +48,14 @@ export default async function OverviewPage({ searchParams }) {
 	const accountId = account._id;
 	const hasPlan = hasActiveSubscription(account);
 	const warmup = hasPlan ? getWarmup(account, { place }) : null;
+	const isWelcomePaused = usage.welcomeEmailsPaused && (await hasWelcomeEmailsOn(accountId));
 
 	return (
 		<>
 			<Suspense fallback={null}>
 				<CookieTimezone />
 			</Suspense>
-			{hasPlan && <BannerUsage usage={usage} />}
+			{hasPlan && <BannerUsage usage={usage} isWelcomePaused={isWelcomePaused} />}
 			<HeaderPage title="Overview" />
 
 			<div className="flex flex-col gap-8">

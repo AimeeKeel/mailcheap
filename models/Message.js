@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import { accountScoped } from "../lib/account-scope.js";
 
-// held: a first send's never-mailed contacts past the first slice, queued once that slice checks out.
+// held: a first send's never-mailed contacts past the first slice, queued once that slice checks out. skipped: a
+// welcome email the month's emails had no room for (lib/sending.js), never sent later.
 export const MESSAGE_STATUSES = [
 	"held",
 	"queued",
@@ -11,6 +12,7 @@ export const MESSAGE_STATUSES = [
 	"complained",
 	"failed",
 	"suppressed",
+	"skipped",
 ];
 
 const messageSchema = new mongoose.Schema(

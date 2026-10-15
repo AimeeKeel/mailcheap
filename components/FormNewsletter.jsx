@@ -5,6 +5,7 @@ import { ExternalLink, FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { saveNewsletter, sendWelcomeTest } from "@/app/(app)/newsletters/actions";
 import InputImage from "@/components/InputImage";
+import NoticeWelcomePaused from "@/components/NoticeWelcomePaused";
 import PreviewEmail from "@/components/PreviewEmail";
 import StatusSaved from "@/components/StatusSaved";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,8 @@ import { prefillWelcome } from "@/lib/welcome-content";
 
 const IMAGE_PREVIEW_PATTERN = /^(https:\/\/\S+\.\S{2,}\/\S+|\/\S+\.\w{3,4})$/;
 
-export default function FormNewsletter({ newsletter, domains, sharedDomain, isSendingEnabled, testEmail, cleanupTotals }) {
+// welcomePause: the notice to show while the month's emails are used up and welcome emails are skipped.
+export default function FormNewsletter({ newsletter, domains, sharedDomain, isSendingEnabled, testEmail, cleanupTotals, welcomePause }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const archiveHost = domains.find(({ archiveHostVerified }) => archiveHostVerified)?.archiveHost;
@@ -300,6 +302,7 @@ export default function FormNewsletter({ newsletter, domains, sharedDomain, isSe
 					/>
 				}
 			>
+				{welcomePause && isWelcomeEnabled && <NoticeWelcomePaused {...welcomePause} className="px-4 py-3" />}
 				<Field label="Subject">
 					<Input name="welcomeSubject" value={welcome.subject} onChange={updateWelcome("subject")} />
 				</Field>

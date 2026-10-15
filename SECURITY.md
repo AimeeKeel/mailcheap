@@ -73,6 +73,7 @@ Without `MAILCHEAP_CLOUD=true` (only that exact value counts), a server is self-
 - Stripe webhooks are verified with `STRIPE_WEBHOOK_SECRET`, and every subscription event re-reads the subscription from Stripe instead of trusting the payload.
 - The checkout return only syncs a session whose `client_reference_id` is the signed-in account.
 - Checkout refuses a Stripe price whose amount or interval doesn't match `lib/plans.js`.
+- Every email counts toward the plan's emails for the month: issues, last-chance, tests, welcome and confirmation emails. Campaign and welcome emails take their room in one atomic update before they go out (`claimPlanEmails` in `lib/usage.js`), with the plan's numbers, a free plan's or an admin's overrides, so signups (600 an hour per account) can't send welcome emails past the plan. Without room, a welcome email is skipped for good, its `Message` records why, and the owner is emailed once that month; welcome emails start again when the month resets or the plan grows. Confirmation emails always go out, so signups never break, and still count. A self-hosted server has no limits.
 
 ## Sending
 

@@ -17,13 +17,15 @@ const accountSchema = new mongoose.Schema(
 		currentPeriodStart: { type: Date },
 		currentPeriodEnd: { type: Date },
 		cancelAt: { type: Date },
-		// Emails sent this month of the paid period (lib/usage-period.js): every kind counts.
+		// Emails sent this month of the paid period (lib/usage-period.js): every kind counts. welcomePausedAt: when the
+		// month's first welcome email was skipped for want of emails left, which told the owner; a new month clears it.
 		usage: {
 			emailsSent: { type: Number, default: 0 },
 			periodStart: { type: Date },
 			periodEnd: { type: Date },
 			anchor: { type: Date },
 			paidThrough: { type: Date },
+			welcomePausedAt: { type: Date },
 		},
 		// "paused" is a blocked account (lib/account-blocks.js): it sends nothing, welcome and confirmation emails
 		// included, and refuses every change but stopping things, until an admin unblocks it. pauseReason is what its

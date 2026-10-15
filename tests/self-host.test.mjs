@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 import mongoose from "mongoose";
 import { addVerifiedDomain, as, callApi, catchRedirect, form, jsonRequest, mockStripe, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
+import { flushAfter } from "./stubs/next-server.mjs";
 import { published } from "./stubs/qstash.mjs";
 
 // A self-hosted server: no MAILCHEAP_CLOUD, no Stripe keys, no shared domain, and sign-in limited to
@@ -125,6 +126,7 @@ before(async () => {
 		accountState: await import("../lib/account-state.js"),
 		Account: (await import("../models/Account.js")).default,
 		Campaign: (await import("../models/Campaign.js")).default,
+		Message: (await import("../models/Message.js")).default,
 	};
 });
 
@@ -149,12 +151,12 @@ describe("billing is off", () => {
 		assert.equal(stripeCalls.length, 0);
 	});
 
-	test("a send far past every plan's emails and subscribers goes out in full, and still counts", async () => {
+	test("a send far past every plan's emails and subscribers goes out in full, and still counts; so do welcome emails", async () => {
 		const user = await signIn("sender@team.example.org");
 		await addVerifiedDomain(user, "self-hosted.dev");
-		const url = await as(user, () =>
-			catchRedirect(m.newsletters.saveNewsletter(null, form({ name: "Notes", slug: "self-notes", fromName: "Jo", fromEmail: "hello@self-hosted.dev", postalAddress: "1 Main St, Paris" })))
-		);
+		const settings = { name: "Notes", slug: "self-notes", fromName: "Jo", fromEmail: "hello@self-hosted.dev", postalAddress: "1 Main St, Paris" };
+		const welcome = { welcomeEnabled: "on", welcomeSubject: "Welcome", welcomeMarkdown: "Thanks for joining." };
+		const url = await as(user, () => catchRedirect(m.newsletters.saveNewsletter(null, form({ ...settings, ...welcome }))));
 		const newsletterId = url.split("/").at(-1);
 		const rows = ["a", "b", "c"].map((name) => ({ email: `${name}@readers.example.org`, status: "active" }));
 		await as(user, () => m.contacts.importContacts({ newsletterId, consent: true, rows }));
@@ -173,6 +175,13 @@ describe("billing is off", () => {
 		const overview = await callApi("GET", "/api/v1/overview", { key });
 		assert.equal(overview.status, 200);
 		assert.deepEqual([overview.body.usage.emailsLimit, overview.body.usage.emailsLeft, overview.body.usage.subscribersLimit], [null, null, null]);
+		assert.equal(overview.body.usage.welcomeEmailsPaused, false);
+
+		assert.equal((await callApi("POST", "/api/v1/contacts", { key, body: { email: "new@readers.example.org" } })).status, 201);
+		await flushAfter();
+		const message = await m.Message.findOne({ accountId: user.accountId, kind: "welcome" }).lean();
+		assert.equal(message.status, "sent");
+		assert.equal((await m.Account.findById(user.accountId).lean()).usage.emailsSent, 50_000_004);
 	});
 
 	test("billing says it's off through the dashboard, the REST API and MCP, and the Stripe webhook is closed", async () => {

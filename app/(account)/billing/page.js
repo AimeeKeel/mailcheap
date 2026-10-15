@@ -5,14 +5,15 @@ import CardSubscription from "@/components/CardSubscription";
 import CardUsage from "@/components/CardUsage";
 import HeaderPage from "@/components/HeaderPage";
 import ListPricing from "@/components/ListPricing";
+import NoticeWelcomePaused from "@/components/NoticeWelcomePaused";
 import StateEmpty from "@/components/StateEmpty";
 import { Button } from "@/components/ui/button";
-import { hasActiveSubscription } from "@/lib/account-state";
+import { getWelcomePauseNotice, hasActiveSubscription } from "@/lib/account-state";
 import { requireAccount } from "@/lib/auth";
 import { isCloud } from "@/lib/config";
 import { getRecommendedPlanId } from "@/lib/onboarding";
 import { isOnFreePlan, readInterval } from "@/lib/plans";
-import { getUsage } from "@/lib/usage";
+import { getUsage, hasWelcomeEmailsOn } from "@/lib/usage";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Billing" };
@@ -47,6 +48,7 @@ export default async function BillingPage({ searchParams }) {
 	}
 
 	const usage = await getUsage(account);
+	const isWelcomePaused = usage.welcomeEmailsPaused && (await hasWelcomeEmailsOn(account._id));
 	const isFree = isOnFreePlan(account);
 	const current = isFree ? { plan: account.comp.plan } : { plan: account.plan, interval: readInterval(account.interval) };
 	return (
@@ -66,6 +68,9 @@ export default async function BillingPage({ searchParams }) {
 				<CardSubscription account={account} />
 				<section style={{ "--stagger": 1 }} className="flex flex-col gap-3 animate-enter">
 					<h2 className="text-sm font-medium text-muted-foreground">This month</h2>
+					{isWelcomePaused && (
+						<NoticeWelcomePaused {...getWelcomePauseNotice(usage)} hasUpgradeLink={false} className="rounded-xl px-4 py-3" />
+					)}
 					<CardUsage usage={usage} />
 				</section>
 				<section style={{ "--stagger": 2 }} className="flex flex-col gap-3 animate-enter">

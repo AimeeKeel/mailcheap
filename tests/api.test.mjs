@@ -505,7 +505,7 @@ describe("newsletters and images", () => {
 		const user = await customer("settings-api@example.com");
 		await api(user.key, "PATCH", `/newsletters/${user.slug}`, { welcome: { enabled: true, subject: "Hi", markdown: "Hello." } });
 		const updated = await api(user.key, "PATCH", `/newsletters/${user.newsletterId}`, { welcome: { subject: "Hello there" }, replyTo: "Me@Example.org" });
-		assert.deepEqual(updated.body.welcome, { enabled: true, subject: "Hello there", previewText: "", markdown: "Hello." });
+		assert.deepEqual(updated.body.welcome, { enabled: true, subject: "Hello there", previewText: "", markdown: "Hello.", paused: false });
 		assert.equal(updated.body.replyTo, "me@example.org");
 		assert.equal(updated.body.postalAddress, "1 Main St, Paris");
 		assert.equal(updated.body.fromEmail, `hello@${user.slug}.mailcheapmail.com`);

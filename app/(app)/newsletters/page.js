@@ -3,12 +3,14 @@ import FormNewsletter from "@/components/FormNewsletter";
 import HeaderPage from "@/components/HeaderPage";
 import LayoutNarrow from "@/components/LayoutNarrow";
 import { scoped } from "@/lib/account-scope";
+import { getWelcomePauseNotice } from "@/lib/account-state";
 import { cleanupTotalsPipeline } from "@/lib/cleanup";
 import { getSharedDomain, isSendingEnabled } from "@/lib/config";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { findAccountDomains } from "@/lib/sender";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
 import { serialize } from "@/lib/serialize";
+import { getUsage } from "@/lib/usage";
 import Contact from "@/models/Contact";
 import Newsletter from "@/models/Newsletter";
 
@@ -19,10 +21,11 @@ export const metadata = { title: "Settings" };
 export default async function SettingsPage() {
 	const { user, account, selected } = await getSelectedNewsletter();
 	if (!selected) redirect(ADD_NEWSLETTER_PATH);
-	const [newsletter, domains, cleanupTotals] = await Promise.all([
+	const [newsletter, domains, cleanupTotals, usage] = await Promise.all([
 		Newsletter.findOne(scoped(account, { _id: selected._id })).lean(),
 		findAccountDomains(account._id),
 		getCleanupTotals(account, selected._id),
+		getUsage(account),
 	]);
 
 	return (
@@ -36,6 +39,7 @@ export default async function SettingsPage() {
 				isSendingEnabled={isSendingEnabled()}
 				testEmail={user.email}
 				cleanupTotals={cleanupTotals}
+				welcomePause={usage.welcomeEmailsPaused ? getWelcomePauseNotice(usage) : null}
 			/>
 		</LayoutNarrow>
 	);

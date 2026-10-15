@@ -113,14 +113,20 @@ describe("counting", () => {
 		assert.equal((await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean()).status, "sent");
 	});
 
-	test("welcome emails count, and keep going over the limit, like signups", async () => {
+	test("welcome emails count, and stop at the limit while signups keep coming in", async () => {
 		const user = await setup("welcome@example.com", { emails: 1, subscribers: 100, contacts: 0, welcome: true });
-		await setUsage(user, 1);
-		const response = await signup(user, "new-reader@example.org");
-		assert.equal(response.status, 201);
-		const welcome = await m.Message.findOne({ accountId: user.accountId, kind: "welcome" }).lean();
-		assert.equal(welcome.status, "sent");
-		assert.equal((await usage(user)).emailsSent, 2, "over the limit, and counted");
+		assert.equal((await signup(user, "first-reader@example.org")).status, 201);
+		const first = await m.Message.findOne({ accountId: user.accountId, kind: "welcome", email: "first-reader@example.org" }).lean();
+		assert.equal(first.status, "sent");
+		assert.equal((await usage(user)).emailsSent, 1, "counted");
+
+		const before = sesEmails.length;
+		assert.equal((await signup(user, "new-reader@example.org")).status, 201);
+		const welcome = await m.Message.findOne({ accountId: user.accountId, kind: "welcome", email: "new-reader@example.org" }).lean();
+		assert.deepEqual([welcome.status, welcome.error], ["skipped", "This month's emails are used up"]);
+		assert.equal(sesEmails.length, before);
+		assert.equal((await usage(user)).emailsSent, 1, "never past the limit");
+		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId, status: "active" }), 2, "the signup went through");
 	});
 });
 

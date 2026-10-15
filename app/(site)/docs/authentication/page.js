@@ -121,8 +121,10 @@ export default function AuthenticationPage() {
 				{isCloud() ? (
 					<p>
 						Everything but the billing endpoints needs an active plan; without one the answer is <Code>402 subscription_required</Code>.
-						Signups keep coming in over the plan&apos;s limits. Campaign sends stop with <Code>plan_limit_emails</Code> or{" "}
-						<Code>plan_limit_subscribers</Code>.
+						Signups and confirmation emails keep coming in over the plan&apos;s limits. Campaign sends stop with{" "}
+						<Code>plan_limit_emails</Code> or <Code>plan_limit_subscribers</Code>. Welcome emails count toward the month&apos;s emails
+						like issues: once they&apos;re used up, new subscribers get none until the count starts over or the plan grows, and don&apos;t
+						get one later. <Code>usage.welcomeEmailsPaused</Code> in <Code>get_billing</Code> and <Code>get_overview</Code> says so.
 					</p>
 				) : (
 					<p>
