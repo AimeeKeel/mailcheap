@@ -59,7 +59,7 @@ MailCheap is the rest of what a newsletter needs, in one Next.js app: an editor,
 - A public archive: issue pages, author page, share images, sitemap. On a subdomain of your own if you want.
 - Overview with subscribers over time, emails per hour, and delivery, open, click, bounce and complaint rates.
 - Campaign reports by mailbox provider (Gmail, Outlook, Yahoo, iCloud...).
-- A domains page with each domain's DKIM and return path status and the DNS records to add.
+- A domains page with each domain's DKIM, return path and DMARC status and the DNS records to add.
 
 **For agents**
 

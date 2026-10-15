@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { decryptSecret } from "../lib/credentials.js";
 import { activate, as, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 import { POSTSHIBA, POSTSHIBA_ENV, createFakePostshiba } from "./helpers/postshiba.mjs";
+import { cnames, txts } from "./stubs/dns-check.mjs";
 import { published } from "./stubs/qstash.mjs";
 import { dnsRecords } from "./stubs/dns-broker.mjs";
 
@@ -106,6 +107,8 @@ before(async () => {
 		campaigns: await import("../app/(app)/campaigns/actions.js"),
 		contacts: await import("../app/(app)/contacts/actions.js"),
 		domains: await import("../app/(app)/domains/actions.js"),
+		domainsPage: await import("../app/(app)/domains/page.js"),
+		dashboard: await import("../lib/actions/dashboard.js"),
 		admin: await import("../app/admin/actions.js"),
 		sending: await import("../lib/sending.js"),
 		sendBatchRoute: await import("../app/api/jobs/send-batch/route.js"),
@@ -267,6 +270,93 @@ describe("PostShiba domains", () => {
 		await m.Domain.updateOne({ accountId: user.accountId, _id: domain._id }, { $unset: { checkedAt: 1 } });
 		await as(user, () => m.domains.checkDomainAction(String(domain._id)));
 		assert.deepEqual(await as(user, () => m.campaigns.sendTestCampaign(id)), { ok: true });
+	});
+
+	test("every check looks up DMARC on the domain, else its parent, and a lookup that fails keeps the last answer", async () => {
+		const user = await signIn("ps-dmarc@example.com");
+		await activate(user);
+		assert.deepEqual(await as(user, () => m.domains.addDomainAction(null, form({ domain: "mail.dmarc-parent.dev" }))), { ok: true, domain: "mail.dmarc-parent.dev" });
+		const { _id } = await m.Domain.findOne({ accountId: user.accountId }).lean();
+		async function check() {
+			const { output } = await as(user, () => m.dashboard.runDashboardAction("check_domain", { id: String(_id) }));
+			return output.setup.find(({ key }) => key === "dmarc").status;
+		}
+
+		assert.equal(await check(), "Recommended");
+		txts.set("_dmarc.dmarc-parent.dev", [["v=DMARC1; p=quarantine; ", "rua=mailto:reports@dmarc-parent.dev"]]);
+		assert.equal(await check(), "Found on dmarc-parent.dev", "the parent's record covers its subdomains");
+		txts.set("_dmarc.mail.dmarc-parent.dev", [["v=DMARC1; p=none;"], ["v=DMARC1; p=reject;"]]);
+		assert.equal(await check(), "More than one record, keep one", "the domain's own records come first");
+		txts.set("_dmarc.mail.dmarc-parent.dev", [["v=DMARC1; p=none;"]]);
+		assert.equal(await check(), "Found");
+		txts.set("_dmarc.mail.dmarc-parent.dev", null);
+		assert.equal(await check(), "Found", "the resolver failed: nothing changes");
+		txts.delete("_dmarc.mail.dmarc-parent.dev");
+		txts.delete("_dmarc.dmarc-parent.dev");
+		assert.equal(await check(), "Recommended");
+		assert.deepEqual((await m.Domain.findOne({ accountId: user.accountId, _id }).lean()).dmarc, { status: "missing" });
+	});
+
+	test("a return path PostShiba verifies after a check shows on the Domains page without another, and Check now still verifies", async () => {
+		const user = await signIn("ps-refresh@example.com");
+		await activate(user);
+		assert.deepEqual(await as(user, () => m.domains.addDomainAction(null, form({ domain: "refresh.dev" }))), { ok: true, domain: "refresh.dev" });
+		const { _id, providerDomainId } = await m.Domain.findOne({ accountId: user.accountId }).lean();
+		const atPostshiba = fake.state.domains.get(providerDomainId);
+		const verifyCalls = () => fake.callsTo("POST", new RegExp(`/sending_domains/${providerDomainId}/verify$`)).length;
+		const reads = () => fake.callsTo("GET", new RegExp(`/sending_domains/${providerDomainId}$`)).length;
+		const stored = () => m.Domain.findOne({ accountId: user.accountId, _id }).lean();
+		const checkedLongAgo = () => m.Domain.updateOne({ accountId: user.accountId, _id }, { $set: { checkedAt: new Date(Date.now() - 120_000) } });
+		const openPage = () => as(user, () => m.domainsPage.default());
+		async function returnPathStatus() {
+			const { output } = await as(user, () => m.dashboard.runDashboardAction("list_domains"));
+			return output.domains[0].setup.find(({ key }) => key === "mail-from").status;
+		}
+
+		// PostShiba sends once DKIM is in: the return path can verify at a later round of its own checks.
+		Object.assign(atPostshiba, { dkim_status: "verified", sending_allowed: true });
+		await checkedLongAgo();
+		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(_id))), { ok: true, verified: true, archiveHostVerified: false });
+		assert.equal(await returnPathStatus(), "Waiting for DNS");
+		atPostshiba.return_path_status = "verified";
+
+		const before = { verifyCalls: verifyCalls(), reads: reads() };
+		await openPage();
+		assert.deepEqual([reads(), await returnPathStatus()], [before.reads, "Waiting for DNS"], "checked a moment ago: not read again yet");
+		await checkedLongAgo();
+		await openPage();
+		assert.equal(await returnPathStatus(), "Found");
+		assert.deepEqual([verifyCalls(), reads()], [before.verifyCalls, before.reads + 1], "a read, outside the verification budget");
+		assert.ok((await stored()).readAt);
+		await openPage();
+		assert.equal(reads(), before.reads + 1, "read a moment ago: not again");
+
+		await as(user, () => m.domains.checkDomainAction(String(_id)));
+		assert.equal(verifyCalls(), before.verifyCalls + 1, "the page's reads don't hold Check now back");
+	});
+
+	test("the Domains page leaves a domain alone once PostShiba verified it and DMARC is found, and the archive to Check now", async () => {
+		const user = await signIn("ps-settled@example.com");
+		await activate(user);
+		assert.deepEqual(await as(user, () => m.domains.addDomainAction(null, form({ domain: "settled.dev" }))), { ok: true, domain: "settled.dev" });
+		const { _id, providerDomainId } = await m.Domain.findOne({ accountId: user.accountId }).lean();
+		const reads = () => fake.callsTo("GET", new RegExp(`/sending_domains/${providerDomainId}$`)).length;
+		const stored = () => m.Domain.findOne({ accountId: user.accountId, _id }).lean();
+		const longAgo = new Date(Date.now() - 120_000);
+		fake.verifyDomain("settled.dev");
+		txts.set("_dmarc.settled.dev", [["v=DMARC1; p=none;"]]);
+		cnames.set("news.settled.dev", ["cname.mailcheap.ai"]);
+		await m.Domain.updateOne({ accountId: user.accountId, _id }, { $set: { checkedAt: longAgo } });
+		await as(user, () => m.domainsPage.default());
+		const read = await stored();
+		assert.deepEqual([read.verified, read.mailFromStatus, read.dmarc.status], [true, "SUCCESS", "found"]);
+		assert.equal(read.archiveHostVerified, false, "moving the archive refreshes its cached pages, which can't happen while a page renders");
+
+		const readsBefore = reads();
+		await m.Domain.updateOne({ accountId: user.accountId, _id }, { $set: { checkedAt: longAgo, readAt: longAgo } });
+		await as(user, () => m.domainsPage.default());
+		assert.equal(reads(), readsBefore);
+		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(_id))), { ok: true, verified: true, archiveHostVerified: true });
 	});
 });
 

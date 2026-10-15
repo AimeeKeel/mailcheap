@@ -18,7 +18,11 @@ const domainSchema = new mongoose.Schema(
 		mailFromStatus: { type: String, default: "PENDING" },
 		archiveHostVerified: { type: Boolean, default: false },
 		records: [{ _id: false, purpose: String, type: { type: String }, name: String, value: String }],
+		// The DMARC record found on the domain, or on the closest parent with one (lib/dmarc-rules.js).
+		dmarc: { status: { type: String }, host: { type: String } },
+		// The last check, which PostShiba's verification budget counts from, and the Domains page's last read, which doesn't.
 		checkedAt: { type: Date },
+		readAt: { type: Date },
 		verifiedAt: { type: Date },
 	},
 	{ timestamps: true }

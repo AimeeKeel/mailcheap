@@ -12,6 +12,7 @@ import { scoped } from "@/lib/account-scope";
 import { hasActiveSubscription } from "@/lib/account-state";
 import { getArchiveCnameTarget, getSharedDomain } from "@/lib/config";
 import { getDomainSetup, getDomainSummary } from "@/lib/domain-records";
+import { refreshDomains } from "@/lib/domains";
 import { getEmailProvider } from "@/lib/email-provider";
 import { rootDomain } from "@/lib/favicon";
 import {
@@ -30,23 +31,26 @@ import Newsletter from "@/models/Newsletter";
 
 export const metadata = { title: "Domains" };
 
-// The account's domains, which any of its newsletters can send from. Statuses are as of the last check: "Check now"
-// asks the email provider and DNS again.
+// The account's domains, which any of its newsletters can send from. "Check now" asks the email provider and DNS again.
 export default async function DomainsPage() {
 	const { account, selected } = await getSelectedNewsletter();
 	const [stored, saved] = await Promise.all([
 		Domain.find(scoped(account)).sort({ createdAt: 1 }).lean(),
 		Newsletter.find(scoped(account)).sort({ createdAt: 1, _id: 1 }).select({ name: 1, slug: 1, fromEmail: 1, sharedSender: 1 }).lean(),
 	]);
-	const domains = stored.map((domain) => withActiveProvider(domain));
 	const sharedDomain = getSharedDomain();
 	const hasPlan = hasActiveSubscription(account);
-	// A shared address still being set up is looked at again, at most once a minute. Without a plan there's none yet.
-	const newsletters = await Promise.all(
-		saved.map((newsletter) =>
-			!hasPlan || isSharedSenderReady(newsletter, { sharedDomain }) ? newsletter : refreshSharedSender(account, newsletter)
-		)
-	);
+	// A domain or a shared address still being set up is looked at again, at most once a minute. Without a plan
+	// there's no shared address yet, and domains wait.
+	const [refreshed, newsletters] = await Promise.all([
+		hasPlan ? refreshDomains(account, stored) : stored,
+		Promise.all(
+			saved.map((newsletter) =>
+				!hasPlan || isSharedSenderReady(newsletter, { sharedDomain }) ? newsletter : refreshSharedSender(account, newsletter)
+			)
+		),
+	]);
+	const domains = refreshed.map((domain) => withActiveProvider(domain));
 	const cnameTarget = getArchiveCnameTarget();
 	const isProviderSetUp = getEmailProvider().isConfigured();
 	const hasVerifiedDomain = domains.some(({ verified }) => verified);
