@@ -160,24 +160,23 @@
   }
 }
 
-/* Dashboard: toasts stack above the get-started panel, whose height ShellGetStarted keeps in
-   --get-started-height, and above a save bar. Sonner adds its own rules at runtime, hence html in front. */
+/* Dashboard: toasts stack 0.75rem above what floats in the bottom right corner (its variables are further down), from
+   where Sonner puts them: 24px from the bottom, 16px up to 600px wide. Sonner adds its own rules at runtime, hence html
+   in front. */
 html [data-sonner-toaster][data-y-position="bottom"] {
-  margin-bottom: var(--save-bar-height, 0);
-  translate: 0 calc(-1 * (var(--get-started-height) + 0.75rem));
+  --toaster-bottom: 24px;
+  translate: 0 calc(-1 * max(0px, max(var(--chat-top), var(--get-started-top), var(--save-bar-top)) + 0.75rem - var(--toaster-bottom)));
   transition:
     transform 400ms ease,
     translate 200ms cubic-bezier(0.23, 1, 0.32, 1);
 
+  @media (width <= 600px) {
+    --toaster-bottom: 16px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     transition: none;
   }
-}
-
-/* A save bar holds the bottom of the screen, even at the end of the page (FormNewsletter's): the toasts and the
-   get-started panel sit above it. */
-html:has([data-save-bar]) {
-  --save-bar-height: 3.75rem;
 }
 
 /* An account without a plan has BannerPlan across the top of the dashboard: what sticks to the top of the screen
@@ -208,16 +207,56 @@ html:has([data-wide-page]) {
   }
 }
 
-/* MailCheap Cloud's support chat keeps its button in the bottom right corner of the dashboard, 54px wide and 14px to
-   24px from the edge, wherever SupportChat (components/SiteExtensions.jsx) renders [data-support-chat]: the get-started
-   panel and the save bar's buttons stay to its left. */
+/* The dashboard's bottom right corner. Where SupportChat (components/SiteExtensions.jsx) renders [data-support-chat],
+   MailCheap Cloud's support chat keeps its button there, 54px wide: 14px from the edges under 480px wide, 24px from the
+   right and 20px from the bottom above. The get-started pill and a save bar, both 40px high, sit on its center line;
+   the pill ends 12px to its left, --chat-clearance from the edge, and so does a save bar whose column reaches that far.
+   Without the chat, the pill takes the corner. */
+@property --chat-clearance {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 html {
-  --chat-button-width: 0px;
+  --dock-right: 1rem;
+  --dock-bottom: 1rem;
+  --chat-top: 0px;
+  --get-started-top: 0px;
+  --save-bar-top: 0px;
+
+  @media (width >= 40rem) {
+    --dock-right: 1.5rem;
+    --dock-bottom: 1.5rem;
+  }
 }
 
 html:has([data-support-chat]) {
-  --chat-button-width: 4.25rem;
+  --chat-right: 14px;
+  --chat-bottom: 14px;
+  --chat-clearance: calc(var(--chat-right) + 54px + 12px);
+  --chat-top: calc(var(--chat-bottom) + 54px);
+  --dock-right: var(--chat-clearance);
+  --dock-bottom: calc(var(--chat-bottom) + 7px);
+
+  @media (width >= 480px) {
+    --chat-right: 24px;
+    --chat-bottom: 20px;
+  }
 }
+
+/* ShellGetStarted renders [data-get-started] while the pill or the panel shows, BarSave [data-save-bar][data-shown]
+   while a save bar does: the pill steps aside for it (the save-bar variant). */
+html:has([data-get-started]) {
+  --get-started-top: calc(var(--dock-bottom) + var(--get-started-height, 0px));
+}
+
+html:has([data-save-bar][data-shown]) {
+  --get-started-top: 0px;
+  --save-bar-top: calc(var(--dock-bottom) + 2.5rem);
+}
+
+@custom-variant save-bar (html:has([data-save-bar][data-shown]) &);
 
 @keyframes enter {
   from {

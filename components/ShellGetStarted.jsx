@@ -11,7 +11,8 @@ import { useIsClient } from "@/lib/use-is-client";
 import { cn } from "@/lib/utils";
 
 // The get-started panel at the bottom right of every dashboard page, open or folded into a pill, around the
-// steps PanelGetStarted renders on the server. Closing it hides it for good, on every device.
+// steps PanelGetStarted renders on the server: left of the support chat's button, and out of the way while a save
+// bar shows (app/globals.css). Closing it hides it for good, on every device.
 export default function ShellGetStarted({ done, total, isFinished, children }) {
 	const isClient = useIsClient();
 	if (!isClient) return null;
@@ -82,7 +83,10 @@ function Dock({ done, total, isFinished, children }) {
 	}
 
 	return (
-		<div className="pointer-events-none fixed inset-x-4 bottom-4 z-40 mr-(--chat-button-width) mb-(--save-bar-height) flex justify-end sm:inset-x-auto sm:right-6 sm:bottom-6">
+		<div
+			data-get-started={isClosed ? undefined : ""}
+			className="pointer-events-none fixed right-(--dock-right) bottom-(--dock-bottom) left-4 z-40 flex origin-bottom-right justify-end transition-[opacity,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none sm:left-auto save-bar:invisible save-bar:scale-95 save-bar:opacity-0"
+		>
 			<button
 				ref={pillRef}
 				type="button"

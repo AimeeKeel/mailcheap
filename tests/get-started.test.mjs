@@ -86,7 +86,7 @@ async function doneSteps(user) {
 }
 
 describe("the steps", () => {
-	test("a new account has all five to do, the domain one optional, and sees the list", async () => {
+	test("a new account has all five to do, the domain one optional and the AI agent last, and sees the list", async () => {
 		const user = await customer("gs-new@example.com");
 		const { steps, draftId, isFinished } = await check(user);
 		assert.deepEqual(
@@ -94,9 +94,9 @@ describe("the steps", () => {
 			[
 				["write", false, false],
 				["subscribers", false, false],
-				["agent", false, false],
 				["domain", false, true],
 				["send", false, false],
+				["agent", false, false],
 			]
 		);
 		assert.equal(draftId, null);
