@@ -13,9 +13,11 @@ export default function PreviewEmail({
 	subject,
 	previewText,
 	fit = "fill",
+	defaultDevice = "desktop",
+	onDeviceChange,
 	className,
 }) {
-	const [device, setDevice] = useState("desktop");
+	const [device, setDevice] = useState(defaultDevice);
 	const [contentHeight, setContentHeight] = useState(null);
 	const frameRef = useRef(null);
 	const isContentFit = fit === "content";
@@ -43,6 +45,7 @@ export default function PreviewEmail({
 							aria-pressed={device === id}
 							onClick={() => {
 								setDevice(id);
+								onDeviceChange?.(id);
 								if (isContentFit) setContentHeight(null);
 							}}
 							className={cn(
@@ -88,7 +91,7 @@ export default function PreviewEmail({
 					style={isContentFit ? { height: contentHeight ?? 640 } : undefined}
 					className={cn(
 						"max-w-full rounded-lg bg-white shadow-border transition-[width] duration-300 ease-[cubic-bezier(0.2,0,0,1)]",
-						isContentFit ? "min-h-96" : "h-[640px] lg:h-full",
+						isContentFit ? "min-h-96" : "h-full",
 						device === "mobile" ? "w-[375px]" : "w-full max-w-[760px]"
 					)}
 				/>

@@ -190,6 +190,17 @@ html:has([data-plan-bar]) {
   --plan-bar-height: 2.5rem;
 }
 
+/* Dashboard pages are 72rem wide at most, padding included. The campaign editor (FormCampaign) docks its preview
+   beside the writing column on wide screens: 42rem to write, a 1rem gap, 42.5rem for an email at its 640px width
+   and the page's 5rem of padding. */
+html {
+  --page-width: 72rem;
+}
+
+html:has([data-wide-page]) {
+  --page-width: 90.5rem;
+}
+
 /* BannerBlocked's reason takes two lines on phones. */
 @media (width < 48rem) {
   html:has([data-blocked-bar]) {
