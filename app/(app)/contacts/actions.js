@@ -35,6 +35,12 @@ export async function setContactStatus(id, status) {
 	return failure ? toFormError(failure) : { ok: true };
 }
 
+export async function deleteContact(id) {
+	const { failure } = await runDashboardAction("delete_contact", { id: String(id) });
+	revalidatePath("/contacts");
+	return failure ? toFormError(failure) : { ok: true };
+}
+
 // A link to the CSV with the list's filters, valid for an hour.
 export async function exportContacts({ newsletterId, status, query } = {}) {
 	const { output, failure } = await runDashboardAction("export_contacts", {

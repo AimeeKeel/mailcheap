@@ -220,6 +220,8 @@ describe("isolation through keys", () => {
 			["GET", `/contacts/${bobContact._id}`],
 			["GET", `/contacts/${encodeURIComponent(bobContact.email)}`],
 			["PATCH", `/contacts/${bobContact._id}`, { status: "unsubscribed" }],
+			["DELETE", `/contacts/${bobContact._id}`],
+			["DELETE", `/contacts/${encodeURIComponent(bobContact.email)}?newsletter=${bob.slug}`],
 			["GET", `/newsletters/${bob.slug}`],
 			["PATCH", `/newsletters/${bob.newsletterId}`, { name: "Taken" }],
 			["GET", `/contacts?newsletter=${bob.slug}`],

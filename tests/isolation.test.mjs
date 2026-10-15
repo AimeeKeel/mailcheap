@@ -179,7 +179,7 @@ describe("server actions refuse another account's data", () => {
 		assert.deepEqual(await snapshot(), before);
 	});
 
-	test("contacts: status changes", async () => {
+	test("contacts: status changes and deleting", async () => {
 		const before = await snapshot();
 		assert.deepEqual(await as(alice, () => m.contacts.setContactStatus(bobData.readerId, "unsubscribed")), {
 			error: "Contact not found",
@@ -187,6 +187,7 @@ describe("server actions refuse another account's data", () => {
 		assert.deepEqual(await as(alice, () => m.contacts.setContactStatus(bobData.dormantId, "active")), {
 			error: "Contact not found",
 		});
+		assert.deepEqual(await as(alice, () => m.contacts.deleteContact(bobData.readerId)), { error: "Contact not found" });
 		assert.deepEqual(await snapshot(), before);
 	});
 

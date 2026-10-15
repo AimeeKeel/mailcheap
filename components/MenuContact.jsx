@@ -1,20 +1,39 @@
 "use client";
 
-import { useTransition } from "react";
-import { MoreHorizontal, UserCheck, UserX } from "lucide-react";
-import { setContactStatus } from "@/app/(app)/contacts/actions";
+import { useState, useTransition } from "react";
+import { Loader2, MoreHorizontal, Trash2, UserCheck, UserX } from "lucide-react";
+import { deleteContact, setContactStatus } from "@/app/(app)/contacts/actions";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/lib/toast";
 
-export default function MenuContact({ id, status }) {
+const SUBSCRIBED_STATUSES = ["active", "dormant"];
+// Deleted, they leave their status behind (lib/contacts.js).
+const AFTER_DELETE = {
+	unsubscribed: "They unsubscribed, so adding them again won't email them.",
+	bounced: "Their address bounced, so adding it again won't email it.",
+	complained: "They marked an email as spam, so adding them again won't email them.",
+};
+
+export default function MenuContact({ id, email, status }) {
+	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [isPending, startTransition] = useTransition();
-	if (!["active", "dormant"].includes(status)) return null;
+	const isSubscribed = SUBSCRIBED_STATUSES.includes(status);
 
 	function update(nextStatus) {
 		startTransition(async () => {
@@ -24,24 +43,77 @@ export default function MenuContact({ id, status }) {
 	}
 
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon-sm" aria-label="Actions" disabled={isPending}>
-					<MoreHorizontal />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				{status === "dormant" && (
-					<DropdownMenuItem onSelect={() => update("active")}>
-						<UserCheck />
-						Reactivate
+		<>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						aria-label={`Actions for ${email}`}
+						disabled={isPending}
+						className="text-muted-foreground hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
+					>
+						{isPending ? <Loader2 className="animate-spin" /> : <MoreHorizontal />}
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="min-w-44">
+					{status === "dormant" && (
+						<DropdownMenuItem onSelect={() => update("active")}>
+							<UserCheck />
+							Reactivate
+						</DropdownMenuItem>
+					)}
+					{isSubscribed && (
+						<>
+							<DropdownMenuItem variant="destructive" onSelect={() => update("unsubscribed")}>
+								<UserX />
+								Unsubscribe
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+						</>
+					)}
+					<DropdownMenuItem variant="destructive" onSelect={() => setIsDeleteOpen(true)}>
+						<Trash2 />
+						Delete contact
 					</DropdownMenuItem>
-				)}
-				<DropdownMenuItem variant="destructive" onSelect={() => update("unsubscribed")}>
-					<UserX />
-					Unsubscribe
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
+				</DropdownMenuContent>
+			</DropdownMenu>
+			<DialogDeleteContact id={id} email={email} status={status} isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen} />
+		</>
+	);
+}
+
+function DialogDeleteContact({ id, email, status, isOpen, onOpenChange }) {
+	const [isDeleting, startDeleting] = useTransition();
+
+	function remove() {
+		startDeleting(async () => {
+			const result = await deleteContact(id);
+			if (result?.error) return void toast.error(result.error);
+			onOpenChange(false);
+			toast.success("Contact deleted");
+		});
+	}
+
+	return (
+		<Dialog open={isOpen} onOpenChange={onOpenChange}>
+			<DialogContent className="sm:max-w-sm">
+				<DialogHeader>
+					<DialogTitle>Delete this contact?</DialogTitle>
+					<DialogDescription>
+						<span className="font-medium wrap-anywhere text-foreground">{email}</span> leaves your contacts.{" "}
+						{AFTER_DELETE[status] ?? "They can be added again later."}
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<DialogClose asChild>
+						<Button variant="outline">Cancel</Button>
+					</DialogClose>
+					<Button variant="destructive" onClick={remove} disabled={isDeleting} className="min-w-20">
+						{isDeleting ? <Loader2 className="animate-spin" /> : "Delete"}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }

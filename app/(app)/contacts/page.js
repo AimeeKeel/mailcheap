@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import AvatarContact from "@/components/AvatarContact";
 import BadgeStatus from "@/components/BadgeStatus";
@@ -63,6 +64,9 @@ export default async function ContactsPage({ searchParams }) {
 		if (next.get("page") === "1") next.delete("page");
 		return `/contacts${next.size ? `?${next}` : ""}`;
 	}
+
+	// Deleting the last page's last contact leaves the page past the end.
+	if (page > pageCount) redirect(href({ page: pageCount }));
 
 	return (
 		<>
@@ -154,7 +158,7 @@ export default async function ContactsPage({ searchParams }) {
 											{formatDate(contact.subscribedAt) ?? <TextEmpty />}
 										</TableCell>
 										<TableCell className="pr-2 text-right">
-											<MenuContact id={contact._id.toString()} status={contact.status} />
+											<MenuContact id={contact._id.toString()} email={contact.email} status={contact.status} />
 										</TableCell>
 									</TableRow>
 								))}

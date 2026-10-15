@@ -223,6 +223,8 @@ describe("scoping", () => {
 		assert.deepEqual(theirs.structuredContent.contacts, []);
 		const update = await callTool(stranger.fullKey, "update_contact_status", { id: "reader@example.org", status: "unsubscribed" });
 		assert.equal(parseError(update).code, "not_found");
+		const reader = await m.Contact.findOne({ accountId: owner.accountId, email: "reader@example.org" }).lean();
+		assert.equal(parseError(await callTool(stranger.fullKey, "delete_contact", { id: String(reader._id) })).code, "not_found");
 		assert.equal((await m.Contact.findOne({ accountId: owner.accountId, email: "reader@example.org" }).lean()).status, "active");
 	});
 });

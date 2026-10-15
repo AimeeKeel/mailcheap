@@ -107,8 +107,8 @@ function connectApp(user, clientId = "app-client") {
 }
 
 // A paying customer with one of everything: Google as a sign-in method, a newsletter on the shared address, contacts
-// from an import, a campaign with a test sent, a verified domain, an image on S3, an API key, a connected app, problem
-// events, suppressions and an alert.
+// from an import and one deleted after it unsubscribed, a campaign with a test sent, a verified domain, an image on S3,
+// an API key, a connected app, problem events, suppressions and an alert.
 async function customer(email, slug) {
 	const user = await signIn(email);
 	await collection("auth_accounts").insertOne({ userId: user.userId, providerId: "google", accountId: `google-${slug}`, createdAt: new Date(), updatedAt: new Date() });
@@ -121,9 +121,12 @@ async function customer(email, slug) {
 			rows: [
 				{ email: `reader@${slug}.org`, status: "active" },
 				{ email: `other@${slug}.org`, status: "active" },
+				{ email: `left@${slug}.org`, status: "unsubscribed" },
 			],
 		})
 	);
+	const left = await m.Contact.findOne({ accountId: user.accountId, email: `left@${slug}.org` }).lean();
+	assert.deepEqual(await as(user, () => m.contacts.deleteContact(String(left._id))), { ok: true });
 	user.campaignId = await createCampaign(user);
 	assert.deepEqual(await as(user, () => m.campaigns.sendTestCampaign(user.campaignId)), { ok: true });
 	user.domain = `${slug}.dev`;
@@ -138,7 +141,7 @@ async function customer(email, slug) {
 	return user;
 }
 
-const ACCOUNT_MODELS = ["Newsletter", "Contact", "ContactImport", "Campaign", "Message", "Event", "Suppression", "Upload", "Domain", "ApiKey", "Alert"];
+const ACCOUNT_MODELS = ["Newsletter", "Contact", "ContactImport", "DeletedContact", "Campaign", "Message", "Event", "Suppression", "Upload", "Domain", "ApiKey", "Alert"];
 
 async function countData(user) {
 	const counts = {};
@@ -179,6 +182,7 @@ before(async () => {
 		Campaign: (await import("../models/Campaign.js")).default,
 		Contact: (await import("../models/Contact.js")).default,
 		ContactImport: (await import("../models/ContactImport.js")).default,
+		DeletedContact: (await import("../models/DeletedContact.js")).default,
 		DeletionRecord: (await import("../models/DeletionRecord.js")).default,
 		Domain: (await import("../models/Domain.js")).default,
 		Event: (await import("../models/Event.js")).default,

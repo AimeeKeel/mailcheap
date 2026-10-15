@@ -46,7 +46,7 @@ MailCheap is the rest of what a newsletter needs, in one Next.js app: an editor,
 
 **Keep it healthy**
 
-- Bounce and complaint handling, and a suppression list per account.
+- Bounce and complaint handling, and a suppression list per account. A deleted contact who unsubscribed, bounced or complained leaves a hash of the address behind, so adding it back to the newsletter never emails it.
 - A send pauses past 2% hard bounces (at least 5) or 0.08% complaints (at least 2), and its owner gets an email and can resume it. One complaint alone never stops anything.
 - Clear abuse blocks the whole account until an admin unblocks it: a send, a first send's slice or the last 7 days past 5% hard bounces (at least 10) or 0.3% complaints (at least 3), a spam trap hit, or the email provider stopping the account. Nothing goes out while it's blocked, welcome emails included, and the tracked links in its emails show a page saying they're disabled instead of redirecting; unsubscribe and confirmation links keep working.
 - On MailCheap Cloud, a new account's campaigns go out over 24, 16 and 12 hours, then 8, for its first 30 days. One account per inbox (jane.doe+2@gmail.com is jane.doe@gmail.com), no throwaway inboxes, and 3 new accounts a day per IP address.
