@@ -180,7 +180,7 @@ test("a free plan opens what a paid one does: its limits, a tenant, the shared a
 	assert.deepEqual([account.comp.plan, account.comp.by, account.comp.until], ["scale", "admin@example.com", undefined]);
 	assert.equal(account.subscriptionStatus, undefined, "nothing on Stripe");
 	assert.equal(m.state.hasActiveSubscription(account), true);
-	assert.deepEqual(m.plans.getAccountLimits(account), { emails: 500_000, subscribers: 100_000 });
+	assert.deepEqual(m.plans.getAccountLimits(account), { emails: 500_000, subscribers: 250_000 });
 	assert.deepEqual([account.usage.emailsSent, account.usage.paidThrough], [0, null]);
 	assert.equal(account.usage.periodStart.getTime(), account.comp.grantedAt.getTime(), "the month starts with the plan");
 	assert.equal(account.ses.tenantName, `mc-${user.accountId}`);
@@ -197,7 +197,7 @@ test("a free plan opens what a paid one does: its limits, a tenant, the shared a
 		{ status: "active", isActive: true, currentPeriodEnd: null }
 	);
 	assert.deepEqual(billing.body.freePlan, { id: "scale", name: "Scale", grantedAt: account.comp.grantedAt.toISOString(), until: null });
-	assert.deepEqual([billing.body.usage.emailsLimit, billing.body.usage.subscribersLimit], [500_000, 100_000]);
+	assert.deepEqual([billing.body.usage.emailsLimit, billing.body.usage.subscribersLimit], [500_000, 250_000]);
 	const tool = await callTool(key, "get_billing");
 	assert.deepEqual(tool.structuredContent.freePlan, billing.body.freePlan);
 	assert.deepEqual(tool.structuredContent.plan, billing.body.plan);
@@ -298,7 +298,7 @@ describe("with Stripe", () => {
 		let account = await load(user);
 		assert.equal(account.subscriptionStatus, "active");
 		assert.equal(m.plans.getAccountPlan(account).id, "growth");
-		assert.deepEqual(m.plans.getAccountLimits(account), { emails: 75_000, subscribers: 15_000 });
+		assert.deepEqual(m.plans.getAccountLimits(account), { emails: 75_000, subscribers: 40_000 });
 		assert.deepEqual(
 			[account.usage.emailsSent, account.usage.periodStart.getTime(), account.usage.paidThrough.getTime()],
 			[0, NOW * 1000, (NOW + 30 * DAY) * 1000],

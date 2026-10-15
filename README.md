@@ -371,10 +371,10 @@ Integration tests (sign-in, isolation, billing, plan limits, admin, sending, dom
 
 | Plan | Monthly | Yearly | Emails per month | Subscribers |
 | --- | --- | --- | --- | --- |
-| Starter | $19 | $190 | 20,000 | 5,000 |
-| Growth | $39 | $390 | 75,000 | 15,000 |
-| Pro | $79 | $790 | 200,000 | 40,000 |
-| Scale | $149 | $1,490 | 500,000 | 100,000 |
+| Starter | $19 | $190 | 20,000 | 10,000 |
+| Growth | $39 | $390 | 75,000 | 40,000 |
+| Pro | $79 | $790 | 200,000 | 100,000 |
+| Scale | $149 | $1,490 | 500,000 | 250,000 |
 
 `lib/plans.js` is the one place these live. Yearly plans get the monthly allowance every month of the paid year. Every email counts toward the month: issues, tests, welcome and confirmation emails. Over a limit, campaigns stop with a clear message and an upgrade link; signups and confirmation emails keep going. Welcome emails take room in the month's emails like issues: once they're used up, each one is skipped (its `Message` says why), the owner gets one email that month, and the dashboard says so next to the welcome email, on the overview and on the billing page. They start again when the month resets or the plan grows; the skipped ones aren't sent later. Admin overrides replace a plan's numbers for one account.
 

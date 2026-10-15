@@ -26,10 +26,10 @@ test("the four plans match the spec: prices, emails a month and subscribers", ()
 	assert.deepEqual(
 		PLANS.map((plan) => [plan.name, getPrice(plan, "month"), getPrice(plan, "year"), plan.emailsPerMonth, plan.subscribers]),
 		[
-			["Starter", 19, 190, 20_000, 5_000],
-			["Growth", 39, 390, 75_000, 15_000],
-			["Pro", 79, 790, 200_000, 40_000],
-			["Scale", 149, 1_490, 500_000, 100_000],
+			["Starter", 19, 190, 20_000, 10_000],
+			["Growth", 39, 390, 75_000, 40_000],
+			["Pro", 79, 790, 200_000, 100_000],
+			["Scale", 149, 1_490, 500_000, 250_000],
 		]
 	);
 });
@@ -50,10 +50,10 @@ test("Stripe lookup keys name the plan and the interval, both ways", () => {
 });
 
 test("an admin's numbers replace the plan's", () => {
-	assert.deepEqual(getAccountLimits({ plan: "pro" }), { emails: 200_000, subscribers: 40_000 });
+	assert.deepEqual(getAccountLimits({ plan: "pro" }), { emails: 200_000, subscribers: 100_000 });
 	assert.deepEqual(getAccountLimits({ plan: "pro", limitOverrides: { emailsPerMonth: 1_000 } }), {
 		emails: 1_000,
-		subscribers: 40_000,
+		subscribers: 100_000,
 	});
 	assert.deepEqual(getAccountLimits({ plan: "starter", limitOverrides: { emailsPerMonth: 0, subscribers: 9 } }), {
 		emails: 0,
@@ -81,7 +81,7 @@ test("a free plan from an admin works like a paid one until its end; a paid plan
 	assert.equal(isOnFreePlan(free), true);
 	assert.equal(getAccountStatus(free), "active");
 	assert.equal(getAccountSendProblem(free), null);
-	assert.deepEqual(getAccountLimits(free), { emails: 500_000, subscribers: 100_000 });
+	assert.deepEqual(getAccountLimits(free), { emails: 500_000, subscribers: 250_000 });
 	assert.deepEqual(getAccountLimits({ ...free, limitOverrides: { subscribers: 7 } }), { emails: 500_000, subscribers: 7 });
 	assert.equal(getAccountStatus({ ...free, status: "paused" }), "blocked");
 	assert.equal(getAccountSendProblem({ ...free, status: "paused" }).code, ERROR_CODES.accountBlocked, "a free plan doesn't lift a block");
@@ -93,7 +93,7 @@ test("a free plan from an admin works like a paid one until its end; a paid plan
 	const paid = { plan: "growth", subscriptionStatus: "active", comp };
 	assert.equal(isOnFreePlan(paid), false);
 	assert.equal(getAccountPlan(paid).id, "growth", "the paid plan is in charge");
-	assert.deepEqual(getAccountLimits(paid), { emails: 75_000, subscribers: 15_000 });
+	assert.deepEqual(getAccountLimits(paid), { emails: 75_000, subscribers: 40_000 });
 
 	const ended = { comp: { ...comp, until: new Date(Date.now() - 1000) } };
 	assert.equal(hasActiveSubscription(ended), false);
@@ -116,7 +116,7 @@ test("every send needs a plan and an account that isn't blocked", () => {
 
 test("a send is blocked when it would pass the month's emails or the account is over its subscribers", () => {
 	const account = { plan: "starter", subscriptionStatus: "active" };
-	const fits = { account, emailsSent: 15_000, queued: 0, recipients: 5_000, activeContacts: 5_000 };
+	const fits = { account, emailsSent: 15_000, queued: 0, recipients: 5_000, activeContacts: 10_000 };
 	assert.equal(getPlanLimitProblem(fits), null, "exactly the emails left, exactly the subscriber limit");
 
 	const tooMany = getPlanLimitProblem({ ...fits, recipients: 5_001 });
@@ -124,9 +124,9 @@ test("a send is blocked when it would pass the month's emails or the account is 
 	assert.equal(tooMany.message, "This send needs 5,001 emails and your plan has 5,000 left this month. Upgrade to send.");
 
 	assert.equal(getPlanLimitProblem({ ...fits, queued: 1 }).code, "plan_limit_emails", "emails still going out count");
-	const overList = getPlanLimitProblem({ ...fits, recipients: 1, activeContacts: 5_001 });
+	const overList = getPlanLimitProblem({ ...fits, recipients: 1, activeContacts: 10_001 });
 	assert.equal(overList.code, ERROR_CODES.planLimitSubscribers);
-	assert.match(overList.message, /5,001 subscribers and your plan allows 5,000/);
+	assert.match(overList.message, /10,001 subscribers and your plan allows 10,000/);
 
 	const overridden = { ...account, limitOverrides: { emailsPerMonth: 30_000 } };
 	assert.equal(getPlanLimitProblem({ ...fits, account: overridden, recipients: 15_000 }), null);

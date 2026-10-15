@@ -98,7 +98,7 @@ describe("/welcome", () => {
 	test("the list sizes follow the plans' subscribers", () => {
 		assert.deepEqual(
 			m.onboarding.LIST_SIZES.map(({ label }) => label),
-			["Not yet", "Under 5,000", "5,000 to 15,000", "15,000 to 40,000", "40,000 to 100,000", "Over 100,000"]
+			["Not yet", "Under 10,000", "10,000 to 40,000", "40,000 to 100,000", "100,000 to 250,000", "Over 250,000"]
 		);
 	});
 });
