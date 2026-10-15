@@ -19,13 +19,20 @@ import { countGlobalSuppressions } from "@/lib/global-suppressions";
 import { isOnFreePlan } from "@/lib/plans";
 import { serialize } from "@/lib/serialize";
 import { cn } from "@/lib/utils";
+import { isObjectIdString } from "@/lib/validation";
 
 export const metadata = { title: "Accounts" };
 
+// ?account=<id>, where the support chat links: that account first and selected, however old it is.
 export default async function AdminPage({ searchParams }) {
 	await requireAdmin();
-	const { postmaster } = await searchParams;
-	const [accounts, undeliverable] = await Promise.all([listAccountsForAdmin(), countGlobalSuppressions()]);
+	const { postmaster, account } = await searchParams;
+	const pinnedId = isObjectIdString(account) ? account : null;
+	const [accounts, pinned, undeliverable] = await Promise.all([
+		listAccountsForAdmin(),
+		pinnedId ? listAccountsForAdmin({ accountId: pinnedId }) : [],
+		countGlobalSuppressions(),
+	]);
 	// Self-hosted, every account counts as paying.
 	const withPlan = accounts.filter(hasActiveSubscription);
 	const onFreePlan = withPlan.filter((account) => isOnFreePlan(account));
@@ -59,7 +66,7 @@ export default async function AdminPage({ searchParams }) {
 					{accounts.length === 0 ? (
 						<StateEmpty icon={Users} title="No accounts yet" />
 					) : (
-						<TableAccounts accounts={serialize(accounts)} />
+						<TableAccounts accounts={serialize([...pinned, ...accounts.filter(({ _id }) => String(_id) !== pinnedId)])} pinnedId={pinnedId} />
 					)}
 				</section>
 

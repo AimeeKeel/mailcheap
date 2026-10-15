@@ -11,7 +11,7 @@ import { getAccountLimits, getAccountPlan, getPlan, hasActiveFreePlan, isOnFreeP
 import { getWarmup } from "@/lib/send-spread";
 import { cn } from "@/lib/utils";
 
-export default function TableAccounts({ accounts }) {
+export default function TableAccounts({ accounts, pinnedId }) {
 	const provider = getEmailProvider();
 	const hasPlans = isCloud();
 	return (
@@ -39,7 +39,7 @@ export default function TableAccounts({ accounts }) {
 						const isSpreading = getWarmup(account) !== null;
 						const blockedBy = isBlocked(account) ? `Blocked by ${BLOCKED_BY[account.pausedBy] ?? "an admin"}` : null;
 						return (
-							<TableRow key={account._id} className="tabular-nums">
+							<TableRow key={account._id} data-state={account._id === pinnedId ? "selected" : undefined} className="tabular-nums">
 								<TableCell className="max-w-0 py-2.5 pl-4 sm:w-1/4">
 									<span className="block truncate font-medium">{account.ownerEmail ?? <TextEmpty />}</span>
 									{blockedBy && (

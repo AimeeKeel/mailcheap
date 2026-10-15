@@ -94,4 +94,11 @@ test("the account list shows each owner, plan, status, usage and creation date, 
 	assert.equal(listed.activeContacts, 1);
 	assert.equal(listed.usage.emailsSent, 0);
 	assert.ok(listed.createdAt instanceof Date);
+
+	const pinned = await m.accounts.listAccountsForAdmin({ accountId: String(admin.accountId) });
+	assert.deepEqual(
+		pinned.map(({ ownerEmail, activeContacts }) => [ownerEmail, activeContacts]),
+		[["ops@example.com", 0]],
+		"one account's own link: it alone, with its owner and contacts"
+	);
 });
