@@ -1,113 +1,109 @@
-# MailCheap
+<p align="center">
+  <a href="https://mailcheap.ai">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
+      <img src="docs/logo.svg" alt="MailCheap" width="64" height="64">
+    </picture>
+  </a>
+</p>
 
-MailCheap is a newsletter app: write an issue, send it to your list, publish it on the web. Self-host it free with your own Amazon SES or PostShiba account, or let us run it on [MailCheap Cloud](https://mailcheap.ai).
+<h1 align="center">MailCheap</h1>
 
-![MailCheap overview](docs/screenshots/overview.webp)
+<p align="center">
+  Newsletters where you pay for the emails you send, not for dormant subscribers.<br>
+  A fraction of the price of beehiiv and the like.
+</p>
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap&project-name=mailcheap&repository-name=mailcheap&env=MONGODB_URI,BETTER_AUTH_SECRET,ADMIN_EMAILS,EMAIL_FROM&envDescription=Database%2C%20signing%20secret%20%2832%2B%20characters%3A%20openssl%20rand%20-base64%2048%29%2C%20your%20email%20to%20sign%20in%20with%2C%20and%20the%20from%20address%20of%20sign-in%20codes.%20Add%20RESEND_API_KEY%2C%20or%20set%20up%20SES%20or%20PostShiba%2C%20so%20the%20codes%20can%20reach%20you.&envLink=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap%23environment-variables)
+<p align="center">
+  <a href="https://mailcheap.ai">Website</a> ·
+  <a href="https://mailcheap.ai/docs">Docs</a> ·
+  <a href="https://mailcheap.ai/signin">Sign up for MailCheap Cloud</a>
+</p>
 
-> [!IMPORTANT]
-> **No support.** Issues are off, and setup questions go unanswered. Fork it, deploy it, make it yours. Or let us run it: [mailcheap.ai](https://mailcheap.ai).
+<p align="center">
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/github/license/marclou/mailcheap?color=blue"></a>
+  <a href="#self-hosting"><img alt="Node.js 22 or later" src="https://img.shields.io/badge/node-22%2B-339933?logo=nodedotjs&logoColor=white"></a>
+  <a href="https://mailcheap.ai/docs/mcp"><img alt="MCP server" src="https://img.shields.io/badge/MCP-server-0a0a0a"></a>
+</p>
 
-## Self-host it free, or let us run it
+![MailCheap's overview: emails sent, delivery, open, click, bounce and complaint rates, and subscribers over the last 30 days](docs/screenshots/overview.webp)
 
-This repository is the whole app: the dashboard, the public archive, the REST API, the MCP server and the docs. MailCheap Cloud runs this same code with `MAILCHEAP_CLOUD=true`, which adds plans and Stripe billing, and our own sending accounts. Its marketing site (the landing, pricing and legal pages) isn't part of the open source. Every change to the app ships to both.
-
-| | Self-hosted | MailCheap Cloud |
-| --- | --- | --- |
-| Price | Free, plus what your provider charges per email | From $19 a month |
-| Sending | Your Amazon SES or PostShiba account | Ours, set up for you |
-| Who signs in | The emails you allow | Anyone who signs up |
-| Limits | None | Emails per month and subscribers, per plan |
-| Setup | About an hour, most of it waiting for DNS and production access | A few minutes |
-
-## Why
-
-Newsletter platforms charge for every subscriber, every month. With your own sending account you pay for the emails you send: 10,000 readers and 4 issues a month is 40,000 emails, about $4 to $6 on Amazon SES.
-
-MailCheap is the rest of what a newsletter needs, in one Next.js app: an editor, a list, signup forms, unsubscribe handling, bounce and complaint handling, stats and a public archive. Your list stays in your database, and everything the dashboard does also works from an AI agent, through a REST API and an MCP server.
+MailCheap is a newsletter app: write an issue, send it to your list, publish it on the web, from the dashboard or from your AI agent. This repository is the whole app. Self-host it with your own Amazon SES or PostShiba account, or use [MailCheap Cloud](https://mailcheap.ai), which runs this same code.
 
 ## Features
 
-**Write and send**
+- **AI agents and the dashboard.** Everything the dashboard does also works from an AI agent through the MCP server, and from code through the REST API, with the same checks and limits. ChatGPT, Claude and Grok Bot connect with OAuth; Claude Code, Codex and Cursor with an API key. MCP marks sending as an action that can't be undone, so agents ask you first.
+- **Write, review, send.** Write in an editor with slash commands, images and boxes, or send Markdown or a complete HTML email through the API and MCP. Review shows what to fix before sending: subject, preview text, unsubscribe link, Gmail's 100 KB clip, postal address, sender. Then send it, schedule it, or start with your most engaged readers and send to more later.
+- **Imports from beehiiv, Substack and Mailchimp.** Their CSV exports import as they are, with each reader's status and signup date, and so do Kit's, MailerLite's, Buttondown's, Ghost's and EmailOctopus's.
+- **A website for each newsletter**, on a free subdomain on MailCheap Cloud (`<slug>.mailcheap.ai`), or on your server: every issue gets a page search engines can find, with a signup form, an author page, share images and a sitemap.
+- **Sending from your own domain**, with the DKIM, return path and DMARC records to add and a check for each. On MailCheap Cloud, a newsletter without a domain sends from its own shared address, `hello@<slug>.mailcheap.ai`.
+- **Deliverability protections**, built in:
+  - warm-up: contacts the account never emailed go out as a 5% slice first, and the rest 3 hours later if the slice's bounces and complaints stay low. On MailCheap Cloud, an account's sends also speed up as it proves clean volume;
+  - list cleanup, on by default: readers who ignored several issues get one "do you still want this?" email, then stop getting issues;
+  - contact cleaning: imports leave out invalid, misspelled (gmial.com), spam trap, role, throwaway and duplicate addresses, domains that can't receive email, and anyone who unsubscribed, bounced or complained before;
+  - spam and bounce limits: a send pauses past 2% hard bounces or 0.08% complaints, and the account is blocked past 5% or 0.3%, or on a spam trap hit;
+  - one-click unsubscribe (RFC 8058) and a signed unsubscribe link in every email, and confirmed opt-in, on by default.
+- **Several newsletters**: up to 3 per account, each with its own contacts, campaigns and website.
+- **Signups and stats**: signup forms and a signup API, welcome emails, open and click tracking that leaves link scanners out, subscribers over time, and reports by inbox provider (Gmail, Outlook, Yahoo, iCloud...).
 
-- Editor with a live email preview, slash commands and boxes. Images are dropped in, pasted, or picked from the ones you uploaded before. Markdown and raw HTML work too.
-- Checks before every send: subject, preview text, unsubscribe link, size under Gmail's 100 KB clip, postal address, verified domain.
-- Test emails, scheduling, and sending in batches through QStash.
-- Send in steps: start with your most engaged readers, then send to more. A first send to contacts never mailed goes out in steps by itself: a 5% slice, then the rest 3 hours later if its bounces and complaints stay low.
-
-**Grow the list**
-
-- A signup form on the archive, and a signup API with API keys.
-- Confirmed opt-in, on by default. Welcome email.
-- CSV import from any platform. It leaves out invalid, misspelled (gmial.com), spam trap, role, throwaway, duplicate and suppressed addresses, and records that your readers agreed. Signups refuse misspellings with a suggestion.
-- Contacts you add by hand are subscribed at once, without a confirmation email, once you tick that they agreed. MailCheap records who ticked it and when.
-- Rate limits on signups, sign-in, unsubscribes, slug changes, the API, and the dashboard's test emails, sends, imports and uploads, on by default. An account's API keys, connected apps and dashboard share its limits, so more keys don't raise them.
-
-**Keep it healthy**
-
-- Bounce and complaint handling, and a suppression list per account. A deleted contact who unsubscribed, bounced or complained leaves a hash of the address behind, so adding it back to the newsletter never emails it.
-- A send pauses past 2% hard bounces (at least 5) or 0.08% complaints (at least 2), and its owner gets an email and can resume it. One complaint alone never stops anything.
-- Clear abuse blocks the whole account until an admin unblocks it: a send, a first send's slice or the last 7 days past 5% hard bounces (at least 10) or 0.3% complaints (at least 3), a spam trap hit, or the email provider stopping the account. Nothing goes out while it's blocked, welcome emails included, and the tracked links in its emails show a page saying they're disabled instead of redirecting; unsubscribe and confirmation links keep working.
-- On MailCheap Cloud, a send goes out at full speed up to what its account has proven: 200 emails, or 2 times its largest recent send with few bounces and complaints, rising to 5 times over its first 30 days. A bigger one goes out over hours, up to 3 days. One account per inbox (jane.doe+2@gmail.com is jane.doe@gmail.com), no throwaway inboxes, and 3 new accounts a day per IP address.
-- One-click unsubscribe (RFC 8058 `List-Unsubscribe` headers) and an unsubscribe page, with signed links.
-- List cleanup, on by default: readers who ignored several issues get one "do you still want this?" email, then stop getting issues.
-- Open and click tracking, with link scanners filtered out.
-
-**Publish and measure**
-
-- A public archive: issue pages, author page, share images, sitemap. A self-hosted server can put it on a subdomain of your own.
-- Overview with subscribers over time, emails per hour, and delivery, open, click, bounce and complaint rates.
-- Campaign reports by mailbox provider (Gmail, Outlook, Yahoo, iCloud...).
-- A domains page with each domain's DKIM, return path and DMARC status and the DNS records to add.
-
-**For agents**
-
-- Every dashboard action works through a REST API at `/api/v1` and an MCP server at `/mcp`, with the same API keys and the same checks.
-- Docs at `/docs`, an OpenAPI document and `/llms.txt` on your server.
-
-**Accounts**
-
-- Sign-in with a code by email, or with Google. On a self-hosted server, only the emails you allow.
-- One account per person, with up to 3 newsletters, each with its contacts and campaigns, and the account's domains and API keys, which they share. The dashboard shows one newsletter at a time: a menu under the logo switches. Admins see every account and can block or unblock it, or give it a free plan on MailCheap Cloud.
-- An account page for the name and photo, the email and billing, and deleting the account: it stops at once, and its data is deleted 30 days later unless its owner signs in and restores it.
-
-## Screenshots
-
-| Editor | Campaign report |
+| Write, review, send | The newsletter's website |
 | --- | --- |
-| ![Editor](docs/screenshots/editor.webp) | ![Campaign report](docs/screenshots/report.webp) |
-| **Contacts** | **Public archive** |
-| ![Contacts](docs/screenshots/contacts.webp) | ![Public archive](docs/screenshots/archive.webp) |
-
-<details>
-<summary>Issue page</summary>
-
-![Issue page](docs/screenshots/issue.webp)
-
-</details>
+| ![The campaign editor's Write step: the subject, preview text and body of a draft, with the Write, Review and Send steps at the top](docs/screenshots/editor.webp) | ![A newsletter's website: its signup form, a featured issue and the latest issues](docs/screenshots/website.webp) |
 
 All names and addresses in the screenshots are made up.
 
-## What you need
+## MailCheap Cloud or self-hosted
+
+| | [MailCheap Cloud](https://mailcheap.ai) | Self-hosted |
+| --- | --- | --- |
+| Price | From $19 a month for 20,000 emails | Free, plus what your provider charges per email: $0.10 to $0.16 per 1,000 on Amazon SES |
+| Sending | Set up for you, from `hello@<slug>.mailcheap.ai` or your domain | Your Amazon SES or PostShiba account, from your domain |
+| Website | `<slug>.mailcheap.ai` | `/archive/<slug>` on your server's domain |
+| Who signs in | Anyone who signs up | The emails you allow |
+| Limits | Emails a month and active subscribers, by plan | None |
+| Setup | A few minutes | About an hour, most of it waiting for DNS and production access |
+| Support | A chat in the dashboard | None: issues are off |
+
+MailCheap Cloud is this repository with `MAILCHEAP_CLOUD=true`, which adds open sign-up, plans and Stripe billing. Only active subscribers count toward a plan, not the ones list cleanup marked dormant. Its marketing site (the landing, pricing and legal pages) isn't part of the open source. Every change to the app ships to both.
+
+With your own sending account, you pay your provider for the emails you send: 10,000 readers and 4 issues a month is 40,000 emails, about $4 to $6 on Amazon SES.
+
+## Self-hosting
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap&project-name=mailcheap&repository-name=mailcheap&env=MONGODB_URI,BETTER_AUTH_SECRET,ADMIN_EMAILS,EMAIL_FROM&envDescription=Database%2C%20signing%20secret%20%2832%2B%20characters%3A%20openssl%20rand%20-base64%2048%29%2C%20your%20email%20to%20sign%20in%20with%2C%20and%20the%20from%20address%20of%20sign-in%20codes.%20Add%20RESEND_API_KEY%2C%20or%20set%20up%20SES%20or%20PostShiba%2C%20so%20the%20codes%20can%20reach%20you.&envLink=https%3A%2F%2Fgithub.com%2Fmarclou%2Fmailcheap%23environment-variables)
+
+Plan for about an hour, most of it waiting for DNS and for your provider to approve production sending. Self-hosting comes without support: issues are off and setup questions go unanswered.
+
+### What you need
 
 | Service | For | Cost |
 | --- | --- | --- |
 | [MongoDB](https://www.mongodb.com/atlas) | Contacts, campaigns, stats | Free tier works |
 | [Amazon SES](https://aws.amazon.com/ses/) or [PostShiba](https://postshiba.com) | Sending | SES: $0.10 to $0.16 per 1,000 emails, depending on its pricing plan. PostShiba: a fixed price per cluster, invite only for now |
-| [Upstash QStash](https://upstash.com/docs/qstash) | Background sending and scheduling | Free tier to start, then pay per message. One message sends 50 emails. |
-| [Vercel](https://vercel.com) or any Node.js host | Hosting | Free tier works |
+| [Upstash QStash](https://upstash.com/docs/qstash) | Background sending and scheduling | Free tier to start, then pay per message. One message sends 50 emails |
+| [Vercel](https://vercel.com) or any Node.js 22+ host | Hosting | Free tier works |
 | [Resend](https://resend.com) (optional) | Sign-in codes and alerts. Without it, they go through SES or PostShiba | Free plan works |
 | [Upstash Redis](https://upstash.com/docs/redis) (optional) | Rate limits shared by every server instance | Free tier |
 | [Amazon S3](https://aws.amazon.com/s3/) with [CloudFront](https://aws.amazon.com/cloudfront/), or [Vercel Blob](https://vercel.com/docs/vercel-blob) (optional) | Image uploads in the editor, the newsletter settings and the API | S3 and CloudFront: pay per use. Blob: free tier |
 
-Without Redis, MailCheap counts the same rate limits in each server instance's memory. That still stops a script hammering a form, but on serverless hosts the limits aren't shared between instances and reset on each deploy. Add Redis before you put a signup form on a busy site.
+Without Redis, MailCheap counts the same rate limits in each server instance's memory. That still stops a script hammering a form, but on serverless hosts the limits aren't shared between instances and reset on each deploy. Add Redis before you put a signup form on a busy site. Without S3 or Blob, image uploads are off; HTML and Markdown campaigns can still use images hosted anywhere.
 
-Without S3 or Blob, image uploads are off. HTML and Markdown campaigns can still use images hosted anywhere.
+### Environment variables
 
-## Self-hosting
+| Variable | What it does |
+| --- | --- |
+| `MONGODB_URI` | MongoDB connection string with a database name |
+| `BETTER_AUTH_SECRET` | Signs sessions and every link in sent emails. 32+ random characters (`openssl rand -base64 48`), or the server refuses to start. Rotating it signs everyone out and breaks links in emails already sent |
+| `ADMIN_EMAILS` | Comma-separated emails that can sign in and open `/admin` |
+| `ALLOWED_EMAILS` | Who else can sign in: addresses and `@domain` entries, comma-separated |
+| `EMAIL_FROM` | From address of sign-in codes and alerts, on a domain your Resend account or email provider verified |
+| `APP_URL` | Public URL of the app, for email links and sign-in. On Vercel it defaults to the production domain |
+| `RESEND_API_KEY` | Optional: sign-in codes and alerts through Resend. Without it, they go through the email provider |
+| `SENDING_ENABLED` | Nothing goes to readers unless it's `true`. Sign-in codes and alerts don't wait for it |
+| `SES_*` or `POSTSHIBA_*` | The email provider, in step 4 |
+| `QSTASH_*` | Background sending and scheduling, in step 5 |
 
-Plan for about an hour, most of it waiting for DNS and for your provider to approve production sending.
+[`.env.example`](.env.example) lists every variable with what it does, the optional ones included: Google sign-in, image uploads, Redis, Telegram alerts, the shared domain, and MailCheap Cloud's own.
 
 ### 1. Database
 
@@ -125,7 +121,7 @@ Plan for about an hour, most of it waiting for DNS and for your provider to appr
 
 Sending stays off until you finish the next steps, so nothing goes out to readers by mistake. On any other Node.js host: `npm ci && npm run build && npm start`, with the same variables, behind HTTPS. `/api/health` answers 200, or 503 with what to fix.
 
-If you plan to use your own domain for the dashboard (like `mailcheap.example.com`), add it in Vercel now and set `APP_URL` to it. Links in your emails use `APP_URL` until a newsletter's archive subdomain is set up, so it should be final before your first send.
+If you plan to use your own domain for the dashboard (like `mailcheap.example.com`), add it in Vercel now and set `APP_URL` to it. Links in your emails use `APP_URL`, so it should be final before your first send.
 
 ### 3. Who can sign in
 
@@ -210,10 +206,6 @@ QStash calls `APP_URL/api/jobs/...` to send each batch, so the app has to be rea
 
 ### Optional
 
-- **Archive on its own subdomain.** Each domain comes with an archive subdomain (`news.<domain>` by default). Set `ARCHIVE_CNAME_TARGET` to the host it should point at (`cname.vercel-dns.com` on Vercel) and add the subdomain to your hosting (on Vercel, to the project's domains): MailCheap doesn't. Once its CNAME resolves, **Check now** moves the archive, tracked links and unsubscribe links there. Without `ARCHIVE_CNAME_TARGET`, the Domains page doesn't ask for that subdomain.
-
-  This is the safer setup: issue pages show HTML from your editor and from API keys, and on their own domain that HTML never shares the dashboard's origin. Without one, the archive stays at `/archive/<slug>` on the app's domain, where the sanitizer, the sandboxed frame and the Content Security Policy protect it.
-- **Shared domain.** `SHARED_DOMAIN` gives every newsletter without a domain of its own an address of its own, `hello@<slug>.SHARED_DOMAIN`, and its archive at `<slug>.SHARED_DOMAIN`. MailCheap adds each subdomain at the provider and has its records published, and removed when the slug changes, by a DNS helper (`DNS_BROKER_URL`, `DNS_BROKER_SECRET`): on MailCheap Cloud a Vercel project of its own that holds the Vercel token, so the app never does, and only writes a shared address's records. Without one, DNS automation is off and shared addresses can't be set up. Its DNS has to be on Vercel, with `*.SHARED_DOMAIN` on the project. Add one DMARC record for the whole domain yourself: `_dmarc.SHARED_DOMAIN` TXT `v=DMARC1; p=none;`. It can be the app's own domain, as MailCheap Cloud's is `mailcheap.ai`: slugs can't take `www` or the other names in `lib/reserved-slugs.js`, and those hosts never open an archive. Without a shared domain, every newsletter sends from a domain of its own.
 - **Google sign-in.** Create an OAuth client (web application) with the redirect URI `<APP_URL>/api/auth/callback/google`, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The allowlist applies, and a Google sign-in joins an existing user only when Google verified that email.
 - **Image uploads.** The quickest is Vercel Blob: in Vercel, **Storage > Create > Blob**, connect it to the project, and redeploy. To serve images from a subdomain of your own (like `cdn.example.com`), put an S3 bucket behind CloudFront. It takes over new uploads, and images already on Blob keep their URLs:
   1. Create a private S3 bucket with Block Public Access on.
@@ -244,61 +236,46 @@ QStash calls `APP_URL/api/jobs/...` to send each batch, so the app has to be rea
   Each image gets a name that never changes and `Cache-Control: public, max-age=31536000, immutable`, so CloudFront and browsers keep it for a year. An account's purge invalidates its folder, `/accounts/<accountId>/*`, on the distribution, so CloudFront stops serving its deleted images.
 - **Shared rate limits.** Create a Redis database in the [Upstash console](https://console.upstash.com/redis) and add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 - **Alerts on Telegram.** Every admin alert is an email to `ADMIN_EMAILS`. The ones that need someone (an automatic account block, the email provider refusing MailCheap's sends or holding a tenant, sign-in codes, Stripe events, webhooks or background jobs failing, QStash refusing jobs, shared addresses and the DNS helper) can reach Telegram too: create a bot with [@BotFather](https://t.me/BotFather), send it a message, and set `TELEGRAM_BOT_TOKEN` and the chat's id as `TELEGRAM_CHAT_ID`. Each alert goes there at most once every 6 hours. On PostShiba, have a scheduler call `/api/cron/hourly` every hour with `Authorization: Bearer <CRON_SECRET>` (Vercel Cron sends it once `CRON_SECRET` is set): it checks the team's status (a suspension, the approval, clusters at their cap, held tenants) and alerts on what stops sending. Its first run with Telegram set up posts "Telegram alerts are on".
+- **Shared domain.** `SHARED_DOMAIN` is how MailCheap Cloud gives every newsletter without a domain of its own an address, `hello@<slug>.SHARED_DOMAIN`, and its website at `<slug>.SHARED_DOMAIN`. MailCheap adds each subdomain at the provider and has its records published, and removed when the slug changes, by a DNS helper (`DNS_BROKER_URL`, `DNS_BROKER_SECRET`): on MailCheap Cloud a Vercel project of its own that holds the Vercel token, so the app never does, and only writes a shared address's records. The helper isn't part of this repository, and without one DNS automation is off and shared addresses can't be set up. Its DNS has to be on Vercel, with `*.SHARED_DOMAIN` on the project. Add one DMARC record for the whole domain yourself: `_dmarc.SHARED_DOMAIN` TXT `v=DMARC1; p=none;`. It can be the app's own domain, as MailCheap Cloud's is `mailcheap.ai`: slugs can't take `www` or the other names in `lib/reserved-slugs.js`, and those hosts never open a website.
 
-## Deliverability basics
+### Sending well
 
 - **Send from a subdomain** (`mail.example.com`), so a bad week doesn't affect your main domain's email.
 - **Authenticate everything:** DKIM, SPF through the custom return path, and DMARC on the root domain.
-- **Only email people who asked.** Never import a bought or scraped list. If bots fill your forms, turn on confirmed opt-in.
+- **Only email people who asked.** Never import a bought or scraped list. If bots fill your forms, keep confirmed opt-in on.
 - **Warm up a new domain.** Send to your most engaged readers first, and grow each send over a few weeks.
 - **Watch complaints and bounces.** Keep complaints under 0.1% and bounces under 2%. MailCheap pauses a send past 0.08% complaints or 2% bounces, and blocks the account past 0.3% complaints or 5% bounces. Add your domain to [Google Postmaster Tools](https://postmaster.google.com) to see your spam rate at Gmail.
 - **Make leaving easy.** Every email has one-click unsubscribe headers and a footer link, which Gmail and Yahoo require.
 - **Clean your list.** Keep list cleanup on to stop emailing people who never open. New newsletters start with it on.
 - **Keep emails under 100 KB**, or Gmail clips them and hides the unsubscribe link.
 
-## Environment variables
+<details>
+<summary><b>Billing, as on MailCheap Cloud</b></summary>
 
-| Variable | Self-hosted | MailCheap Cloud | What it does |
-| --- | --- | --- | --- |
-| `MONGODB_URI` | Required | Required | MongoDB connection string with a database name |
-| `BETTER_AUTH_SECRET` | Required | Required | Signs sessions and every link in sent emails. 32+ random characters, or the server refuses to start. Rotating it signs everyone out and breaks links in emails already sent |
-| `APP_URL` | Outside Vercel | Outside Vercel | Public URL of the app: email links, sign-in, Stripe return URLs and the base URL in the docs. On Vercel it defaults to the production domain |
-| `ADMIN_EMAILS` | Required | Optional | Comma-separated emails that can open `/admin`. On a self-hosted server they can also sign in |
-| `ALLOWED_EMAILS` | Optional | Not used | Who else can sign in to a self-hosted server: addresses and `@domain` entries, comma-separated |
-| `EMAIL_FROM` | Required | Optional | From address of sign-in codes and alerts. MailCheap Cloud uses `MailCheap <hello@r.mailcheap.ai>` without it, with replies to `hello@mailcheap.ai` |
-| `RESEND_API_KEY` | Optional | Required | Sign-in codes and alerts through Resend. Self-hosted without it, they go through the email provider; MailCheap Cloud never does that and refuses to start without it |
-| `MAILCHEAP_CLOUD` | Unset | `true` | Turns on open sign-up, plans and Stripe billing. Only exactly `true` counts. Set it for builds too: the public pages read it then |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Not used | Required | Billing, and the signing secret of `<APP_URL>/api/webhooks/stripe`. MailCheap Cloud refuses to start without them |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional | Optional | Google sign-in. Redirect URI `<APP_URL>/api/auth/callback/google` |
-| `SENDING_ENABLED` | To send | To send | Nothing goes to readers unless it's `true`. Sign-in codes and alerts don't wait for it |
-| `EMAIL_PROVIDER` | Optional | Optional | `postshiba` or `ses`. Default: `postshiba` when `POSTSHIBA_API_KEY` is set, else `ses`. Any other value stops sending |
-| `POSTSHIBA_API_KEY`, `POSTSHIBA_TEAM_ID` | For PostShiba | For PostShiba | A full access key of the PostShiba team, and the team id |
-| `POSTSHIBA_BULK_CLUSTER_ID` | For PostShiba | For PostShiba | The cluster every email goes out on: campaigns and last-chance emails over HTTP inject, every other email through `POST /sends` |
-| `POSTSHIBA_TRANSACTIONAL_CLUSTER_ID` | Optional | Optional | A second cluster for welcome, confirmation and test emails; without it they share the bulk one |
-| `POSTSHIBA_WEBHOOK_SECRET` | For PostShiba | For PostShiba | Signing secret of `<APP_URL>/api/webhooks/postshiba` |
-| `POSTSHIBA_API_URL`, `POSTSHIBA_INJECT_URL` | Optional | Optional | Default `https://app.postshiba.com` and `https://inject.postshiba.com/api/inject/v1` |
-| `CREDENTIALS_ENCRYPTION_KEY` | For PostShiba | For PostShiba | 32 random bytes in base64 (`openssl rand -base64 32`). Encrypts each tenant's SMTP password at rest. Changing it makes the stored passwords unreadable |
-| `SES_REGION`, `SES_ACCESS_KEY_ID`, `SES_SECRET_ACCESS_KEY` | For SES | For SES | SES region (default `us-east-1`) and the IAM user's keys. Never default AWS credentials |
-| `SES_AWS_ACCOUNT_ID` | For SES | For SES | ID of the AWS account, for identity ARNs |
-| `SES_SNS_TOPIC_ARN` | For SES | For SES | Events of every account's configuration set, at `/api/webhooks/ses` |
-| `SES_TENANT_SNS_TOPIC_ARN` | Optional | Used | Tenant pauses and reputation findings from EventBridge, at `/api/webhooks/ses-tenants` |
-| `SHARED_DOMAIN` | Optional | Used | Shared domain with its DNS on Vercel, `mailcheap.ai` on MailCheap Cloud: newsletters without a domain of their own send from `hello@<slug>.SHARED_DOMAIN` and have their archive at `<slug>.SHARED_DOMAIN` |
-| `ARCHIVE_CNAME_TARGET` | Optional | Used | What archive subdomains point at with a CNAME (`cname.vercel-dns.com` on Vercel) |
-| `DNS_BROKER_URL`, `DNS_BROKER_SECRET` | With `SHARED_DOMAIN` | Used | The DNS helper that publishes the shared subdomains' records, and the secret that signs each request to it |
-| `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `QSTASH_URL` | To send campaigns | To send campaigns | Batches, scheduling, and sends the provider asked to retry later |
-| `SEND_RATE_PER_SECOND` | Optional | Optional | Campaign emails per second across all accounts, default 14: SES's max send rate, or PostShiba's bulk cluster cap per hour / 3,600 |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Optional | Optional | Rate limits and the send rate shared across server instances |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional | Optional | A Telegram bot and the chat it posts to: the admin alerts that need someone go there too, each at most once every 6 hours. Without both, nothing does |
-| `CRON_SECRET` | Optional | Used | Lets Vercel Cron, or any scheduler sending `Authorization: Bearer <CRON_SECRET>`, run `/api/cron/hourly`: PostShiba's team status, with an alert for what stops sending |
-| `IMAGES_S3_BUCKET`, `IMAGES_S3_REGION` | Optional | Used | S3 bucket for new image uploads (region default `us-east-1`). Takes over from Blob; images already on Blob keep their URLs |
-| `IMAGES_S3_ACCESS_KEY_ID`, `IMAGES_S3_SECRET_ACCESS_KEY` | With S3 | Used | Keys of an IAM user that can only put, get and delete objects under `accounts/` in the bucket, and create invalidations on the CloudFront distribution (`cloudfront:CreateInvalidation`). Never default AWS credentials |
-| `IMAGES_CDN_URL` | With S3 | Used | Where the bucket's images are served from, like `https://cdn.example.com` (CloudFront). Set it for builds too: `next/image` allows its host |
-| `IMAGES_CLOUDFRONT_DISTRIBUTION_ID` | With CloudFront | Used | The distribution in front of the bucket. After an account's purge deletes its images, it invalidates `/accounts/<accountId>/*` there, which CloudFront would otherwise keep serving for up to a year. Without it, the purge skips that step |
-| `BLOB_READ_WRITE_TOKEN` | Optional | Used | Image uploads to Vercel Blob when no S3 bucket is set |
+<br>
 
-[`.env.example`](.env.example) has the same list with more detail.
+`MAILCHEAP_CLOUD=true` is what [mailcheap.ai](https://mailcheap.ai) runs with: sign-up open to anyone, a newsletter setup at `/welcome` right after sign-in, a dashboard to try before paying with a paywall on sending, imports, domains and API keys, plan limits, and MailCheap's own emails through Resend only. It refuses to start without `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and `RESEND_API_KEY`, and `/api/health` answers 503 with the reason, so the cloud can't run without billing by mistake. Set `MAILCHEAP_CLOUD` for builds too: the public pages read it then.
 
-## REST API and MCP
+| Plan | Monthly | Yearly | Emails per month | Active subscribers |
+| --- | --- | --- | --- | --- |
+| Starter | $19 | $190 | 20,000 | 10,000 |
+| Growth | $39 | $390 | 75,000 | 40,000 |
+| Pro | $79 | $790 | 200,000 | 100,000 |
+| Scale | $149 | $1,490 | 500,000 | 250,000 |
+
+`lib/plans.js` is the one place these live. Yearly plans get the monthly allowance every month of the paid year. Every email counts toward the month: issues, tests, welcome and confirmation emails. Over a limit, campaigns stop with a clear message and an upgrade link; signups and confirmation emails keep going. Welcome emails take room in the month's emails like issues: once they're used up, each one is skipped (its `Message` says why), the owner gets one email that month, and the dashboard says so next to the welcome email, on the overview and on the billing page. They start again when the month resets or the plan grows; the skipped ones aren't sent later. Admin overrides replace a plan's numbers for one account.
+
+Admins can give an account a free plan from `/admin` (the account's menu, **Give a free plan**): any of the four, with an optional end date, without Stripe. It works like a paid plan, its emails start over every month from the day it was given, and the billing page and `get_billing` (REST API and MCP) show it. A plan the account pays for takes over while there's one. **End free plan**, or its end date, stops it like a canceled plan: the data stays and sending stops.
+
+1. **Prices by lookup key.** Create four products (Starter, Growth, Pro, Scale), each with a monthly and a yearly recurring USD price, and give every price its lookup key: `mailcheap_<plan>_monthly` and `mailcheap_<plan>_yearly`, like `mailcheap_growth_yearly`. Checkout finds prices by these keys and refuses one whose amount or interval doesn't match `lib/plans.js`, so no price ID goes in the environment.
+2. **Webhook.** Add an endpoint at `<APP_URL>/api/webhooks/stripe` with the events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` and `invoice.paid`. Use API version `2026-09-30.endive` (the one `stripe@23` pins) and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+3. **Customer Portal.** Turn on payment method updates, invoices, cancellation (at the end of the period) and plan changes between the eight prices. Charge upgrades at once, with prorations invoiced immediately, and schedule downgrades, a cheaper price or a shorter interval, for the end of the period: otherwise an account can upgrade, send a bigger plan's emails and downgrade before the difference is billed. The billing page's "Switch" buttons open the portal's confirm page for one plan; without plan changes on, they open the portal's home.
+
+Every subscription event re-reads the subscription from Stripe, so events arriving out of order can't leave stale data. Canceled accounts keep their data: sending, signups and the website stop, and everything comes back when they subscribe again.
+
+</details>
+
+## AI agents, REST API and MCP
 
 Create a key on the **API keys** page and send it as `Authorization: Bearer <key>`. A full access key can do everything the dashboard can; a signups only key can only add contacts, for keys that sit in a website's code. Every key gets 300 requests a minute.
 
@@ -311,20 +288,22 @@ curl -X POST https://<your-app>/api/v1/contacts \
   -d '{"email":"jane@example.com","source":"website","ip":"203.0.113.7"}'
 ```
 
-**MCP**: connect Claude Code with a full access key. Every action is a tool, and sending is marked as one that can't be undone, so your agent asks you first.
+**MCP**: connect Claude Code with a full access key. Every action is a tool.
 
 ```bash
 claude mcp add --transport http --scope user mailcheap https://<your-app>/mcp \
   --header "Authorization: Bearer $MAILCHEAP_API_KEY"
 ```
 
-**ChatGPT, Claude and Grok Bot** add `https://<your-app>/mcp` as a connector or custom MCP server and sign in with OAuth: the user signs in to MailCheap, allows the app on a consent page, and the app gets full access to that account. Better Auth is the authorization server (issuer `APP_URL`, discovery at `/.well-known/oauth-authorization-server`), apps identify themselves with a client metadata document (Grok Bot, on Cursor's agents, registers instead, with redirect URIs from the allowlist in `lib/oauth-rules.js`), and access tokens are bound to `/mcp`. The **API keys** page lists connected apps and revokes them. The server has to be reachable over HTTPS from the internet for them.
+ChatGPT, Claude and Grok Bot add `https://<your-app>/mcp` as a connector or custom MCP server and sign in with OAuth: you sign in to MailCheap and allow the app on a consent page, and it gets full access to that account. The **API keys** page lists connected apps and revokes them. They need the server to be reachable over HTTPS from the internet.
 
 `/docs` on your server has every endpoint, the errors, the MCP setup for ChatGPT, Claude, Grok Bot, Claude Code, Codex and Cursor, and the OpenAPI document at `/api/v1/openapi.json`. On MailCheap Cloud, the same at [mailcheap.ai/docs](https://mailcheap.ai/docs) and `https://mailcheap.ai/mcp`.
 
-## Local development
+## Contributing
 
-You need Node.js 22+ and MongoDB.
+Read [AGENTS.md](AGENTS.md) first, whether you're a person or an AI agent: how the app is organized, MailCheap Cloud and self-hosting, the rules (no secrets or personal data in code, tests or commits), code style and tests. [SECURITY.md](SECURITY.md) covers what's built in and the known gaps. Issues are off, and pull requests may not be reviewed.
+
+You need Node.js 22+ and MongoDB:
 
 ```bash
 git clone https://github.com/marclou/mailcheap.git && cd mailcheap
@@ -339,7 +318,7 @@ npm run dev
 - Sending stays off unless `SENDING_ENABLED=true`. SES needs `SES_ACCESS_KEY_ID` and `SES_SECRET_ACCESS_KEY`: the app never falls back to `~/.aws` or other default AWS credentials. PostShiba needs its four ids and keys and `CREDENTIALS_ENCRYPTION_KEY`.
 - QStash can't reach `localhost`. To try a full send locally, run the QStash dev server (`npx @upstash/qstash-cli dev`) and use the URL, token and signing keys it prints.
 
-## Tests
+Before a pull request, run the full suite, lint and a build:
 
 ```bash
 npm test       # unit and integration tests
@@ -347,53 +326,7 @@ npm run lint
 npm run build
 ```
 
-Integration tests (sign-in, isolation, billing, plan limits, admin, sending, domains, PostShiba, its webhook, the REST API, MCP, parity, the public site, self-hosting, MailCheap's own emails, the account page and deleting an account) start a throwaway `mongod` per file, so `mongod` has to be on the `PATH` (or set `MONGOD_PATH`). They import server actions and route handlers as they are: `tests/setup` resolves the `@/` alias and replaces Next.js request APIs, QStash, SES (`lib/ses.js`), DNS lookups, the DNS helper, Vercel Blob, S3 (`@aws-sdk/client-s3`), CloudFront (`@aws-sdk/client-cloudfront`) and image downloads with the stubs in `tests/stubs`. Stripe, Resend, Google's token endpoint and PostShiba are answered by a mocked `fetch` (`tests/helpers/postshiba.mjs` is an in-memory PostShiba); nothing reaches the network. Tests run as MailCheap Cloud on SES unless they say otherwise: `tests/self-host.test.mjs` runs as a self-hosted server, `tests/platform-email.test.mjs` as both.
-
-`tests/parity.test.mjs` walks the action registry and fails when an action has no REST route, no MCP tool (listed through the real `/mcp` route), no entry in the OpenAPI document, the docs or the llms files, or an input without a description, and when a dashboard server action does anything but run a registered action. The account page's profile and deletion are the exception: like sign-in, no API key or app may reach them. `tests/mcp.test.mjs` also connects the official MCP client on the 2026-07-28 revision and with the 2025 handshake. `tests/oauth.test.mjs` connects it with OAuth the way ChatGPT and Claude do (discovery, a client metadata document served from memory by `tests/stubs/cimd-node.mjs`, PKCE, sign-in and consent, refresh) and the way Grok Bot does (registration, with the allowlist and its rate limit), and checks scopes, revocation and accounts kept apart.
-
-## How it works
-
-- Next.js App Router, JavaScript, Tailwind CSS with shadcn/ui, MongoDB through Mongoose, Better Auth for sign-in.
-- **Two modes, one switch.** `isCloud()` in `lib/config.js` is `MAILCHEAP_CLOUD === "true"`. Without it there's no billing (every account counts as paid, `getAccountLimits()` is `null`, the billing actions answer `billing_off`) and sign-in is limited to the allowlist. MailCheap Cloud's marketing site, which isn't part of the open source, plugs into the shared pages through `lib/site-extensions.js` and `components/SiteExtensions.jsx`; their defaults add nothing, so `/` is the dashboard, or sign-in without a session.
-- **Scoping.** `scoped(account, filter)` in `lib/account-scope.js` adds the account to every query. A Mongoose plugin on every customer model rejects any query, aggregation or bulk write without an `accountId`, so a forgotten scope fails loudly instead of reading another account's data. The few lookups that have to find a document across accounts say so with `{ crossAccount: true }`: tracking links (by message id), unsubscribe, confirm and keep links (signed tokens), archives (public slugs), the API key lookup (the key decides the account) and the global uniqueness of archive slugs.
-- **Who's asking.** Pages and server actions call `requireAccount()`, the REST API and MCP call `authenticateRequest()` (API key to account and level), all in `lib/auth.js` and `lib/api-keys.js`. MCP also takes OAuth access tokens: `authenticateAccessToken()` in `lib/oauth.js` checks the token against Better Auth's signing keys, its audience (`/mcp`), its scope and the connected app it names, then works in the token's user's account. `proxy.js` only checks that a session cookie is there. On MailCheap Cloud the dashboard opens without a plan: an action marked `tryWithoutPlan` (setting up the newsletter, writing campaigns, adding 5 contacts a day by hand, reading) runs from the dashboard, and the others (sending, imports, domains, API keys) answer `subscription_required`, which opens the paywall. The REST API and MCP need a plan for everything but billing.
-- **OAuth.** `lib/auth.js` adds Better Auth's JWT, MCP and client metadata document plugins. Sign-in (`/signin`) and the consent page (`/oauth/consent`) carry Better Auth's signed authorization request; Better Auth creates its RS256 signing key in the `jwks` collection on first use. A connected app is an `oauthConsent` document; disconnecting it deletes its tokens and the consent, and every access token names its consent, so it stops at once.
-- **Sign-in.** Codes are sent and checked by server actions with the app's rate limits; Better Auth's own code routes are closed. On a self-hosted server, Better Auth's user and session hooks refuse anyone off the allowlist, whatever the route, and `getSession()` ignores anyone taken off it since.
-- **Actions.** Every customer action is one `defineAction` in `lib/actions/<group>.js`: an HTTP route, zod input and output schemas, a permission (`full` or `signups`), MCP hints, an optional rate limit, per key and per account, and a handler. `dashboardInput` adds fields only the dashboard sends, like Add contact's consent box: the REST API and MCP don't take them. `runAction` (`lib/actions/run-action.js`) is the only way to run one, from the dashboard, the REST API (`app/api/v1/[...path]`) or MCP (`/mcp`, `lib/mcp/server.js`). `lib/docs` builds the OpenAPI document, `/docs/api` and `/llms-full.txt` from the same schemas.
-- **Send** picks the audience (active contacts, suppressions left out, most engaged first), creates one message per reader, and queues one QStash job per batch of 50. Each job sends at `SEND_RATE_PER_SECOND` and checks the campaign's bounce and complaint rates against the two levels in `LIMITS` (`lib/config.js`): past the pause level the campaign pauses, past the block level the account is blocked (`lib/account-blocks.js`). On MailCheap Cloud, a send bigger than its account's proven volume allows spreads its batches over hours (`lib/send-spread.js`, thresholds in `WARMUP` in `lib/config.js`), and contacts never mailed wait behind a first slice (`lib/first-send.js`). Welcome and confirmation emails go out right away, capped at 100 every 10 minutes per newsletter; on MailCheap Cloud, welcome emails also need room left in the plan's month.
-- **Email providers.** `lib/email-provider` is the one switch: each adapter (`ses.js`, `postshiba.js`) does tenants, domains and sends, and its errors carry a stable outcome that the batch turns into retry later, skip the address, pause the campaign or fail the email. Both providers' events become one shape (`lib/email-event-rules.js`) and are recorded only in the account they name.
-- **Images** (`lib/image-storage.js`): uploads from the editor, the newsletter settings and `upload_image` go to the S3 bucket when `IMAGES_S3_BUCKET` is set, under `accounts/<accountId>/images/` with a random part in the name, and are served from `IMAGES_CDN_URL`; otherwise to Vercel Blob. Nothing is moved, and nothing is deleted until its account is, since sent emails point at the URLs. Each upload is an `Upload` document, which the image picker and `list_images` list and the purge deletes files by; a file whose document can't be saved is deleted right away.
-- **Deleting an account** (`lib/account-deletion.js`, `lib/account-purge.js`) only happens on its page, with a code sent for it: never through the REST API or MCP. It's refused while Stripe bills a plan or a campaign sends or is scheduled. At once, every session ends, API keys and connected apps stop, the account counts as unpaid (no sends, signups or archive) and its tenant is suspended. A QStash job runs 30 days later, waking up every 6 days on the way, unless signing in restored the account: it deletes the user, everything with the account's id, its domains and shared subdomains at the provider and in DNS, its tenant and its images (invalidated on CloudFront too), and keeps a `DeletionRecord` (a keyed hash of the email and the dates). A step that fails is tried again the next day, with an alert.
-- **MailCheap's own emails** (`lib/platform-email.js`): Resend when `RESEND_API_KEY` is set; on a self-hosted server without it, the provider's `sendPlatformEmail`. MailCheap Cloud never sends them through the provider.
-- **Opens and clicks** go through `/o/...` and `/c/...` on the newsletter's host. Clicks within 30 seconds of the send, or from known link scanners, don't count. While the account is blocked, `/c/...` answers an uncached page saying the link is disabled instead of redirecting, and its opens and clicks don't count.
-- **Archive pages** are static and refresh when you send or save.
-
-## Running MailCheap Cloud
-
-`MAILCHEAP_CLOUD=true` is what [mailcheap.ai](https://mailcheap.ai) runs with: sign-up open to anyone, a newsletter setup at `/welcome` right after sign-in, a dashboard to try before paying with a paywall on sending, imports, domains and API keys, plan limits, and MailCheap's own emails through Resend only. Its landing, pricing and legal pages live in its own repository. It refuses to start without `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and `RESEND_API_KEY`, and `/api/health` answers 503 with the reason, so the cloud can't run without billing by mistake.
-
-| Plan | Monthly | Yearly | Emails per month | Subscribers |
-| --- | --- | --- | --- | --- |
-| Starter | $19 | $190 | 20,000 | 10,000 |
-| Growth | $39 | $390 | 75,000 | 40,000 |
-| Pro | $79 | $790 | 200,000 | 100,000 |
-| Scale | $149 | $1,490 | 500,000 | 250,000 |
-
-`lib/plans.js` is the one place these live. Yearly plans get the monthly allowance every month of the paid year. Every email counts toward the month: issues, tests, welcome and confirmation emails. Over a limit, campaigns stop with a clear message and an upgrade link; signups and confirmation emails keep going. Welcome emails take room in the month's emails like issues: once they're used up, each one is skipped (its `Message` says why), the owner gets one email that month, and the dashboard says so next to the welcome email, on the overview and on the billing page. They start again when the month resets or the plan grows; the skipped ones aren't sent later. Admin overrides replace a plan's numbers for one account.
-
-Admins can give an account a free plan from `/admin` (the account's menu, **Give a free plan**): any of the four, with an optional end date, without Stripe. It works like a paid plan, its emails start over every month from the day it was given, and the billing page and `get_billing` (REST API and MCP) show it. A plan the account pays for takes over while there's one. **End free plan**, or its end date, stops it like a canceled plan: the data stays and sending stops.
-
-### Stripe setup
-
-1. **Prices by lookup key.** Create four products (Starter, Growth, Pro, Scale), each with a monthly and a yearly recurring USD price, and give every price its lookup key: `mailcheap_<plan>_monthly` and `mailcheap_<plan>_yearly`, like `mailcheap_growth_yearly`. Checkout finds prices by these keys and refuses one whose amount or interval doesn't match `lib/plans.js`, so no price ID goes in the environment.
-2. **Webhook.** Add an endpoint at `<APP_URL>/api/webhooks/stripe` with the events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` and `invoice.paid`. Use API version `2026-09-30.endive` (the one `stripe@23` pins) and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
-3. **Customer Portal.** Turn on payment method updates, invoices, cancellation (at the end of the period) and plan changes between the eight prices. Charge upgrades at once, with prorations invoiced immediately, and schedule downgrades, a cheaper price or a shorter interval, for the end of the period: otherwise an account can upgrade, send a bigger plan's emails and downgrade before the difference is billed. The billing page's "Switch" buttons open the portal's confirm page for one plan; without plan changes on, they open the portal's home.
-
-Every subscription event re-reads the subscription from Stripe, so events arriving out of order can't leave stale data. Canceled accounts keep their data: sending, signups and the archive stop, and everything comes back when they subscribe again.
-
-## Support
-
-There's none: issues are off and pull requests may not be reviewed. See [SECURITY.md](SECURITY.md) for what's built in.
+Integration tests start a throwaway `mongod` per file, so `mongod` has to be on the `PATH` (or set `MONGOD_PATH`). They import server actions and route handlers as they are, and `tests/setup` replaces every outside service with the stubs in `tests/stubs`, so nothing reaches the network. `tests/parity.test.mjs` fails when an action is missing from the REST API, MCP, the OpenAPI document, the docs or the llms files.
 
 ## License
 
