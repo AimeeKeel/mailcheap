@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sendAlert } from "@/lib/alerts";
 import { handleStripeEvent } from "@/lib/billing";
 import { isCloud } from "@/lib/config";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
@@ -26,6 +27,14 @@ export async function POST(request) {
 		return reply(200, { received: true, ...(await handleStripeEvent(event)) });
 	} catch (error) {
 		console.error(`[stripe-webhook] ${event.type} ${event.id} failed:`, error);
+		await sendAlert({
+			accountId: null,
+			key: `stripe-webhook-failed:${event.type}`,
+			title: "Stripe event not handled",
+			detail: `${event.type} ${event.id}: ${String(error?.message ?? error).slice(0, 300)}.`,
+			action: "Stripe retries it for 3 days; until then an account's plan can be out of date. Check the logs.",
+			link: "https://dashboard.stripe.com/webhooks",
+		});
 		return reply(500, { error: "Could not handle the event" });
 	}
 }

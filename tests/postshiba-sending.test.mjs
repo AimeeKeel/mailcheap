@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { after, afterEach, before, describe, test } from "node:test";
 import mongoose from "mongoose";
 import { decryptSecret } from "../lib/credentials.js";
-import { activate, as, catchRedirect, form, jsonRequest, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
+import { activate, as, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 import { POSTSHIBA, POSTSHIBA_ENV, createFakePostshiba } from "./helpers/postshiba.mjs";
 import { published } from "./stubs/qstash.mjs";
 import { dnsRecords } from "./stubs/dns-broker.mjs";
@@ -400,10 +400,11 @@ describe("PostShiba sending", () => {
 		assert.equal((await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean()).status, "sent");
 	});
 
-	test("before PostShiba approves production sending, a campaign pauses with the reason", async () => {
+	test("before PostShiba approves production sending, a campaign pauses with the reason, and the admins hear of it once", async () => {
 		const user = await customer("ps-kyc@example.com", "ps-kyc");
 		await importContacts(user, ["kyc@example.org"]);
 		const id = await draft(user, "Waiting");
+		const emailsBefore = platformEmails.length;
 		fake.fail({ path: /^\/inject$/, status: 200, body: { success_count: 0, fail_count: 1, failed_recipients: ["kyc@example.org"], errors: ["550 kyc_required"] } });
 		await as(user, () => m.campaigns.sendCampaign(id, {}));
 		await runJobs();
@@ -414,6 +415,9 @@ describe("PostShiba sending", () => {
 
 		fake.fail({ method: "POST", path: /\/sends$/, status: 403, body: { error: "kyc_required", field: "to" } });
 		assert.match((await as(user, () => m.campaigns.sendTestCampaign(id))).error, /hasn't approved production sending/);
+		const toAdmins = platformEmails.slice(emailsBefore).filter(({ to }) => to.includes("admin@example.com"));
+		assert.deepEqual(toAdmins.map(({ subject }) => subject), ["[MailCheap] PostShiba refuses MailCheap's sends"], "the campaign and the test are the same problem");
+		assert.match(toAdmins[0].text, new RegExp(`Account ${user.accountId}: PostShiba hasn't approved production sending yet \\(kyc_required\\)\\.\\nReaders' emails are refused until PostShiba approves the team\\.`));
 	});
 
 	test("a welcome email PostShiba throttles is retried later with the same Idempotency-Key", async () => {

@@ -8,7 +8,7 @@ import { siteExtensions } from "@/lib/site-extensions";
 // No route can live under an underscore folder, so this always renders the not-found page with a 404.
 const NOT_FOUND_PATH = "/_not-on-this-server";
 
-// Reachable without a session: recipients, mail providers, AWS, Stripe, QStash, API-key
+// Reachable without a session: recipients, mail providers, AWS, Stripe, QStash, Vercel Cron, API-key
 // and OAuth clients (REST and MCP, OAuth discovery), the docs and uptime checks. The consent page checks
 // the session itself, so a signed-out visitor goes to sign-in with the app's request.
 const PUBLIC_PATHS = [
@@ -36,6 +36,7 @@ const PUBLIC_PATHS = [
 	/^\/api\/v1\//,
 	/^\/api\/webhooks\//,
 	/^\/api\/jobs\//,
+	/^\/api\/cron\//,
 ];
 
 // A newsletter's host carries its archive and the links in its emails, never the dashboard, not even its login page.

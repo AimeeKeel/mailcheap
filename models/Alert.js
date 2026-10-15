@@ -1,13 +1,14 @@
 import mongoose from "mongoose";
 
-// One document per alert kind and account: lastSentAt enforces the cooldown between repeated alerts.
-// Platform alerts (the rate limiter) have no account.
+// One document per alert kind and account: lastSentAt enforces the cooldown between repeated alerts, and
+// telegramSentAt Telegram's. Platform alerts (the rate limiter) have no account.
 const alertSchema = new mongoose.Schema(
 	{
 		accountId: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
 		key: { type: String, required: true },
 		title: { type: String },
 		lastSentAt: { type: Date },
+		telegramSentAt: { type: Date },
 	},
 	{ timestamps: true }
 );

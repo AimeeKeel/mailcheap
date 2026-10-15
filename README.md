@@ -243,6 +243,7 @@ QStash calls `APP_URL/api/jobs/...` to send each batch, so the app has to be rea
 
   Each image gets a name that never changes and `Cache-Control: public, max-age=31536000, immutable`, so CloudFront and browsers keep it for a year. An account's purge invalidates its folder, `/accounts/<accountId>/*`, on the distribution, so CloudFront stops serving its deleted images.
 - **Shared rate limits.** Create a Redis database in the [Upstash console](https://console.upstash.com/redis) and add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+- **Alerts on Telegram.** Every admin alert is an email to `ADMIN_EMAILS`. The ones that need someone (an automatic account block, the email provider refusing MailCheap's sends or holding a tenant, sign-in codes, Stripe events, webhooks or background jobs failing, QStash refusing jobs, shared addresses and the DNS helper) can reach Telegram too: create a bot with [@BotFather](https://t.me/BotFather), send it a message, and set `TELEGRAM_BOT_TOKEN` and the chat's id as `TELEGRAM_CHAT_ID`. Each alert goes there at most once every 6 hours. On PostShiba, have a scheduler call `/api/cron/hourly` every hour with `Authorization: Bearer <CRON_SECRET>` (Vercel Cron sends it once `CRON_SECRET` is set): it checks the team's status (a suspension, the approval, clusters at their cap, held tenants) and alerts on what stops sending. Its first run with Telegram set up posts "Telegram alerts are on".
 
 ## Deliverability basics
 
@@ -287,6 +288,8 @@ QStash calls `APP_URL/api/jobs/...` to send each batch, so the app has to be rea
 | `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `QSTASH_URL` | To send campaigns | To send campaigns | Batches, scheduling, and sends the provider asked to retry later |
 | `SEND_RATE_PER_SECOND` | Optional | Optional | Campaign emails per second across all accounts, default 14: SES's max send rate, or PostShiba's bulk cluster cap per hour / 3,600 |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Optional | Optional | Rate limits and the send rate shared across server instances |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional | Optional | A Telegram bot and the chat it posts to: the admin alerts that need someone go there too, each at most once every 6 hours. Without both, nothing does |
+| `CRON_SECRET` | Optional | Used | Lets Vercel Cron, or any scheduler sending `Authorization: Bearer <CRON_SECRET>`, run `/api/cron/hourly`: PostShiba's team status, with an alert for what stops sending |
 | `IMAGES_S3_BUCKET`, `IMAGES_S3_REGION` | Optional | Used | S3 bucket for new image uploads (region default `us-east-1`). Takes over from Blob; images already on Blob keep their URLs |
 | `IMAGES_S3_ACCESS_KEY_ID`, `IMAGES_S3_SECRET_ACCESS_KEY` | With S3 | Used | Keys of an IAM user that can only put, get and delete objects under `accounts/` in the bucket, and create invalidations on the CloudFront distribution (`cloudfront:CreateInvalidation`). Never default AWS credentials |
 | `IMAGES_CDN_URL` | With S3 | Used | Where the bucket's images are served from, like `https://cdn.example.com` (CloudFront). Set it for builds too: `next/image` allows its host |

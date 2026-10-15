@@ -6,16 +6,26 @@ import { startMongo } from "./mongo.mjs";
 
 // Platform emails sent through Resend's API, newest last.
 export const platformEmails = [];
+// Messages to Telegram's Bot API, newest last, with the token their URL carried.
+export const telegramMessages = [];
 let stripeHandler = null;
+let telegramAnswer = null;
 let visitor = 0;
 
-// No test talks to the network: Resend is recorded and Stripe answers from mockStripe's handler.
+// No test talks to the network: Resend and Telegram are recorded and Stripe answers from mockStripe's handler.
 function installFetch() {
 	globalThis.fetch = async (input, init = {}) => {
 		const url = String(input?.url ?? input);
 		if (url === "https://api.resend.com/emails") {
 			platformEmails.push(JSON.parse(init.body));
 			return Response.json({ id: `email_${platformEmails.length}` });
+		}
+		const telegram = /^https:\/\/api\.telegram\.org\/bot([^/]+)\/sendMessage$/.exec(url);
+		if (telegram) {
+			const answer = telegramAnswer?.();
+			if (answer) return answer;
+			telegramMessages.push({ token: telegram[1], ...JSON.parse(init.body) });
+			return Response.json({ ok: true, result: { message_id: telegramMessages.length } });
 		}
 		if (url.startsWith("https://api.stripe.com/")) {
 			if (!stripeHandler) throw new Error(`Unexpected Stripe request: ${init.method ?? "GET"} ${url}`);
@@ -33,6 +43,11 @@ function installFetch() {
 
 export function mockStripe(handler) {
 	stripeHandler = handler;
+}
+
+// Telegram answers this Response instead, while the function returns one.
+export function answerTelegram(answer) {
+	telegramAnswer = answer;
 }
 
 // MailCheap Cloud by default; a self-hosted server with { MAILCHEAP_CLOUD: "" }.

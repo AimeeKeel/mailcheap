@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 import Stripe from "stripe";
-import { activate, as, callApi, catchRedirect, form, mockStripe, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, as, callApi, catchRedirect, form, mockStripe, platformEmails, signIn, startTestApp } from "./helpers/app.mjs";
 
 // Stripe's API is answered by the handler each test gives mockStripe; events are signed like Stripe signs them.
 let app;
@@ -262,15 +262,20 @@ describe("subscription changes", () => {
 		assert.equal((await account(user)).subscriptionStatus, "active");
 	});
 
-	test("when Stripe can't be read the webhook answers 500, so Stripe retries", async () => {
+	test("when Stripe can't be read the webhook answers 500, so Stripe retries, and the admins hear of it", async () => {
 		const error = console.error;
 		console.error = () => {};
+		const emailsBefore = platformEmails.length;
 		try {
 			const result = await deliver("customer.subscription.updated", { id: "sub_missing" });
 			assert.equal(result.status, 500);
 		} finally {
 			console.error = error;
 		}
+		const [alert] = platformEmails.slice(emailsBefore);
+		assert.deepEqual([alert.to, alert.subject], [["admin@example.com"], "[MailCheap] Stripe event not handled"]);
+		assert.match(alert.text, new RegExp(`customer\\.subscription\\.updated evt_${eventCount}: No such subscription\\.\\nStripe retries it for 3 days`));
+		assert.match(alert.text, /\nhttps:\/\/dashboard\.stripe\.com\/webhooks$/);
 	});
 
 	test("a price with an unknown lookup key keeps the plan and logs it", async () => {

@@ -1,9 +1,20 @@
 // The DNS helper in memory: records MailCheap asked for, by slug, as the helper keeps them on mailcheap.ai.
 export const dnsRecords = new Map();
 let nextId = 0;
+let nextFailure = null;
+
+// The next publish fails as lib/dns-broker.js reports the helper's answer: { status, message, helperProblem }.
+export function failNextPublish(failure) {
+	nextFailure = failure;
+}
 
 // Like the helper: a slug's records all or none, one record per name for a CNAME.
 export async function publishSharedRecords(slug, records) {
+	if (nextFailure) {
+		const { status, message, helperProblem } = nextFailure;
+		nextFailure = null;
+		throw Object.assign(new Error(`The DNS helper refused to create ${slug}'s records: ${message}`), { status, helperProblem });
+	}
 	for (const { type, name } of records) {
 		if ([...dnsRecords.values()].some((record) => record.name === name && (record.type === "CNAME" || type === "CNAME"))) {
 			throw new Error(`The DNS helper refused to create ${slug}'s records: ${type} ${name} is taken`);

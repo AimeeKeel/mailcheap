@@ -53,6 +53,8 @@ export function createFakePostshiba() {
 		// tenantId:email pairs on a tenant's suppression list.
 		suppressed: new Set(),
 		isDnsVisible: true,
+		// The team's side of GET /teams/:id/status; held tenants come from the tenants themselves.
+		team: { suspended: false, kyc_status: "approved", clusters_at_cap: [] },
 		clusters: new Map([
 			[POSTSHIBA.bulkClusterId, { id: POSTSHIBA.bulkClusterId, name: "bulk", plan: "small", classification: "bulk", emails_per_hour: 40_000, emails_per_day: 240_000, status: "active", sending_ready: true }],
 			[POSTSHIBA.transactionalClusterId, { id: POSTSHIBA.transactionalClusterId, name: "transactional", plan: "micro", classification: "transactional", emails_per_hour: 4000, emails_per_day: 24_000, status: "active", sending_ready: true }],
@@ -147,6 +149,10 @@ export function createFakePostshiba() {
 			return reply(201, tenant);
 		}
 		if (method === "GET" && path === `${team}/tenants`) return reply(200, [...state.tenants.values()].map(({ held, ...tenant }) => tenant));
+		if (method === "GET" && path === `${team}/status`) {
+			const held = [...state.tenants.values()].filter((tenant) => tenant.held).map(({ id, name, slug }) => ({ id, name, slug }));
+			return reply(200, { ...state.team, held_tenants: held });
+		}
 		// Like PostShiba: the tenant's SMTP credentials go with it, its sending domains move to the team's default tenant.
 		if ((match = /^\/api\/v1\/tenants\/([^/]+)$/.exec(path)) && method === "DELETE") {
 			if (!state.tenants.delete(match[1])) return reply(404, { error: "Not found" });
