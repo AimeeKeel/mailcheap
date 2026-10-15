@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ButtonThemeToggle from "@/components/ButtonThemeToggle";
 import LogoWordmark from "@/components/LogoWordmark";
-import { FooterCredit } from "@/components/SiteExtensions";
+import { FooterCredit, FooterNote } from "@/components/SiteExtensions";
 import { isCloud } from "@/lib/config";
 import { currentYear } from "@/lib/format";
 import { SOURCE_URL } from "@/lib/site";
@@ -20,6 +20,7 @@ export default function FooterSite() {
 					<div className="flex flex-col items-start gap-4">
 						<LogoWordmark href="/" className="-ml-1 rounded-lg px-1 py-1" />
 						<p className="max-w-xs text-sm text-pretty text-muted-foreground">{tagline}</p>
+						{cloudFooter && FooterNote && <FooterNote />}
 						{cloudFooter && FooterCredit && <FooterCredit />}
 					</div>
 					<nav aria-label="Footer" className={cn("grid gap-x-12 gap-y-8", columns.length > 1 && "grid-cols-2 sm:grid-cols-3")}>

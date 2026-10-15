@@ -6,5 +6,6 @@ export const SiteAnalytics = null;
 export const SiteBand = null;
 export const SigninAside = null;
 export const FooterCredit = null;
+export const FooterNote = null;
 export const PricingNote = null;
 export const SupportChat = null;
