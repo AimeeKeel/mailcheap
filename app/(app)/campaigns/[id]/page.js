@@ -5,11 +5,11 @@ import FormCampaign from "@/components/FormCampaign";
 import { scoped } from "@/lib/account-scope";
 import { getAccountSendProblem, hasActiveSubscription, isBlocked } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
-import { countNewContacts, countStartedCampaigns, sendTimesPipeline } from "@/lib/campaign-queries";
+import { countNewContacts, getSendVolumes, sendTimesPipeline } from "@/lib/campaign-queries";
 import { isSendingEnabled } from "@/lib/config";
 import { MESSAGE_STATS_GROUP } from "@/lib/message-stats";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
-import { getWarmup } from "@/lib/send-spread";
+import { getPace } from "@/lib/send-spread";
 import { serialize } from "@/lib/serialize";
 import { loadSender } from "@/lib/sender";
 import { countEmailsInFlight, getUsage } from "@/lib/usage";
@@ -37,6 +37,9 @@ export default async function CampaignPage({ params }) {
 			getProviderBreakdown(campaign),
 			countRemaining(campaign),
 		]);
+		// Only a next step needs them, for what its dialog says.
+		const [volumes, newContacts] =
+			remainingCount > 0 ? await Promise.all([getSendVolumes(account), countNewContacts(account, newsletter._id)]) : [];
 		return (
 			<CampaignReport
 				campaign={serialize(campaign)}
@@ -45,15 +48,17 @@ export default async function CampaignPage({ params }) {
 				remainingCount={remainingCount}
 				emailsLeft={plan.emailsLeft}
 				isBlocked={isBlocked(account)}
+				pace={getPace(account, volumes)}
+				newContacts={newContacts}
 			/>
 		);
 	}
 
-	const [audienceCount, sender, sendTimes, place, newContacts] = await Promise.all([
+	const [audienceCount, sender, sendTimes, volumes, newContacts] = await Promise.all([
 		Contact.countDocuments(scoped(account, { newsletterId: newsletter._id, status: "active" })),
 		loadSender(account, newsletter),
 		getSendTimes(campaign),
-		countStartedCampaigns(account),
+		getSendVolumes(account),
 		countNewContacts(account, newsletter._id),
 	]);
 
@@ -69,7 +74,7 @@ export default async function CampaignPage({ params }) {
 			archiveUrlBase={newsletter.archiveEnabled ? getArchiveUrls(newsletter).absolutePost("") : null}
 			planProblem={plan.problem}
 			emailsLeft={plan.emailsLeft}
-			warmup={getWarmup(account, { place })}
+			pace={getPace(account, volumes)}
 			newContacts={newContacts}
 		/>
 	);

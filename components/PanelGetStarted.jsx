@@ -2,8 +2,10 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight } from "lucide-react";
 import ButtonNewCampaign from "@/components/ButtonNewCampaign";
 import IconBrand, { AGENTS } from "@/components/IconBrand";
+import IconWarmup from "@/components/IconWarmup";
 import ShellGetStarted from "@/components/ShellGetStarted";
 import { Button } from "@/components/ui/button";
+import { WARMUP, isCloud } from "@/lib/config";
 import { getGetStartedSteps } from "@/lib/get-started";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
 import { cn } from "@/lib/utils";
@@ -69,6 +71,15 @@ function ItemStep({ step, number, isNext, link, newsletterId }) {
 							{step.id === "agent" && <IconsAgents />}
 						</p>
 						<p className="text-sm text-muted-foreground">{description}</p>
+						{step.id === "send" && isCloud() && (
+							<p className="mt-1.5 flex gap-1.5 text-sm text-pretty text-muted-foreground">
+								<IconWarmup className="mt-0.5" />
+								<span>
+									It starts your account&apos;s {WARMUP.days}-day warm-up: up to {WARMUP.quickEmails} emails go out at once, bigger sends
+									over hours.
+								</span>
+							</p>
+						)}
 					</div>
 					{step.id === "write" ? (
 						<ButtonNewCampaign newsletterId={newsletterId} label="New draft" size="sm" />

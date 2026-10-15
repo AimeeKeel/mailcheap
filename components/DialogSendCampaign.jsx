@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { summarizePreview } from "@/lib/cleanup";
-import { FIRST_SEND } from "@/lib/first-send";
+import { FIRST_SEND } from "@/lib/config";
 import { formatCount, formatSendTime } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import { useToastError } from "@/lib/use-toast-error";
@@ -34,7 +34,7 @@ export default function DialogSendCampaign({
 	emailsLeft,
 	scheduledAt,
 	isCleanupEnabled,
-	warmup,
+	pace,
 	newContacts = 0,
 	blockingMessage,
 	onBeforeSend,
@@ -102,7 +102,7 @@ export default function DialogSendCampaign({
 						{recipients < issueAudience && " Send it to more later from its page."}
 					</DialogDescription>
 				</DialogHeader>
-				{warmup && <NoticeWarmup warmup={warmup} />}
+				<NoticeWarmup pace={pace} emails={emails} newContacts={newContacts} />
 				{newContacts > FIRST_SEND.minSlice && <NoticeFirstSend count={newContacts} />}
 				<InputAudienceLimit value={limit} onChange={setLimit} audienceCount={issueAudience} />
 				{isCleanupEnabled && <ListCleanupPreview summary={summary} isCounting={isCounting} error={preview?.error} />}

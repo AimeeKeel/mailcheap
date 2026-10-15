@@ -151,7 +151,8 @@ export async function signIn(email) {
 	const Account = (await import("../../models/Account.js")).default;
 	const stored = await mongoose.connection.db.collection("users").findOne({ email: email.toLowerCase() });
 	user.userId = stored._id;
-	// Past its first 30 days of sending, so sends go out at full speed; tests of spread sends unset it.
+	// Past its warm-up: sends up to 200 emails, or 5 times what it proved (proveVolume), go out at full speed. Tests of the
+	// warm-up unset it.
 	await Account.updateOne({ ownerId: stored._id }, { $set: { spreadUntil: new Date(0) } });
 	user.account = await Account.findOne({ ownerId: stored._id }).lean();
 	user.accountId = user.account._id;
@@ -182,6 +183,23 @@ export async function activate(user, { plan = "starter", interval = "month", ...
 	);
 	user.account = await Account.findById(user.accountId).lean();
 	return user.account;
+}
+
+// A campaign the account sent before, which proves its volume (lib/send-spread.js) once it's a day old and under the
+// pause level.
+export async function proveVolume(user, sent, { bounced = 0, hoursAgo = 48 } = {}) {
+	const Campaign = (await import("../../models/Campaign.js")).default;
+	const at = new Date(Date.now() - hoursAgo * 3_600_000);
+	await Campaign.create({
+		accountId: user.accountId,
+		newsletterId: user.newsletterId,
+		subject: "Earlier issue",
+		status: "sent",
+		stats: { recipients: sent, sent, bounced },
+		startedAt: at,
+		sentAt: at,
+		finishedAt: at,
+	});
 }
 
 // A domain added through the Domains page, with its DNS records in and its archive subdomain pointed at us.

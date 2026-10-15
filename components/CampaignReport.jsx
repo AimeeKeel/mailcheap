@@ -14,6 +14,7 @@ import GatePlan from "@/components/GatePlan";
 import CardStat from "@/components/CardStat";
 import DialogSendMore from "@/components/DialogSendMore";
 import HeaderPage from "@/components/HeaderPage";
+import IconWarmup from "@/components/IconWarmup";
 import ImageFavicon from "@/components/ImageFavicon";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import PreviewEmail from "@/components/PreviewEmail";
@@ -29,15 +30,22 @@ import {
 } from "@/components/ui/table";
 import { isPlanLimitCode } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
-import { FIRST_SEND } from "@/lib/first-send";
-import { LIMITS, isSendingEnabled } from "@/lib/config";
+import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
 import { formatCount, formatDate, formatNumber, formatRate } from "@/lib/format";
 import { rateTone } from "@/lib/health";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
-import { SEND_SPREAD } from "@/lib/send-spread";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
 
-export default function CampaignReport({ campaign, newsletter, providers, remainingCount = 0, emailsLeft = 0, isBlocked = false }) {
+export default function CampaignReport({
+	campaign,
+	newsletter,
+	providers,
+	remainingCount = 0,
+	emailsLeft = 0,
+	isBlocked = false,
+	pace = null,
+	newContacts = 0,
+}) {
 	const { stats } = campaign;
 	const id = campaign._id.toString();
 	const isOnArchive = newsletter.archiveEnabled && Boolean(campaign.archiveSlug) && campaign.archiveListed !== false;
@@ -68,6 +76,8 @@ export default function CampaignReport({ campaign, newsletter, providers, remain
 							remainingCount={remainingCount}
 							emailsLeft={emailsLeft}
 							isCleanupEnabled={Boolean(newsletter.cleanup?.enabled)}
+							pace={pace}
+							newContacts={newContacts}
 						/>
 					</GatePlan>
 				)}
@@ -135,10 +145,13 @@ export default function CampaignReport({ campaign, newsletter, providers, remain
 								blocked.
 							</p>
 						)}
-						{campaign.status === "sending" && campaign.sendingUntil && (
-							<p className="text-xs text-pretty text-muted-foreground">
-								Your account is warming up, so this campaign goes out over {campaign.spreadHours ?? SEND_SPREAD.hours} hours: about{" "}
-								{formatCount(hoursUntil(campaign.sendingUntil), "hour")} to go.
+						{campaign.status === "sending" && campaign.sendingUntil && campaign.spreadHours > 0 && (
+							<p className="flex gap-1.5 text-xs text-pretty text-muted-foreground">
+								<IconWarmup className="size-3.5 translate-y-px" />
+								<span>
+									It goes out over hours while your account warms up{pace?.warmup ? "" : " to sends this size"}: about{" "}
+									{formatCount(hoursUntil(campaign.sendingUntil), "hour")} to go.
+								</span>
 							</p>
 						)}
 					</div>

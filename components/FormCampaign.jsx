@@ -11,6 +11,7 @@ import DialogSendCampaign from "@/components/DialogSendCampaign";
 import EditorRich from "@/components/EditorRich";
 import GatePlan from "@/components/GatePlan";
 import HeaderPage from "@/components/HeaderPage";
+import IconWarmup from "@/components/IconWarmup";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import ListChecks from "@/components/ListChecks";
 import PreviewEmail from "@/components/PreviewEmail";
@@ -32,10 +33,11 @@ import {
 	storePanel,
 	storePreviewDevice,
 } from "@/lib/editor-panels";
-import { formatNumber } from "@/lib/format";
+import { formatCount, formatNumber } from "@/lib/format";
 import { markdownToHtml } from "@/lib/markdown";
 import { getPresendChecks } from "@/lib/presend-checks";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
+import { getPaceHours } from "@/lib/send-spread";
 import { slugify } from "@/lib/slug";
 import { toast } from "@/lib/toast";
 import { usePaywall } from "@/lib/use-paywall";
@@ -57,7 +59,7 @@ export default function FormCampaign({
 	archiveUrlBase,
 	planProblem,
 	emailsLeft,
-	warmup,
+	pace,
 	newContacts,
 }) {
 	const isHtml = campaign.format === "html";
@@ -115,6 +117,7 @@ export default function FormCampaign({
 		planProblem,
 	});
 	const problemCount = checks.filter(({ isOk }) => !isOk).length;
+	const warmupCheck = getWarmupCheck(pace, { emails: audienceCount, newContacts });
 	// Without a plan, Send and Schedule open the paywall first; the checks wait until there's one.
 	const blockingMessage = !hasPlan ? null : isUploading ? UPLOADING_MESSAGE : blocking[0]?.message;
 
@@ -283,7 +286,7 @@ export default function FormCampaign({
 						history={sendTimes.history}
 						taken={sendTimes.taken}
 						isCleanupEnabled={Boolean(newsletter.cleanup?.enabled)}
-						warmup={warmup}
+						pace={pace}
 						newContacts={newContacts}
 						blockingMessage={blockingMessage}
 						onBeforeSchedule={persist}
@@ -296,7 +299,7 @@ export default function FormCampaign({
 						emailsLeft={emailsLeft}
 						scheduledAt={campaign.status === "scheduled" ? campaign.scheduledAt : null}
 						isCleanupEnabled={Boolean(newsletter.cleanup?.enabled)}
-						warmup={warmup}
+						pace={pace}
 						newContacts={newContacts}
 						blockingMessage={blockingMessage}
 						onBeforeSend={persist}
@@ -345,7 +348,7 @@ export default function FormCampaign({
 						{/* Clipped while it unfolds; the padding keeps the card's ring and shadow inside the clip. */}
 						<div className="-mx-1 min-h-0 overflow-hidden">
 							<div className="px-1 pt-px pb-4">
-								<ListChecks checks={checks} />
+								<ListChecks checks={warmupCheck ? [...checks, warmupCheck] : checks} />
 							</div>
 						</div>
 					</div>
@@ -563,6 +566,21 @@ function Row({ label, children }) {
 			{children}
 		</div>
 	);
+}
+
+// The checklist's warm-up row, for a send to everyone: while the account warms up, or when the send would go out over
+// hours (lib/send-spread.js). It never blocks and isn't counted.
+function getWarmupCheck(pace, { emails, newContacts }) {
+	const hours = getPaceHours(pace, { emails, newContacts });
+	if (!hours && !pace?.warmup) return null;
+	const { warmup } = pace;
+	return {
+		id: "warmup",
+		label: hours ? `Goes out over ${formatCount(hours, "hour")}` : "Sends now",
+		detail: warmup ? (warmup.hasStarted ? `Warm-up day ${warmup.day} of ${warmup.days}` : "Starts the warm-up") : null,
+		isOk: true,
+		icon: IconWarmup,
+	};
 }
 
 // Panels close in 200ms (and open in 300ms): DOCK_EXIT_MS keeps the dock's preview until it's out of sight.

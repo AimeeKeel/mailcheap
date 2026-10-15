@@ -20,7 +20,7 @@ import {
 import NoticeFirstSend from "@/components/NoticeFirstSend";
 import NoticeWarmup from "@/components/NoticeWarmup";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { FIRST_SEND } from "@/lib/first-send";
+import { FIRST_SEND } from "@/lib/config";
 import { formatCount, formatSendTime } from "@/lib/format";
 import { getScheduleProblem, getScheduleSuggestions } from "@/lib/schedule";
 import { toast } from "@/lib/toast";
@@ -37,7 +37,7 @@ export default function DialogScheduleCampaign({
 	history,
 	taken,
 	isCleanupEnabled,
-	warmup,
+	pace,
 	newContacts = 0,
 	blockingMessage,
 	onBeforeSchedule,
@@ -120,7 +120,7 @@ export default function DialogScheduleCampaign({
 						{isCleanupEnabled && " The list cleanup runs when it goes out, so cold contacts get the last-chance email instead."}
 					</DialogDescription>
 				</DialogHeader>
-				{warmup && <NoticeWarmup warmup={warmup} />}
+				<NoticeWarmup pace={pace} emails={recipients} newContacts={newContacts} />
 				{newContacts > FIRST_SEND.minSlice && <NoticeFirstSend count={newContacts} />}
 				{value && (
 					<>

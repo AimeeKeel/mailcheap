@@ -1,4 +1,5 @@
 import BadgeStatus from "@/components/BadgeStatus";
+import IconWarmup from "@/components/IconWarmup";
 import MenuAccount from "@/components/MenuAccount";
 import TextEmpty from "@/components/TextEmpty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,7 +8,7 @@ import { LIMITS, isCloud } from "@/lib/config";
 import { getEmailProvider } from "@/lib/email-provider";
 import { formatCompact, formatDate, formatNumber } from "@/lib/format";
 import { getAccountLimits, getAccountPlan, getPlan, hasActiveFreePlan, isOnFreePlan } from "@/lib/plans";
-import { getSpreadMs } from "@/lib/send-spread";
+import { getWarmup } from "@/lib/send-spread";
 import { cn } from "@/lib/utils";
 
 export default function TableAccounts({ accounts }) {
@@ -35,7 +36,7 @@ export default function TableAccounts({ accounts }) {
 						const freePlan = hasActiveFreePlan(account) ? { plan: account.comp.plan, until: account.comp.until ?? null } : null;
 						const limits = getAccountLimits(account);
 						const hasOverrides = Object.values(account.limitOverrides ?? {}).some((value) => value !== undefined && value !== null);
-						const isSpreading = getSpreadMs(account) > 0;
+						const isSpreading = getWarmup(account) !== null;
 						const blockedBy = isBlocked(account) ? `Blocked by ${BLOCKED_BY[account.pausedBy] ?? "an admin"}` : null;
 						return (
 							<TableRow key={account._id} className="tabular-nums">
@@ -48,8 +49,11 @@ export default function TableAccounts({ accounts }) {
 										</span>
 									)}
 									{isSpreading && (
-										<span className="block truncate text-xs text-muted-foreground">
-											{account.spreadUntil ? `Warming up until ${formatDate(account.spreadUntil)}` : "Warms up from the first campaign"}
+										<span className="flex items-center gap-1 text-xs text-muted-foreground">
+											<IconWarmup className="size-3" />
+											<span className="truncate">
+												{account.spreadUntil ? `Warming up until ${formatDate(account.spreadUntil)}` : "Warms up from the first campaign"}
+											</span>
 										</span>
 									)}
 								</TableCell>

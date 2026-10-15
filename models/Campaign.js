@@ -24,21 +24,25 @@ const campaignSchema = new mongoose.Schema(
 		ratesAcceptedAt: { type: Date },
 		// Warm-up: send to the most engaged contacts first, capped at audienceLimit.
 		audienceLimit: { type: Number, min: 1 },
-		// Contacts never mailed before go out in steps: a first slice, a check, then the rest (lib/first-send.js).
+		// Contacts never mailed before go out in steps: a first slice, a check, then the rest (lib/first-send.js), over
+		// restHours in a spread send.
 		firstSend: {
 			slice: { type: Number },
 			held: { type: Number },
 			checkAt: { type: Date },
 			checkedAt: { type: Date },
+			restHours: { type: Number },
 		},
 		source: { type: String, default: "dashboard" },
 		scheduledAt: { type: Date },
 		startedAt: { type: Date },
-		// A send spread over hours (lib/send-spread.js): about when its last batch goes out, and the hours its place
-		// in the account's warm-up gave it, kept for its resumes and next steps.
+		// A send spread over hours (lib/send-spread.js): about when its last batch goes out, and the hours its size gave
+		// it next to the account's proven volume, kept for its resumes. Each next step gets its own.
 		sendingUntil: { type: Date },
 		spreadHours: { type: Number },
 		sentAt: { type: Date },
+		// When its latest step finished going out: a day later, it counts toward the account's proven volume.
+		finishedAt: { type: Date },
 		testSentAt: { type: Date },
 		archiveSlug: { type: String, trim: true, lowercase: true },
 		thumbnailUrl: { type: String, trim: true },

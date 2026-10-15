@@ -18,14 +18,14 @@ import TableCampaigns from "@/components/TableCampaigns";
 import { Button } from "@/components/ui/button";
 import { hasActiveSubscription } from "@/lib/account-state";
 import { requireAccount } from "@/lib/auth";
-import { countStartedCampaigns, listNewsletterCampaigns } from "@/lib/campaign-queries";
+import { getSendVolumes, listNewsletterCampaigns } from "@/lib/campaign-queries";
 import { formatNumber, formatSigned } from "@/lib/format";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { getEmailStats, getHourlySends, getSubscriberHistory } from "@/lib/overview-data";
 import { PERIOD_DAYS } from "@/lib/overview-series";
 import { getAccountPlan } from "@/lib/plans";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
-import { getWarmup } from "@/lib/send-spread";
+import { getPace, getWarmup } from "@/lib/send-spread";
 import { TIME_ZONE_COOKIE, resolveTimeZone, timeZoneLabel } from "@/lib/time-zone";
 import { getUsage, hasWelcomeEmailsOn } from "@/lib/usage";
 import { cn } from "@/lib/utils";
@@ -34,12 +34,11 @@ import { cn } from "@/lib/utils";
 // newsletter; every section then loads on its own behind a skeleton of its size.
 export default async function OverviewPage({ searchParams }) {
 	const { account } = await requireAccount();
-	const [view, { newsletter: newsletterParam }, cookieStore, usage, place] = await Promise.all([
+	const [view, { newsletter: newsletterParam }, cookieStore, usage] = await Promise.all([
 		getSelectedNewsletter(),
 		searchParams,
 		cookies(),
 		getUsage(account),
-		countStartedCampaigns(account),
 	]);
 	openNewsletter(view, newsletterParam, "/");
 	const { newsletters, selected } = view;
@@ -47,7 +46,7 @@ export default async function OverviewPage({ searchParams }) {
 	const selectedId = selected?._id.toString();
 	const accountId = account._id;
 	const hasPlan = hasActiveSubscription(account);
-	const warmup = hasPlan ? getWarmup(account, { place }) : null;
+	const pace = hasPlan && getWarmup(account) ? getPace(account, await getSendVolumes(account)) : null;
 	const isWelcomePaused = usage.welcomeEmailsPaused && (await hasWelcomeEmailsOn(accountId));
 
 	return (
@@ -59,9 +58,9 @@ export default async function OverviewPage({ searchParams }) {
 			<HeaderPage title="Overview" />
 
 			<div className="flex flex-col gap-8">
-				{warmup && (
+				{pace && (
 					<section style={{ "--stagger": 1 }} className="animate-enter">
-						<CardWarmup warmup={warmup} />
+						<CardWarmup pace={pace} />
 					</section>
 				)}
 				{selected ? (

@@ -6,6 +6,8 @@ import { Loader2, Send } from "lucide-react";
 import { sendCampaignToMore } from "@/app/(app)/campaigns/actions";
 import InputAudienceLimit, { countRecipients } from "@/components/InputAudienceLimit";
 import ListCleanupPreview from "@/components/ListCleanupPreview";
+import NoticeFirstSend from "@/components/NoticeFirstSend";
+import NoticeWarmup from "@/components/NoticeWarmup";
 import TextPlanLimit from "@/components/TextPlanLimit";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +21,13 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { summarizePreview } from "@/lib/cleanup";
+import { FIRST_SEND } from "@/lib/config";
 import { formatCount, formatNumber } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import { useToastError } from "@/lib/use-toast-error";
 import { useCleanupPreview } from "@/lib/use-cleanup-preview";
 
-export default function DialogSendMore({ campaignId, sentCount, remainingCount, emailsLeft, isCleanupEnabled }) {
+export default function DialogSendMore({ campaignId, sentCount, remainingCount, emailsLeft, isCleanupEnabled, pace, newContacts = 0 }) {
 	const router = useRouter();
 	const toastError = useToastError();
 	const [isOpen, setIsOpen] = useState(false);
@@ -67,10 +70,11 @@ export default function DialogSendMore({ campaignId, sentCount, remainingCount, 
 				<DialogHeader>
 					<DialogTitle className="tabular-nums">Send to {formatCount(recipients, "more contact")}?</DialogTitle>
 					<DialogDescription className="tabular-nums">
-						{formatNumber(sentCount)} got it so far. The next most engaged contacts get it now, and nobody receives it
-						twice.
+						{formatNumber(sentCount)} got it so far. The next most engaged contacts get it, and nobody receives it twice.
 					</DialogDescription>
 				</DialogHeader>
+				<NoticeWarmup pace={pace} emails={emails} newContacts={newContacts} />
+				{newContacts > FIRST_SEND.minSlice && <NoticeFirstSend count={newContacts} />}
 				<InputAudienceLimit label="How many more" value={more} onChange={setMore} audienceCount={remaining} />
 				{isCleanupEnabled && <ListCleanupPreview summary={summary} isCounting={isCounting} error={preview?.error} />}
 				{isOverPlan && <TextPlanLimit emailsLeft={emailsLeft} />}

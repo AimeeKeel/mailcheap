@@ -1,4 +1,4 @@
-import { FIRST_SEND } from "@/lib/first-send";
+import { FIRST_SEND } from "@/lib/config";
 import { formatNumber } from "@/lib/format";
 
 // In the send and schedule dialogs when more contacts than a first slice never got an email (lib/first-send.js).

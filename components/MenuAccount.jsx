@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { Ban, CircleOff, Gauge, Gift, Hourglass, Loader2, MoreHorizontal, ShieldCheck } from "lucide-react";
+import { Ban, CircleOff, Gauge, Gift, Loader2, MoreHorizontal, ShieldCheck } from "lucide-react";
 import { blockAccountAction, endFreePlan, giveFreePlan, saveLimits, setSpread, unblockAccountAction } from "@/app/admin/actions";
+import IconWarmup from "@/components/IconWarmup";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -42,7 +43,7 @@ export default function MenuAccount({
 		startTransition(async () => {
 			const result = await setSpread(accountId, !isSpreading);
 			if (result?.error) toast.error(result.error);
-			else toast.success(isSpreading ? "Sends go out at full speed" : "Warm-up started: campaigns go out over hours for 30 days");
+			else toast.success(isSpreading ? "Warm-up ended" : "Warm-up started again");
 		});
 	}
 
@@ -63,7 +64,7 @@ export default function MenuAccount({
 					)}
 					{canSpread && (
 						<DropdownMenuItem onSelect={toggleSpread}>
-							<Hourglass />
+							<IconWarmup />
 							{isSpreading ? "End warm-up" : "Start warm-up again"}
 						</DropdownMenuItem>
 					)}
