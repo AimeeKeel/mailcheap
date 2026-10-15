@@ -1,5 +1,9 @@
 # Security
 
+## Reporting a vulnerability
+
+Report it privately on GitHub: open the [Security tab](https://github.com/marclou/mailcheap/security) and click Report a vulnerability. Please don't open a public issue for a security report.
+
 ## Accounts and data
 
 - Every customer document carries its `accountId`, and a Mongoose plugin rejects any query, aggregation or bulk write on customer models without one. Cross-account lookups are explicit (`{ crossAccount: true }`) and limited to signed links, tracking links, public archive slugs, the API key lookup, an admin taking an address off the never-email list, which finds the contacts it stopped in every account, and the campaigns and newsletters Gmail's feedback loop names, whose account it reads.
