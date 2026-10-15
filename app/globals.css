@@ -205,9 +205,9 @@ html:has([data-campaign-steps]) {
 
 /* The dashboard's bottom right corner. Where SupportChat (components/SiteExtensions.jsx) renders [data-support-chat],
    MailCheap Cloud's support chat keeps its button there, 54px wide: 14px from the edges under 480px wide, 24px from the
-   right and 20px from the bottom above. The get-started pill and a save bar, both 40px high, sit on its center line;
-   the pill ends 12px to its left, --chat-clearance from the edge, and so does a save bar whose column reaches that far.
-   Without the chat, the pill takes the corner. */
+   right and 20px from the bottom above. The get-started pill, 40px high, and a save bar, 56px high, sit on its center
+   line; the pill ends 12px to its left, --chat-clearance from the edge, and so does a save bar that would reach that
+   far. Without the chat, the pill takes the corner. */
 @property --chat-clearance {
   syntax: "<length>";
   inherits: true;
@@ -217,6 +217,7 @@ html:has([data-campaign-steps]) {
 html {
   --dock-right: 1rem;
   --dock-bottom: 1rem;
+  --save-bar-bottom: var(--dock-bottom);
 
   @media (width >= 40rem) {
     --dock-right: 1.5rem;
@@ -230,6 +231,7 @@ html:has([data-support-chat]) {
   --chat-clearance: calc(var(--chat-right) + 54px + 12px);
   --dock-right: var(--chat-clearance);
   --dock-bottom: calc(var(--chat-bottom) + 7px);
+  --save-bar-bottom: calc(var(--chat-bottom) - 1px);
 
   @media (width >= 480px) {
     --chat-right: 24px;
@@ -240,6 +242,11 @@ html:has([data-support-chat]) {
 /* BarSave renders [data-save-bar][data-shown] while a save bar shows: the get-started pill steps aside for it (the
    save-bar variant). */
 @custom-variant save-bar (html:has([data-save-bar][data-shown]) &);
+
+/* A spring with a little bounce (0.3), sampled for linear(): BarSave's first entrance overshoots by 4.6% and settles. */
+@theme {
+  --ease-settle: linear(0, 0.02, 0.072, 0.146, 0.233, 0.327, 0.423, 0.517, 0.605, 0.685, 0.757, 0.82, 0.874, 0.919, 0.955, 0.984, 1.006, 1.023, 1.034, 1.041, 1.045, 1.046, 1.045, 1.043, 1.039, 1.035, 1.031, 1.027, 1.022, 1.018, 1.014, 1.011, 1.008, 1.006, 1.004, 1.002, 1.001, 1, 0.999, 0.998, 1);
+}
 
 @keyframes enter {
   from {
