@@ -62,7 +62,7 @@ export default async function DomainsPage() {
 			<HeaderPage title="Domains" />
 			<div className="flex flex-col gap-6">
 				<GatePlan reason="domain">
-					<FormAddDomain fromLocalPart={getOwnDomainLocalPart(current?.fromEmail, sharedDomain)} />
+					<FormAddDomain fromLocalPart={getOwnDomainLocalPart(current?.fromEmail, sharedDomain)} hasArchiveHost={Boolean(cnameTarget)} />
 				</GatePlan>
 				{domains.map((domain, index) => (
 					<CardDomain
@@ -133,7 +133,7 @@ function RowNote({ href, icon, label, detail, end, stagger }) {
 }
 
 function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, stagger }) {
-	const summary = getDomainSummary(domain);
+	const summary = getDomainSummary(domain, { cnameTarget });
 	const setup = getDomainSetup(domain, { cnameTarget });
 	const fullNameExample = setup.flatMap(({ records }) => records).find(({ host, name }) => host !== name)?.name;
 	const id = String(domain._id);
@@ -150,8 +150,8 @@ function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, s
 					</div>
 				</div>
 				<div className="flex items-center gap-1">
-					<ButtonCheckDomain id={id} />
-					<DialogRemoveDomain id={id} domain={domain.domain} />
+					<ButtonCheckDomain id={id} hasArchiveHost={Boolean(cnameTarget)} />
+					<DialogRemoveDomain id={id} domain={domain.domain} hasArchiveHost={Boolean(cnameTarget)} />
 				</div>
 			</div>
 			{current && <RowsSender domain={domain} newsletters={newsletters} current={current} sharedDomain={sharedDomain} />}

@@ -10,7 +10,8 @@ import { toast } from "@/lib/toast";
 
 const PLACEHOLDER_DOMAIN = "yourdomain.com";
 
-export default function FormAddDomain({ fromLocalPart }) {
+// hasArchiveHost: the server hosts archives on customers' subdomains, so one is picked here.
+export default function FormAddDomain({ fromLocalPart, hasArchiveHost }) {
 	const id = useId();
 	const [domainInput, setDomainInput] = useState("");
 	const [archiveInput, setArchiveInput] = useState("");
@@ -41,7 +42,9 @@ export default function FormAddDomain({ fromLocalPart }) {
 			<div className="flex flex-col gap-4 p-4 sm:p-5">
 				<div>
 					<h2 className="font-semibold tracking-tight">Add your domain</h2>
-					<p className="mt-1 text-sm text-muted-foreground">Send from an address at your domain, with your archive and links on it.</p>
+					<p className="mt-1 text-sm text-muted-foreground">
+						{hasArchiveHost ? "Send from an address at your domain, with your archive and links on it." : "Send from an address at your domain."}
+					</p>
 				</div>
 				<div className="flex flex-col gap-2">
 					<label htmlFor={`${id}-domain`} className="text-sm font-medium">
@@ -76,24 +79,26 @@ export default function FormAddDomain({ fromLocalPart }) {
 						{fromLocalPart}@<TextDomain domain={domain} />
 					</span>
 				</RowPreview>
-				<RowPreview label="Archive and links" htmlFor={`${id}-archive`}>
-					<label className="flex h-9 max-w-full min-w-0 cursor-text items-center rounded-lg border border-input bg-background px-2.5 font-mono text-base transition-[border-color,box-shadow] duration-150 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 sm:h-8 sm:text-[13px] dark:bg-input/30">
-						<input
-							id={`${id}-archive`}
-							aria-label="Archive and links"
-							value={archiveInput}
-							style={{ width: `${Math.max(archiveInput.length, 4)}ch` }}
-							placeholder="news"
-							autoComplete="off"
-							autoCapitalize="none"
-							spellCheck={false}
-							className="max-w-40 min-w-0 bg-transparent outline-none placeholder:text-muted-foreground"
-							onChange={(event) => setArchiveInput(event.target.value)}
-							onBlur={() => setArchiveInput(archiveLabel)}
-						/>
-						<span className="truncate text-muted-foreground">.{domain || PLACEHOLDER_DOMAIN}</span>
-					</label>
-				</RowPreview>
+				{hasArchiveHost && (
+					<RowPreview label="Archive and links" htmlFor={`${id}-archive`}>
+						<label className="flex h-9 max-w-full min-w-0 cursor-text items-center rounded-lg border border-input bg-background px-2.5 font-mono text-base transition-[border-color,box-shadow] duration-150 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 sm:h-8 sm:text-[13px] dark:bg-input/30">
+							<input
+								id={`${id}-archive`}
+								aria-label="Archive and links"
+								value={archiveInput}
+								style={{ width: `${Math.max(archiveInput.length, 4)}ch` }}
+								placeholder="news"
+								autoComplete="off"
+								autoCapitalize="none"
+								spellCheck={false}
+								className="max-w-40 min-w-0 bg-transparent outline-none placeholder:text-muted-foreground"
+								onChange={(event) => setArchiveInput(event.target.value)}
+								onBlur={() => setArchiveInput(archiveLabel)}
+							/>
+							<span className="truncate text-muted-foreground">.{domain || PLACEHOLDER_DOMAIN}</span>
+						</label>
+					</RowPreview>
+				)}
 			</div>
 			<input type="hidden" name="archiveHost" value={archiveLabel && domain ? `${archiveLabel}.${domain}` : ""} />
 		</form>

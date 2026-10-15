@@ -169,7 +169,24 @@ test("the domains page lists every record with its status in words", () => {
 	assert.equal(steps["mail-from"].status.label, "Waiting for DNS");
 	assert.deepEqual(steps.archive.records, [{ type: "CNAME", name: "news.example.com", host: "news", value: "cname.mailcheap.ai" }]);
 	assert.deepEqual(steps.dmarc.records, [{ type: "TXT", name: "_dmarc.example.com", host: "_dmarc", value: "v=DMARC1; p=none;" }]);
-	assert.equal(getDomainSummary(domain).label, "Sending ready, archive waiting");
-	assert.equal(getDomainSummary({ ...domain, archiveHostVerified: true }).label, "Ready");
-	assert.equal(getDomainSummary({ ...domain, verified: false, dkimStatus: "FAILED" }).label, "Records not found");
+	const withTarget = { cnameTarget: "cname.mailcheap.ai" };
+	assert.equal(getDomainSummary(domain, withTarget).label, "Sending ready, archive waiting");
+	assert.equal(getDomainSummary({ ...domain, archiveHostVerified: true }, withTarget).label, "Ready");
+	assert.equal(getDomainSummary({ ...domain, verified: false, dkimStatus: "FAILED" }, withTarget).label, "Records not found");
+});
+
+test("without an archive target, the domains page has no archive step and a verified domain is ready", () => {
+	const domain = {
+		domain: "example.com",
+		mailFromDomain: "rp.example.com",
+		archiveHost: "news.example.com",
+		dkimStatus: "SUCCESS",
+		mailFromStatus: "SUCCESS",
+		archiveHostVerified: false,
+		verified: true,
+		records: [],
+	};
+	assert.deepEqual(getDomainSetup(domain, { cnameTarget: null }).map(({ key }) => key), ["dkim", "mail-from", "dmarc"]);
+	assert.deepEqual(getDomainSummary(domain, { cnameTarget: null }), { label: "Ready", tone: "good" });
+	assert.equal(getDomainSummary({ ...domain, verified: false }, { cnameTarget: null }).label, "Waiting for DNS");
 });

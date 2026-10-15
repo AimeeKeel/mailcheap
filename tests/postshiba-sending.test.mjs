@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { after, afterEach, before, describe, test } from "node:test";
 import mongoose from "mongoose";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { decryptSecret } from "../lib/credentials.js";
 import { activate, as, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 import { POSTSHIBA, POSTSHIBA_ENV, createFakePostshiba } from "./helpers/postshiba.mjs";
@@ -108,6 +110,7 @@ before(async () => {
 		contacts: await import("../app/(app)/contacts/actions.js"),
 		domains: await import("../app/(app)/domains/actions.js"),
 		domainsPage: await import("../app/(app)/domains/page.js"),
+		TooltipProvider: (await import("../components/ui/tooltip.jsx")).TooltipProvider,
 		dashboard: await import("../lib/actions/dashboard.js"),
 		admin: await import("../app/admin/actions.js"),
 		sending: await import("../lib/sending.js"),
@@ -357,6 +360,26 @@ describe("PostShiba domains", () => {
 		await as(user, () => m.domainsPage.default());
 		assert.equal(reads(), readsBefore);
 		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(_id))), { ok: true, verified: true, archiveHostVerified: true });
+	});
+
+	test("without an archive target, a verified domain is ready and nothing asks for its archive subdomain, on the page or in the API", async () => {
+		const user = await customer("ps-no-archive@example.com", "ps-no-archive");
+		const listDomain = async () => (await as(user, () => m.dashboard.runDashboardAction("list_domains"))).output.domains[0];
+		const renderPage = async () => renderToStaticMarkup(createElement(m.TooltipProvider, null, await as(user, () => m.domainsPage.default())));
+
+		await withEnv({ ARCHIVE_CNAME_TARGET: "" }, async () => {
+			const domain = await listDomain();
+			assert.equal(domain.status, "Ready");
+			assert.deepEqual(domain.setup.map(({ key }) => key), ["dkim", "mail-from", "dmarc"]);
+			const page = await renderPage();
+			assert.doesNotMatch(page, /Archive and links|archive waiting|Waiting for DNS/);
+			assert.match(page, /Send from an address at your domain\.</);
+		});
+
+		const domain = await listDomain();
+		assert.equal(domain.status, "Sending ready, archive waiting", "with a target, the archive subdomain counts again");
+		assert.equal(domain.setup.find(({ key }) => key === "archive").status, "Waiting for DNS");
+		assert.match(await renderPage(), /Archive and links/);
 	});
 });
 

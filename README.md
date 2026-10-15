@@ -52,11 +52,11 @@ MailCheap is the rest of what a newsletter needs, in one Next.js app: an editor,
 - On MailCheap Cloud, a new account's campaigns go out over 24, 16 and 12 hours, then 8, for its first 30 days. One account per inbox (jane.doe+2@gmail.com is jane.doe@gmail.com), no throwaway inboxes, and 3 new accounts a day per IP address.
 - One-click unsubscribe (RFC 8058 `List-Unsubscribe` headers) and an unsubscribe page, with signed links.
 - List cleanup, on by default: readers who ignored several issues get one "do you still want this?" email, then stop getting issues.
-- Open and click tracking on your own domain, with link scanners filtered out.
+- Open and click tracking, with link scanners filtered out.
 
 **Publish and measure**
 
-- A public archive: issue pages, author page, share images, sitemap. On a subdomain of your own if you want.
+- A public archive: issue pages, author page, share images, sitemap. A self-hosted server can put it on a subdomain of your own.
 - Overview with subscribers over time, emails per hour, and delivery, open, click, bounce and complaint rates.
 - Campaign reports by mailbox provider (Gmail, Outlook, Yahoo, iCloud...).
 - A domains page with each domain's DKIM, return path and DMARC status and the DNS records to add.
@@ -210,7 +210,7 @@ QStash calls `APP_URL/api/jobs/...` to send each batch, so the app has to be rea
 
 ### Optional
 
-- **Archive on its own subdomain.** Each domain comes with an archive subdomain (`news.<domain>` by default). Set `ARCHIVE_CNAME_TARGET` to the host it should point at (`cname.vercel-dns.com` on Vercel) and add the subdomain to your hosting (on Vercel, to the project's domains): MailCheap doesn't. Once its CNAME resolves, **Check now** moves the archive, tracked links and unsubscribe links there.
+- **Archive on its own subdomain.** Each domain comes with an archive subdomain (`news.<domain>` by default). Set `ARCHIVE_CNAME_TARGET` to the host it should point at (`cname.vercel-dns.com` on Vercel) and add the subdomain to your hosting (on Vercel, to the project's domains): MailCheap doesn't. Once its CNAME resolves, **Check now** moves the archive, tracked links and unsubscribe links there. Without `ARCHIVE_CNAME_TARGET`, the Domains page doesn't ask for that subdomain.
 
   This is the safer setup: issue pages show HTML from your editor and from API keys, and on their own domain that HTML never shares the dashboard's origin. Without one, the archive stays at `/archive/<slug>` on the app's domain, where the sanitizer, the sandboxed frame and the Content Security Policy protect it.
 - **Shared domain.** `SHARED_DOMAIN` gives every newsletter without a domain of its own an address of its own, `hello@<slug>.SHARED_DOMAIN`, and its archive at `<slug>.SHARED_DOMAIN`. MailCheap adds each subdomain at the provider and has its records published, and removed when the slug changes, by a DNS helper (`DNS_BROKER_URL`, `DNS_BROKER_SECRET`): on MailCheap Cloud a Vercel project of its own that holds the Vercel token, so the app never does, and only writes a shared address's records. Without one, DNS automation is off and shared addresses can't be set up. Its DNS has to be on Vercel, with `*.SHARED_DOMAIN` on the project. Add one DMARC record for the whole domain yourself: `_dmarc.SHARED_DOMAIN` TXT `v=DMARC1; p=none;`. It can be the app's own domain, as MailCheap Cloud's is `mailcheap.ai`: slugs can't take `www` or the other names in `lib/reserved-slugs.js`, and those hosts never open an archive. Without a shared domain, every newsletter sends from a domain of its own.
