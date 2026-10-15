@@ -71,7 +71,7 @@ describe("/welcome", () => {
 		const account = await loadAccount(user);
 		assert.deepEqual([account.onboarding.listSize, account.onboarding.listSource], ["growth", "Substack"]);
 		assert.ok(account.onboarding.completedAt);
-		assert.equal(m.onboarding.getRecommendedPlanId(account), "growth", "the paywall starts on the plan the list fits");
+		assert.equal(m.onboarding.getRecommendedPlanId(account), "pro", "the paywall starts on the plan with the emails for a weekly issue");
 		assert.equal(await m.onboarding.needsOnboarding(account), false);
 
 		assert.equal(await welcome(user, { name: "Again" }), "/", "sent twice, it only finishes");
@@ -100,6 +100,23 @@ describe("/welcome", () => {
 			m.onboarding.LIST_SIZES.map(({ label }) => label),
 			["Not yet", "Under 10,000", "10,000 to 40,000", "40,000 to 100,000", "100,000 to 250,000", "Over 250,000"]
 		);
+	});
+
+	test("the suggested plan has the emails for one issue a week to the top of the list's size", () => {
+		const suggest = (listSize) => m.onboarding.getRecommendedPlanId({ onboarding: { listSize } });
+		// Under 10,000 is up to 43,300 emails a month, past Starter's 20,000: 9,000 subscribers sending weekly get Growth.
+		assert.deepEqual(
+			m.onboarding.LIST_SIZES.map(({ id }) => [id, suggest(id)]),
+			[
+				["none", "starter"],
+				["starter", "growth"],
+				["growth", "pro"],
+				["pro", "scale"],
+				["scale", "scale"],
+				["more", "scale"],
+			]
+		);
+		assert.equal(suggest(undefined), "starter", "no answer");
 	});
 });
 
