@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { activate, anonymous, as, catchRedirect, form, mockStripe, platformEmails, signIn, startTestApp } from "./helpers/app.mjs";
 
 // The public side of the app on every server: where / sends signed-out visitors, which paths open without a session,
-// the plan buttons' way through sign-in to Checkout, and what the sitemap and robots.txt tell search engines.
+// the plan buttons' way through sign-in to Checkout, the header's plane, and what the sitemap and robots.txt tell
+// search engines.
 // MailCheap Cloud's marketing site adds to it through the site extensions (tests/marketing/site.test.mjs).
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const SITE_URL = "https://mailcheap.ai";
@@ -227,6 +228,31 @@ describe("copy", () => {
 		const intro = m.docs.getLlmsIndex(SITE_URL).split("## Docs")[0];
 		assert.match(intro, /^> The affordable newsletter for the agentic era: run your newsletter on autopilot with AI agents\./m);
 		assert.doesNotMatch(intro, PROVIDERS);
+	});
+});
+
+describe("header", () => {
+	test("only the public header's plane flies, for a mouse with motion allowed, leaving and landing along its nose", async () => {
+		const flying = [];
+		for (const folder of ["app", "components"]) {
+			for (const file of await readdir(join(ROOT, folder), { recursive: true })) {
+				if (!/\.jsx?$/.test(file)) continue;
+				if (/<LogoWordmark\b[^>]*\bcanFly\b/.test(await readFile(join(ROOT, folder, file), "utf8"))) flying.push(`${folder}/${file}`);
+			}
+		}
+		assert.deepEqual(flying, ["components/HeaderSite.jsx"]);
+
+		const css = await readFile(join(ROOT, "app/globals.css"), "utf8");
+		assert.match(css, /@media \(hover: hover\) and \(pointer: fine\) and \(prefers-reduced-motion: no-preference\) \{[^@]*@container wordmark-flight style\(--wordmark-flight: 1\)/);
+		const turn = Number(css.match(/offset-rotate: auto (-?[\d.]+)deg/)[1]);
+
+		// Straight at both ends, from and back to the plane's middle, heading where its nose points at rest.
+		const loop = (await readFile(join(ROOT, "components/LogoWordmark.jsx"), "utf8")).match(/const LOOP = "([^"]+)"/)[1];
+		assert.match(loop, /^M12 12L[^A-Z]+C.+L12 12$/);
+		const numbers = loop.match(/-?[\d.]+/g).map(Number);
+		const heading = ([x1, y1], [x2, y2]) => (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+		assert.ok(Math.abs(heading([12, 12], numbers.slice(2, 4)) + turn) < 0.05, "takes off turned");
+		assert.ok(Math.abs(heading(numbers.slice(-4, -2), [12, 12]) + turn) < 0.05, "lands turned");
 	});
 });
 
