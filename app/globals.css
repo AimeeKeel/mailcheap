@@ -182,15 +182,18 @@ html:has([data-plan-bar]) {
   --plan-bar-height: 2.5rem;
 }
 
-/* Dashboard pages are 72rem wide at most, padding included. The campaign editor (FormCampaign) docks its preview
-   beside the writing column on wide screens: 42rem to write, a 1rem gap, 42.5rem for an email at its 640px width
-   and the page's 5rem of padding. */
-html {
-  --page-width: 72rem;
+/* The campaign editor's steps (FormCampaign): a shorter step keeps the page as wide, and what gets focus scrolls clear
+   of its sticky bars. Below lg the step's button floats at the bottom of the screen, and the page keeps that space. */
+html:has([data-campaign-steps]) {
+  scrollbar-gutter: stable;
+  scroll-padding: calc(var(--plan-bar-height) + 5rem) 0 1rem;
 }
 
-html:has([data-wide-page]) {
-  --page-width: 90.5rem;
+@media (width < 64rem) {
+  html:has([data-campaign-steps]) {
+    --step-bar-space: calc(3.5rem + var(--dock-bottom));
+    scroll-padding: calc(var(--plan-bar-height) + 7.5rem) 0 var(--step-bar-space);
+  }
 }
 
 /* BannerBlocked's reason takes two lines on phones. */

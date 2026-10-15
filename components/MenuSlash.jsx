@@ -29,11 +29,6 @@ export default function MenuSlash({ items, command, ref }) {
 	useImperativeHandle(ref, () => ({
 		onKeyDown({ event }) {
 			if (!items.length) return false;
-			// Escape only closes the menu: the page's own (closing the preview) never sees it.
-			if (event.key === "Escape") {
-				event.stopPropagation();
-				return true;
-			}
 			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 				const step = event.key === "ArrowDown" ? 1 : -1;
 				select((index + step + items.length) % items.length);
