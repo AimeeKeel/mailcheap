@@ -71,7 +71,7 @@ describe("/welcome", () => {
 		const account = await loadAccount(user);
 		assert.deepEqual([account.onboarding.listSize, account.onboarding.listSource], ["growth", "Substack"]);
 		assert.ok(account.onboarding.completedAt);
-		assert.equal(m.onboarding.getRecommendedPlanId(account), "pro", "the paywall starts on the plan with the emails for a weekly issue");
+		assert.equal(m.onboarding.getRecommendedPlanId(account), "growth", "the paywall starts on the plan for a weekly issue to the list");
 		assert.equal(await m.onboarding.needsOnboarding(account), false);
 
 		assert.equal(await welcome(user, { name: "Again" }), "/", "sent twice, it only finishes");
@@ -95,28 +95,30 @@ describe("/welcome", () => {
 		assert.equal((await loadAccount(user)).onboarding.listSize, undefined);
 	});
 
-	test("the list sizes follow the plans' subscribers", () => {
+	test("the list sizes are steps of one issue a week, each suggesting the plan it names", () => {
+		const suggest = (listSize) => m.onboarding.getRecommendedPlanId({ onboarding: { listSize } });
+		// About 4.33 emails per subscriber a month: 15,000 subscribers take 64,950 of Growth's 75,000, 45,000 take 194,850 of
+		// Pro's 200,000 and 100,000 take 433,000 of Scale's 500,000. Starter's 20,000 hold about 4,600, and Under 5,000 stays
+		// on it: most new lists are far smaller.
 		assert.deepEqual(
-			m.onboarding.LIST_SIZES.map(({ label }) => label),
-			["Not yet", "Under 10,000", "10,000 to 40,000", "40,000 to 100,000", "100,000 to 250,000", "Over 250,000"]
+			m.onboarding.LIST_SIZES.map(({ id, label }) => [label, suggest(id)]),
+			[
+				["Not yet", "starter"],
+				["Under 5,000", "starter"],
+				["5,000 to 15,000", "growth"],
+				["15,000 to 45,000", "pro"],
+				["45,000 to 100,000", "scale"],
+				["Over 100,000", "scale"],
+			]
 		);
 	});
 
-	test("the suggested plan has the emails for one issue a week to the top of the list's size", () => {
+	test("an answer saved under earlier steps still names its plan, and one that names none starts on the smallest", () => {
 		const suggest = (listSize) => m.onboarding.getRecommendedPlanId({ onboarding: { listSize } });
-		// Under 10,000 is up to 43,300 emails a month, past Starter's 20,000: 9,000 subscribers sending weekly get Growth.
-		assert.deepEqual(
-			m.onboarding.LIST_SIZES.map(({ id }) => [id, suggest(id)]),
-			[
-				["none", "starter"],
-				["starter", "growth"],
-				["growth", "pro"],
-				["pro", "scale"],
-				["scale", "scale"],
-				["more", "scale"],
-			]
-		);
-		assert.equal(suggest(undefined), "starter", "no answer");
+		// Accounts keep the id, whatever its label was when they picked it: starter was Under 10,000 for a while.
+		assert.deepEqual(["starter", "growth", "pro", "scale", "more"].map(suggest), ["starter", "growth", "pro", "scale", "scale"]);
+		for (const listSize of [undefined, "", "Under 10,000", "enterprise"]) assert.equal(suggest(listSize), "starter", String(listSize));
+		assert.equal(m.onboarding.getRecommendedPlanId({}), "starter", "an account from before onboarding asked");
 	});
 });
 
