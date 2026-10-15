@@ -420,7 +420,7 @@ describe("PostShiba sending", () => {
 		assert.equal(body.subject, "[Test] Issue 7");
 		assert.match(body.headers["List-Unsubscribe"], /\/api\/unsubscribe\?token=/);
 		assert.equal(body.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
-		assert.equal(body.headers["Feedback-ID"], undefined, "PostShiba sets its own");
+		assert.equal(body.headers["Feedback-ID"], `${id}:mc-${user.accountId}:test:mailcheap`, "PostShiba writes its own in its place, led by the same mc-<accountId>");
 		assert.deepEqual(body.unique_args, { account_id: String(user.accountId), message_id: String(message._id), kind: "test", campaign_id: id });
 		assert.ok(response.message_id);
 		assert.equal(message.providerMessageId, undefined, "the Message-ID /sends answers with isn't the id PostShiba's events carry");
@@ -565,6 +565,57 @@ describe("PostShiba sending", () => {
 		await runJobs();
 		assert.equal(fake.state.sends.at(-1).key, String(message._id));
 		assert.equal((await m.Message.findOne({ accountId: user.accountId, _id: message._id }).lean()).status, "sent");
+	});
+});
+
+describe("Feedback-ID on every email", () => {
+	test("a campaign's steps and last-chance emails over inject, signup and test emails over /sends: the campaign or newsletter, the account, the kind", async () => {
+		const user = await customer("ps-feedback@example.com", "ps-feedback");
+		const account = `mc-${user.accountId}`;
+		await importContacts(user, ["first@example.org", "second@example.org", "third@example.org"]);
+		const id = await draft(user, "Feedback");
+		const injected = fake.state.injects.length;
+
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(id, { audienceLimit: 1 })), { ok: true });
+		await runJobs();
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaignToMore(id, { additional: 1 })), { ok: true });
+		await runJobs();
+		const steps = fake.state.injects.slice(injected);
+		assert.equal(steps.length, 2, "the first step and the next");
+		assert.deepEqual(
+			steps.map(({ body }) => body.content.headers["Feedback-ID"]),
+			[`${id}:${account}:campaign:mailcheap`, `${id}:${account}:campaign:mailcheap`],
+			"the campaign's, the same on each of its emails"
+		);
+
+		const third = await m.Contact.findOne({ accountId: user.accountId, email: "third@example.org" }).lean();
+		await m.Campaign.updateOne({ accountId: user.accountId, _id: id }, { $set: { status: "sending" } });
+		const lastChance = await m.Message.create({ accountId: user.accountId, campaignId: id, newsletterId: user.newsletterId, contactId: third._id, email: third.email, kind: "last-chance" });
+		assert.equal((await m.sending.sendMessageBatch({ accountId: String(user.accountId), messageIds: [String(lastChance._id)] })).sent, 1);
+		assert.equal(fake.state.injects.at(-1).body.content.headers["Feedback-ID"], `${id}:${account}:last-chance:mailcheap`);
+
+		await as(user, () =>
+			m.newsletters.saveNewsletter(
+				null,
+				form({ id: user.newsletterId, name: user.slug, slug: user.slug, fromName: "Jane", fromEmail: "hello@ps-feedback.dev", postalAddress: "1 Main St", welcomeEnabled: "on", welcomeSubject: "Welcome", welcomeMarkdown: "Thanks for joining." })
+			)
+		);
+		const sent = fake.state.sends.length;
+		assert.equal((await welcomeNewContact(user, "welcome-reader@example.org")).sent, 1);
+		const newsletter = await m.Newsletter.findOne({ accountId: user.accountId, _id: user.newsletterId }).lean();
+		const pending = await m.Contact.create({ accountId: user.accountId, newsletterId: user.newsletterId, email: "pending-reader@example.org", status: "pending" });
+		assert.equal((await m.sending.queueConfirmationEmail({ newsletter, contact: pending })).sent, 1);
+		assert.deepEqual(await as(user, () => m.campaigns.sendTestCampaign(id)), { ok: true });
+		assert.deepEqual(await as(user, () => m.newsletters.sendWelcomeTest(user.newsletterId)), { ok: true });
+		assert.deepEqual(
+			fake.state.sends.slice(sent).map(({ body }) => body.headers["Feedback-ID"]),
+			[
+				`${user.newsletterId}:${account}:welcome:mailcheap`,
+				`${user.newsletterId}:${account}:confirmation:mailcheap`,
+				`${id}:${account}:test:mailcheap`,
+				`${user.newsletterId}:${account}:test:mailcheap`,
+			]
+		);
 	});
 });
 

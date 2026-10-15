@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Users } from "lucide-react";
+import CardPostmaster from "@/components/CardPostmaster";
 import CardStat from "@/components/CardStat";
 import CardUndeliverable from "@/components/CardUndeliverable";
 import HeaderPage from "@/components/HeaderPage";
@@ -21,8 +22,9 @@ import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Accounts" };
 
-export default async function AdminPage() {
+export default async function AdminPage({ searchParams }) {
 	await requireAdmin();
+	const { postmaster } = await searchParams;
 	const [accounts, undeliverable] = await Promise.all([listAccountsForAdmin(), countGlobalSuppressions()]);
 	// Self-hosted, every account counts as paying.
 	const withPlan = accounts.filter(hasActiveSubscription);
@@ -69,6 +71,13 @@ export default async function AdminPage() {
 				<section style={{ "--stagger": 3 }} className="flex flex-col gap-3 animate-enter">
 					<h2 className="text-sm font-medium text-muted-foreground">{provider.name}</h2>
 					<Suspense fallback={<SkeletonSesAccount />}>{provider.id === "ses" ? <StripSesAccount /> : <StripPostshibaClusters />}</Suspense>
+				</section>
+
+				<section style={{ "--stagger": 4 }} className="flex flex-col gap-3 animate-enter">
+					<h2 className="text-sm font-medium text-muted-foreground">Gmail spam rates</h2>
+					<Suspense fallback={<SkeletonSesAccount />}>
+						<CardPostmaster notice={typeof postmaster === "string" ? postmaster : undefined} />
+					</Suspense>
 				</section>
 			</div>
 		</>

@@ -109,6 +109,7 @@ describe("counting", () => {
 		const [batch] = await runJobs();
 		assert.equal(batch.sent, 3);
 		assert.equal(sesEmails.length - before, 3);
+		assert.deepEqual([...new Set(sesEmails.slice(before).map(({ headers }) => headers["Feedback-ID"]))], [`${id}:mc-${user.accountId}:campaign:mailcheap`]);
 		assert.equal((await usage(user)).emailsSent, 4);
 		assert.equal((await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean()).status, "sent");
 	});

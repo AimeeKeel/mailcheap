@@ -185,6 +185,7 @@ describe("shared addresses", () => {
 		assert.equal(email.from, "hello@weekly.mailcheap.ai");
 		assert.match(email.html, /https:\/\/weekly\.mailcheap\.ai\/c\//);
 		assert.match(email.headers["List-Unsubscribe"], /^<https:\/\/weekly\.mailcheap\.ai\/api\/unsubscribe\?token=/);
+		assert.equal(email.headers["Feedback-ID"], `${id}:mc-${user.accountId}:test:mailcheap`, "SES sends MailCheap's own as it is");
 	});
 
 	test("a slug saved before MailCheap kept it gets no sending subdomain, and the one of its old slug goes", async () => {
