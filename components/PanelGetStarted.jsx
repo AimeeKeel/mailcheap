@@ -187,7 +187,19 @@ const STEPS = {
 	},
 	subscribers: {
 		title: "Add your subscribers",
-		description: "Import a CSV from Substack, beehiiv, Mailchimp or Kit.",
+		description: (
+			<>
+				Import a CSV from beehiiv, Substack or Mailchimp, or add them with the{" "}
+				<Link
+					href="/docs/api#add-contact"
+					target="_blank"
+					className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 transition-colors duration-150 hover:decoration-foreground"
+				>
+					API
+				</Link>
+				.
+			</>
+		),
 		href: "/contacts",
 		action: "Import",
 	},

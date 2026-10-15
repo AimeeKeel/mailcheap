@@ -2,7 +2,7 @@ import Link from "next/link";
 import BlockCode from "@/components/BlockCode";
 import HeaderDocs from "@/components/HeaderDocs";
 import { MAX_ACTIVE_API_KEYS } from "@/lib/actions/api-keys";
-import { SLUG_CHANGES } from "@/lib/actions/newsletters";
+import { SLUG_CHANGES } from "@/lib/newsletters";
 import { ACTIONS } from "@/lib/actions/registry";
 import { API_BASE_PATH, REQUESTS_PER_KEY } from "@/lib/api/rest";
 import { getAppUrl, isCloud } from "@/lib/config";

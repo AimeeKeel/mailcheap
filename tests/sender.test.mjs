@@ -170,7 +170,7 @@ test("the domains page lists every record with its status in words", () => {
 	assert.deepEqual(steps.archive.records, [{ type: "CNAME", name: "news.example.com", host: "news", value: "cname.mailcheap.ai" }]);
 	assert.deepEqual(steps.dmarc.records, [{ type: "TXT", name: "_dmarc.example.com", host: "_dmarc", value: "v=DMARC1; p=none;" }]);
 	const withTarget = { cnameTarget: "cname.mailcheap.ai" };
-	assert.equal(getDomainSummary(domain, withTarget).label, "Sending ready, archive waiting");
+	assert.equal(getDomainSummary(domain, withTarget).label, "Sending ready, website waiting");
 	assert.equal(getDomainSummary({ ...domain, archiveHostVerified: true }, withTarget).label, "Ready");
 	assert.equal(getDomainSummary({ ...domain, verified: false, dkimStatus: "FAILED" }, withTarget).label, "Records not found");
 });

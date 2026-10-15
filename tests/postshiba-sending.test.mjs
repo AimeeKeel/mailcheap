@@ -372,14 +372,14 @@ describe("PostShiba domains", () => {
 			assert.equal(domain.status, "Ready");
 			assert.deepEqual(domain.setup.map(({ key }) => key), ["dkim", "mail-from", "dmarc"]);
 			const page = await renderPage();
-			assert.doesNotMatch(page, /Archive and links|archive waiting|Waiting for DNS/);
+			assert.doesNotMatch(page, /Website and links|website waiting|Waiting for DNS/);
 			assert.match(page, /Send from an address at your domain\.</);
 		});
 
 		const domain = await listDomain();
-		assert.equal(domain.status, "Sending ready, archive waiting", "with a target, the archive subdomain counts again");
+		assert.equal(domain.status, "Sending ready, website waiting", "with a target, the archive subdomain counts again");
 		assert.equal(domain.setup.find(({ key }) => key === "archive").status, "Waiting for DNS");
-		assert.match(await renderPage(), /Archive and links/);
+		assert.match(await renderPage(), /Website and links/);
 	});
 });
 

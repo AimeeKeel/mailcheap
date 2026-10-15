@@ -37,7 +37,7 @@ test("every check that can fail says how to fix it, except the server's own send
 	assert.equal(fixes.content.field, "body");
 	assert.equal(fixes.unsubscribe.field, "body");
 	assert.equal(fixes.size.field, "body");
-	assert.deepEqual(fixes.address, { label: "Open settings", href: "/newsletters/n1" });
+	assert.deepEqual(fixes.address, { label: "Add a postal address", href: "/newsletters#postal-address" });
 	assert.equal(fixes.domain.href, "/newsletters/n1");
 	assert.equal(fixes.test.action, "test");
 	assert.equal(fixes.plan.href, "/billing");

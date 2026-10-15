@@ -53,6 +53,15 @@ function readSettings(formData) {
 	};
 }
 
+// The slug field asks as its value settles: available, or why not.
+export async function checkSlug(slug, newsletterId) {
+	const { output, failure } = await runDashboardAction("check_newsletter_slug", {
+		slug: String(slug ?? ""),
+		...(newsletterId && { id: String(newsletterId) }),
+	});
+	return failure ? toFormError(failure) : output;
+}
+
 export async function sendWelcomeTest(newsletterId) {
 	const { failure } = await runDashboardAction("send_welcome_test_email", { id: String(newsletterId ?? "") });
 	return failure ? toFormError(failure) : { ok: true };

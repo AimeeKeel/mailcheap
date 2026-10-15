@@ -31,7 +31,7 @@ export default function CardAddContacts({ newsletter, curl }) {
 			<div className="grid @4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
 				<ColumnWay
 					title="Import your list"
-					description="Bring your subscribers from beehiiv, Substack, Mailchimp, Kit or a CSV file."
+					description="Import a CSV from beehiiv, Substack or Mailchimp."
 				>
 					<ul
 						aria-hidden="true"
@@ -95,5 +95,4 @@ const SOURCES = [
 	{ id: "beehiiv", name: "beehiiv" },
 	{ id: "substack", name: "Substack" },
 	{ id: "mailchimp", name: "Mailchimp" },
-	{ id: "kit", name: "Kit" },
 ];

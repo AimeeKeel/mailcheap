@@ -10,7 +10,9 @@ const newsletterSchema = new mongoose.Schema(
 		fromName: { type: String, trim: true },
 		fromEmail: { type: String, required: true, lowercase: true, trim: true },
 		replyTo: { type: String, lowercase: true, trim: true },
+		// Without one, emails print the server's default (lib/postal-address.js), unless the owner saved it empty.
 		postalAddress: { type: String, trim: true },
+		postalAddressCleared: { type: Boolean },
 		archiveEnabled: { type: Boolean, default: false },
 		// The account's verified archive subdomain (lib/domains.js syncArchiveHosts). Without one, the
 		// archive and the links in its emails use <slug>.<shared domain>.

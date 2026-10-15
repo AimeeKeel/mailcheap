@@ -5,11 +5,12 @@ import LayoutNarrow from "@/components/LayoutNarrow";
 import { scoped } from "@/lib/account-scope";
 import { getWelcomePauseNotice } from "@/lib/account-state";
 import { cleanupTotalsPipeline } from "@/lib/cleanup";
-import { getSharedDomain, isSendingEnabled } from "@/lib/config";
+import { getAppUrl, getArchiveCnameTarget, getSharedDomain, isSendingEnabled } from "@/lib/config";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { findAccountDomains } from "@/lib/sender";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
 import { serialize } from "@/lib/serialize";
+import { siteExtensions } from "@/lib/site-extensions";
 import { getUsage } from "@/lib/usage";
 import Contact from "@/models/Contact";
 import Newsletter from "@/models/Newsletter";
@@ -36,6 +37,9 @@ export default async function SettingsPage() {
 				newsletter={serialize(newsletter)}
 				domains={serialize(domains)}
 				sharedDomain={getSharedDomain()}
+				appUrl={getAppUrl()}
+				hasArchiveHost={Boolean(getArchiveCnameTarget())}
+				defaultPostalAddress={siteExtensions.defaultPostalAddress}
 				isSendingEnabled={isSendingEnabled()}
 				testEmail={user.email}
 				cleanupTotals={cleanupTotals}

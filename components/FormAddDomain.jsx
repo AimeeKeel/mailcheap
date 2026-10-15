@@ -43,7 +43,7 @@ export default function FormAddDomain({ fromLocalPart, hasArchiveHost }) {
 				<div>
 					<h2 className="font-semibold tracking-tight">Add your domain</h2>
 					<p className="mt-1 text-sm text-muted-foreground">
-						{hasArchiveHost ? "Send from an address at your domain, with your archive and links on it." : "Send from an address at your domain."}
+						{hasArchiveHost ? "Send from an address at your domain, with your website and links on it." : "Send from an address at your domain."}
 					</p>
 				</div>
 				<div className="flex flex-col gap-2">
@@ -80,11 +80,11 @@ export default function FormAddDomain({ fromLocalPart, hasArchiveHost }) {
 					</span>
 				</RowPreview>
 				{hasArchiveHost && (
-					<RowPreview label="Archive and links" htmlFor={`${id}-archive`}>
+					<RowPreview label="Website and links" htmlFor={`${id}-archive`}>
 						<label className="flex h-9 max-w-full min-w-0 cursor-text items-center rounded-lg border border-input bg-background px-2.5 font-mono text-base transition-[border-color,box-shadow] duration-150 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 sm:h-8 sm:text-[13px] dark:bg-input/30">
 							<input
 								id={`${id}-archive`}
-								aria-label="Archive and links"
+								aria-label="Website and links"
 								value={archiveInput}
 								style={{ width: `${Math.max(archiveInput.length, 4)}ch` }}
 								placeholder="news"

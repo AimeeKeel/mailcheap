@@ -40,7 +40,7 @@ export default function DialogRemoveDomain({ id, domain, hasArchiveHost }) {
 				<DialogHeader>
 					<DialogTitle>Remove {domain}?</DialogTitle>
 					<DialogDescription>
-						Newsletters can&apos;t send from it anymore{hasArchiveHost && ", and its archive subdomain stops working"}. You can add it again later.
+						Newsletters can&apos;t send from it anymore{hasArchiveHost && ", and its website subdomain stops working"}. You can add it again later.
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>

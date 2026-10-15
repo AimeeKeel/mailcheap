@@ -8,10 +8,12 @@ import { getArchiveUrls } from "@/lib/archive-hosts";
 import { countNewContacts, getSendVolumes, sendTimesPipeline } from "@/lib/campaign-queries";
 import { isSendingEnabled } from "@/lib/config";
 import { MESSAGE_STATS_GROUP } from "@/lib/message-stats";
+import { getPostalAddress } from "@/lib/postal-address";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
 import { getPace } from "@/lib/send-spread";
 import { serialize } from "@/lib/serialize";
 import { loadSender } from "@/lib/sender";
+import { siteExtensions } from "@/lib/site-extensions";
 import { countEmailsInFlight, getUsage } from "@/lib/usage";
 import Campaign from "@/models/Campaign";
 import Contact from "@/models/Contact";
@@ -28,8 +30,10 @@ export default async function CampaignPage({ params }) {
 	const campaign = await Campaign.findOne(scoped(account, { _id: id })).lean();
 	if (!campaign) notFound();
 	openNewsletter(view, campaign.newsletterId, `/campaigns/${id}`);
-	const newsletter = await Newsletter.findOne(scoped(account, { _id: campaign.newsletterId })).lean();
-	if (!newsletter) notFound();
+	const stored = await Newsletter.findOne(scoped(account, { _id: campaign.newsletterId })).lean();
+	if (!stored) notFound();
+	// The previews and the checks show the address its emails print.
+	const newsletter = { ...stored, postalAddress: getPostalAddress(stored, siteExtensions.defaultPostalAddress) };
 	const plan = await getPlanState(account);
 
 	if (!["draft", "scheduled"].includes(campaign.status)) {
