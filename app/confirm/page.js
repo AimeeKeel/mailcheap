@@ -1,6 +1,7 @@
 import { Link2Off } from "lucide-react";
 import CardNotice from "@/components/CardNotice";
 import FormConfirm from "@/components/FormConfirm";
+import { hasPublishedIssue } from "@/lib/archive-data";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 import { verifyConfirmToken } from "@/lib/confirmation";
 import { connectDb } from "@/lib/db";
@@ -27,7 +28,7 @@ export default async function ConfirmPage({ searchParams }) {
 					newsletterName={newsletter.name}
 					fromName={newsletter.fromName}
 					fromEmail={newsletter.fromEmail}
-					archiveUrl={newsletter.archiveEnabled ? getArchiveUrls(newsletter).siteIndex : null}
+					archiveUrl={newsletter.isArchiveLive ? getArchiveUrls(newsletter).siteIndex : null}
 				/>
 			) : (
 				<CardNotice icon={Link2Off} title="This link doesn't work">
@@ -41,7 +42,8 @@ export default async function ConfirmPage({ searchParams }) {
 async function getNewsletter(newsletterId) {
 	try {
 		await connectDb();
-		return await findOpenNewsletter({ _id: newsletterId });
+		const newsletter = await findOpenNewsletter({ _id: newsletterId });
+		return newsletter && { ...newsletter, isArchiveLive: newsletter.archiveEnabled && (await hasPublishedIssue(newsletter)) };
 	} catch (error) {
 		console.error("[confirm] Could not load the newsletter:", error.message);
 		return null;

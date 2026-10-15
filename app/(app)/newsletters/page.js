@@ -4,6 +4,7 @@ import HeaderPage from "@/components/HeaderPage";
 import LayoutNarrow from "@/components/LayoutNarrow";
 import { scoped } from "@/lib/account-scope";
 import { getWelcomePauseNotice } from "@/lib/account-state";
+import { hasPublishedIssue } from "@/lib/archive-data";
 import { cleanupTotalsPipeline } from "@/lib/cleanup";
 import { getAppUrl, getArchiveCnameTarget, getSharedDomain, isSendingEnabled } from "@/lib/config";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
@@ -22,11 +23,12 @@ export const metadata = { title: "Settings" };
 export default async function SettingsPage() {
 	const { user, account, selected } = await getSelectedNewsletter();
 	if (!selected) redirect(ADD_NEWSLETTER_PATH);
-	const [newsletter, domains, cleanupTotals, usage] = await Promise.all([
+	const [newsletter, domains, cleanupTotals, usage, hasSentIssue] = await Promise.all([
 		Newsletter.findOne(scoped(account, { _id: selected._id })).lean(),
 		findAccountDomains(account._id),
 		getCleanupTotals(account, selected._id),
 		getUsage(account),
+		hasPublishedIssue({ accountId: account._id, _id: selected._id }),
 	]);
 
 	return (
@@ -39,6 +41,7 @@ export default async function SettingsPage() {
 				sharedDomain={getSharedDomain()}
 				appUrl={getAppUrl()}
 				hasArchiveHost={Boolean(getArchiveCnameTarget())}
+				hasSentIssue={hasSentIssue}
 				defaultPostalAddress={siteExtensions.defaultPostalAddress}
 				isSendingEnabled={isSendingEnabled()}
 				testEmail={user.email}

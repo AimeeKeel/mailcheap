@@ -42,12 +42,14 @@ const IMAGE_PREVIEW_PATTERN = /^(https:\/\/\S+\.\S{2,}\/\S+|\/\S+\.\w{3,4})$/;
 // opened and dropped what an error refused. Discard goes back to what the newsletter has saved.
 // defaultPostalAddress: what its emails print until it has its own (lib/postal-address.js); the editor's checks link
 // to the field with #postal-address. hasArchiveHost: the server hosts websites on customers' own subdomains.
+// hasSentIssue: an issue went out, so the website can be live (lib/archive-data.js).
 export default function FormNewsletter({
 	newsletter,
 	domains,
 	sharedDomain,
 	appUrl,
 	hasArchiveHost,
+	hasSentIssue,
 	defaultPostalAddress,
 	isSendingEnabled,
 	testEmail,
@@ -532,6 +534,8 @@ export default function FormNewsletter({
 					hint={
 						!isArchiveEnabled ? (
 							"Your website is off. Turn it on above to give every issue you send a page."
+						) : !hasSentIssue ? (
+							"Goes live after your first issue."
 						) : !hasPlan ? (
 							<>
 								It goes online once you pick a plan.{" "}
@@ -549,7 +553,7 @@ export default function FormNewsletter({
 					}
 				>
 					<span className="flex min-w-0 items-center gap-1.5 sm:min-h-9">
-						{isArchiveEnabled && hasPlan && newsletter?.archiveEnabled ? (
+						{isArchiveEnabled && hasSentIssue && hasPlan && newsletter?.archiveEnabled ? (
 							<a
 								href={websiteAddress}
 								target="_blank"
