@@ -190,7 +190,7 @@ const PERIODS = [
 const INCLUDED = [
 	"Campaigns",
 	"Scheduling",
-	"Web archive",
+	"Website",
 	"Your own domain",
 	"Signup forms",
 	"Welcome emails",
