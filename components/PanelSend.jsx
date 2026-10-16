@@ -164,7 +164,7 @@ export default function PanelSend({
 						<div className="flex flex-col gap-4 px-1 pt-1 animate-enter">
 							<PickerSendTime value={sending.sendAt} onChange={sending.setSendAt} />
 							<div className="flex min-h-10 items-center justify-between gap-3 rounded-lg bg-muted/60 py-1 pr-1 pl-3">
-								<TextSendTime value={sending.sendAt} />
+								<TextSendTime value={sending.sendAt} isLastIssueTime={sending.isLastIssueTime} />
 								{scheduledAt && (
 									<Button variant="ghost" size="sm" onClick={sending.unschedule} disabled={sending.isPending}>
 										Unschedule
@@ -262,15 +262,16 @@ function CardChoice({ icon: Icon, title, description, isSelected, onSelect }) {
 	);
 }
 
-function TextSendTime({ value }) {
+function TextSendTime({ value, isLastIssueTime }) {
 	const zone = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
 		.formatToParts(value)
 		.find(({ type }) => type === "timeZoneName")?.value;
 
 	return (
-		<p className="text-sm tabular-nums">
+		<p className="text-sm text-pretty tabular-nums">
 			<span className="text-muted-foreground">Goes out </span>
 			<span className="font-medium">{formatSendTime(value)}</span> <span className="text-muted-foreground">{zone}</span>
+			{isLastIssueTime && <span className="text-muted-foreground"> · Same time as your last issue</span>}
 		</p>
 	);
 }
