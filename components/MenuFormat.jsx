@@ -120,7 +120,7 @@ export default function MenuFormat({ editor, isEditingLink, onEditLink }) {
 	);
 }
 
-function ButtonFormat({ label, isActive, type = "button", onClick, children }) {
+export function ButtonFormat({ label, isActive, type = "button", onClick, children }) {
 	return (
 		<button
 			type={type}
@@ -139,7 +139,7 @@ function ButtonFormat({ label, isActive, type = "button", onClick, children }) {
 }
 
 // The editor's card clips its overflow, which would cut the menu off at the top of the content.
-function getBody() {
+export function getBody() {
 	return document.body;
 }
 
