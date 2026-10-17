@@ -34,6 +34,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
@@ -186,8 +187,9 @@ export default function FormCampaign({
 		target?.scrollIntoView({ block: "center" });
 	}
 
-	function openPreview(event) {
-		previewOpenerRef.current = event.currentTarget;
+	// opener: what gets the focus back once the preview closes.
+	function openPreview(opener) {
+		previewOpenerRef.current = opener;
 		setIsPreviewOpen(true);
 	}
 
@@ -249,7 +251,13 @@ export default function FormCampaign({
 		return (
 			<>
 				{saved}
-				<Button variant="ghost" size="sm" onClick={openPreview} aria-label="Preview" className="text-muted-foreground max-sm:px-2">
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={(event) => openPreview(event.currentTarget)}
+					aria-label="Preview"
+					className="text-muted-foreground max-sm:px-2"
+				>
 					<Eye data-icon="inline-start" />
 					<span className="max-sm:sr-only">Preview</span>
 				</Button>
@@ -261,6 +269,10 @@ export default function FormCampaign({
 	const menu = (
 		<MenuMore
 			isWorking={isWorking}
+			isTesting={isTesting}
+			isTestDisabled={isTestDisabled}
+			onTest={sendTest}
+			onPreview={openPreview}
 			onDuplicate={() => runAction(duplicateCampaign)}
 			onDiscard={() => setIsDiscardOpen(true)}
 		/>
@@ -357,7 +369,7 @@ export default function FormCampaign({
 							icon={Eye}
 							title="Preview"
 							description="On desktop and mobile, at their real width"
-							onClick={openPreview}
+							onClick={(event) => openPreview(event.currentTarget)}
 						/>
 					</CardSettings>
 				</section>
@@ -448,20 +460,45 @@ function TitleCampaign({ title, newsletter, status }) {
 	);
 }
 
-function MenuMore({ isWorking, onDuplicate, onDiscard }) {
+// The test and the preview from any step. A dialog opened from here keeps the focus the menu would give back to its
+// button as it closes; the preview hands it to that button once it closes, as the item that opened it is gone.
+function MenuMore({ isWorking, isTesting, isTestDisabled, onTest, onPreview, onDuplicate, onDiscard }) {
+	const triggerRef = useRef(null);
+	const isOpeningDialogRef = useRef(false);
+
+	function openDialog(open) {
+		isOpeningDialogRef.current = true;
+		open();
+	}
+
+	function keepDialogFocus(event) {
+		if (!isOpeningDialogRef.current) return;
+		isOpeningDialogRef.current = false;
+		event.preventDefault();
+	}
+
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon" aria-label="More" disabled={isWorking}>
+				<Button ref={triggerRef} variant="ghost" size="icon" aria-label="More" disabled={isWorking}>
 					<MoreHorizontal />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
+			<DropdownMenuContent align="end" onCloseAutoFocus={keepDialogFocus} className="w-52">
+				<DropdownMenuItem onSelect={onTest} disabled={isTestDisabled || isTesting}>
+					{isTesting ? <Loader2 className="animate-spin" /> : <FlaskConical />}
+					Send a test email
+				</DropdownMenuItem>
+				<DropdownMenuItem onSelect={() => openDialog(() => onPreview(triggerRef.current))}>
+					<Eye />
+					Preview
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
 				<DropdownMenuItem onSelect={onDuplicate}>
 					<Copy />
 					Duplicate
 				</DropdownMenuItem>
-				<DropdownMenuItem variant="destructive" onSelect={onDiscard}>
+				<DropdownMenuItem variant="destructive" onSelect={() => openDialog(onDiscard)}>
 					<Trash2 />
 					Discard
 				</DropdownMenuItem>
