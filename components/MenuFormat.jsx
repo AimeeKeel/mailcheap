@@ -139,7 +139,7 @@ export function ButtonFormat({ label, isActive, type = "button", onClick, childr
 }
 
 // The editor's card clips its overflow, which would cut the menu off at the top of the content.
-export function getBody() {
+function getBody() {
 	return document.body;
 }
 
