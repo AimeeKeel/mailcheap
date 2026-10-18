@@ -171,31 +171,20 @@ function FormSegment({ newsletterId, segment, onSaved, isPicking, onDeleted }) {
 						))}
 					</ul>
 				)}
-				<Button
-					type="button"
-					variant="ghost"
-					size="sm"
-					onClick={() => update({ ...draft, conditions: [...draft.conditions, withKey(NEW_CONDITION)] })}
-					disabled={draft.conditions.length >= MAX_SEGMENT_CONDITIONS}
-					className="self-start text-muted-foreground"
-				>
-					<Plus data-icon="inline-start" />
-					Add condition
-				</Button>
-			</div>
-
-			<div className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3">
-				<p
-					className={cn(
-						"text-3xl font-semibold tracking-tight tabular-nums transition-opacity duration-150",
-						isCounting && "opacity-40",
-						!(rules && count !== null) && "text-muted-foreground/50"
-					)}
-				>
-					{rules && count !== null ? formatNumber(count) : "—"}
-				</p>
-				<p className="text-sm text-muted-foreground">{count === 1 ? "contact matches" : "contacts match"}</p>
-				{isCounting && <Loader2 aria-hidden="true" className="ml-auto size-4 animate-spin text-muted-foreground" />}
+				<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						onClick={() => update({ ...draft, conditions: [...draft.conditions, withKey(NEW_CONDITION)] })}
+						disabled={draft.conditions.length >= MAX_SEGMENT_CONDITIONS}
+						className="text-muted-foreground"
+					>
+						<Plus data-icon="inline-start" />
+						Add condition
+					</Button>
+					{rules && <TextMatchCount count={count} isCounting={isCounting} />}
+				</div>
 			</div>
 
 			<DialogFooter className="sm:justify-between">
@@ -225,6 +214,38 @@ function FormSegment({ newsletterId, segment, onSaved, isPicking, onDeleted }) {
 				</div>
 			</DialogFooter>
 		</form>
+	);
+}
+
+// Until the first count, a placeholder the size of the number; then the last count, dimmed while the next one comes. A
+// failed count shows nothing.
+function TextMatchCount({ count, isCounting }) {
+	if (count === null && !isCounting) return null;
+	return (
+		<p
+			aria-live="polite"
+			className={cn(
+				"text-sm text-muted-foreground tabular-nums transition-opacity duration-150 animate-enter",
+				isCounting && count !== null && "opacity-50"
+			)}
+		>
+			{count === null ? (
+				<>
+					<span
+						aria-hidden="true"
+						className="inline-block h-3 w-7 animate-pulse rounded-sm bg-foreground/10 align-[-0.05em] motion-reduce:animate-none"
+					/>
+					<span className="sr-only">Counting</span> contacts match
+				</>
+			) : count === 0 ? (
+				"No contacts match"
+			) : (
+				<>
+					<span className="font-medium text-foreground">{formatNumber(count)}</span>
+					{count === 1 ? " contact matches" : " contacts match"}
+				</>
+			)}
+		</p>
 	);
 }
 

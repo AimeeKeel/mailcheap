@@ -124,14 +124,14 @@ export default async function ContactsPage({ searchParams }) {
 										scroll={false}
 										aria-current={isActive ? "page" : undefined}
 										className={cn(
-											"inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm transition-[color,background-color,box-shadow] duration-150",
+											"inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm transition-[color,background-color] duration-150",
 											isActive
-												? "bg-foreground text-background"
-												: "text-muted-foreground hover:bg-muted hover:text-foreground"
+												? "bg-muted font-medium text-foreground"
+												: "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
 										)}
 									>
 										{key ? key.charAt(0).toUpperCase() + key.slice(1) : "All"}
-										<span className={cn("text-xs tabular-nums", isActive ? "opacity-70" : "opacity-60")}>
+										<span className={cn("text-xs font-normal tabular-nums", isActive ? "text-muted-foreground" : "opacity-60")}>
 											{formatNumber(key ? counts[key] || 0 : totalAll)}
 										</span>
 									</Link>
