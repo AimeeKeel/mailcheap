@@ -50,7 +50,7 @@ export default function WebsitePage() {
 				<li>
 					<strong>On your own site or app</strong>: create an API key with the signups only level on the API keys page, then sign
 					people up with one request each. That key can only add contacts, so it&apos;s safe in your website&apos;s code. See{" "}
-					<Link href="/docs/api#add-contact">add a contact</Link> in the developer docs.
+					<Link href="/docs/api#add-contact">add a contact</Link> in the API reference.
 				</li>
 				<li>
 					<strong>By hand or from a file</strong>: on the Contacts page. <Link href={getHelpHref("contacts")}>Contacts</Link>

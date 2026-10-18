@@ -13,7 +13,7 @@ export default function ApiAndAiPage() {
 			<p>
 				Everything you do in the dashboard also works from code, through the REST API, and from AI assistants, through the MCP server:
 				writing drafts, sending tests, scheduling, adding contacts, building segments, reading reports. Each action runs the same checks
-				and limits as in the dashboard.{isCloud() && " Both need a plan."} The <Link href="/docs">developer docs</Link> have the setup
+				and limits as in the dashboard.{isCloud() && " Both need a plan."} The <Link href="/docs">API and MCP docs</Link> have the setup
 				and every endpoint.
 			</p>
 

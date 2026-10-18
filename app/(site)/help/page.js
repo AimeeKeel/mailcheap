@@ -26,7 +26,7 @@ export default function HelpPage() {
 					Plain answers about your newsletter, your contacts, writing and sending issues, and your account. Building with the REST API or
 					MCP? See the{" "}
 					<Link href="/docs" className={LINK_CLASS}>
-						developer docs
+						API and MCP docs
 					</Link>
 					.
 				</p>
