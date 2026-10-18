@@ -29,6 +29,10 @@ export default function WebsitePage() {
 				<Link href={getHelpHref("newsletters", "website")}>newsletter&apos;s settings</Link>, where you can also turn it off. Search
 				engines get a sitemap of your issues, and each page has its own picture for when it&apos;s shared.
 			</p>
+			<p>
+				Its fonts, colors and shapes are your newsletter&apos;s theme, the same as in your emails.{" "}
+				<Link href={getHelpHref("design")}>Design and themes</Link>
+			</p>
 
 			<h2 id="issue-pages">Issue pages</h2>
 			<p>

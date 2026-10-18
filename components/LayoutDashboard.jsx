@@ -9,7 +9,7 @@ import NavNewsletter from "@/components/NavNewsletter";
 import PanelGetStarted from "@/components/PanelGetStarted";
 import ProviderPaywall from "@/components/ProviderPaywall";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SiteAnalytics, SupportChat } from "@/components/SiteExtensions";
+import { SiteAnalytics, SupportChat, WhatsNew } from "@/components/SiteExtensions";
 import { getSendingStatus, hasActiveSubscription, isBlocked } from "@/lib/account-state";
 import { isCloud } from "@/lib/config";
 import { isGetStartedOpen } from "@/lib/get-started";
@@ -56,6 +56,7 @@ export default async function LayoutDashboard({ user, account, isAdmin, children
 					<PanelGetStarted account={account} />
 				</Suspense>
 			)}
+			{WhatsNew && <WhatsNew account={account} />}
 			{SupportChat && (
 				<Suspense fallback={null}>
 					<SupportChat user={user} account={account} />

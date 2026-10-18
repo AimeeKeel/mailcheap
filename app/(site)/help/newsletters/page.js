@@ -20,7 +20,11 @@ export default function NewslettersPage() {
 				you also switch between them: the dashboard shows one newsletter at a time.{" "}
 				{isCloud() && "They share your plan's emails and subscribers."} Each has its own contacts, campaigns, sender and website.
 			</p>
-			<p>Every setting below is on the Newsletters page. Once you change something, a bar offers to save or discard it.</p>
+			<p>
+				Settings opens on an overview of the newsletter: a card for each section below, with where it stands, like double opt-in on or
+				the website&apos;s address. A card opens its section&apos;s page, and once you change something there, a bar offers to save or
+				discard it.
+			</p>
 
 			<h2 id="general">General</h2>
 			<ul>
@@ -96,6 +100,12 @@ export default function NewslettersPage() {
 				email instead. It&apos;s on for new newsletters, after {cleanup.issues} ignored issues and {cleanup.days} quiet days: you can
 				pick {CLEANUP_LIMITS.minIssues} to {CLEANUP_LIMITS.maxIssues} issues and {CLEANUP_LIMITS.minDays} to{" "}
 				{CLEANUP_LIMITS.maxDays} days. <Link href={getHelpHref("list-cleanup")}>List cleanup</Link>
+			</p>
+
+			<h2 id="design">Design</h2>
+			<p>
+				Your newsletter&apos;s theme: the fonts, colors, corners, shadows and spacing of its website and its emails. Pick one, then
+				change it as you like. <Link href={getHelpHref("design")}>Design and themes</Link>
 			</p>
 		</ArticleHelp>
 	);
