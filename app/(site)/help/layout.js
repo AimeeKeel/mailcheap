@@ -1,4 +1,6 @@
 import NavHelp from "@/components/NavHelp";
+import { ArticleUpsell } from "@/components/SiteExtensions";
+import { isCloud } from "@/lib/config";
 import { getHelpGroups } from "@/lib/help";
 
 export const metadata = {
@@ -12,7 +14,10 @@ export default function HelpLayout({ children }) {
 			<aside className="min-w-0 md:sticky md:top-24 md:self-start">
 				<NavHelp groups={getHelpGroups()} />
 			</aside>
-			<main className="min-w-0 pb-24">{children}</main>
+			<main className="min-w-0 pb-24">
+				{children}
+				{isCloud() && ArticleUpsell && <ArticleUpsell />}
+			</main>
 		</div>
 	);
 }

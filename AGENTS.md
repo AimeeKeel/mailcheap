@@ -44,6 +44,7 @@ MailCheap Cloud's marketing site, analytics and support chat aren't part of the 
 - Write "MailCheap" in display text: copy, titles, emails, docs, comments. Lowercase in identifiers and machine names: `mailcheap.ai`, `MAILCHEAP_CLOUD`, `LogoMailcheap`, package and file names.
 - Copy is plain and short, in sentence case: only the first word of a title or a button is capitalized.
 - The help center (`app/(site)/help`, its articles listed in `lib/help.js`) explains every feature to the people who use MailCheap, in plain words. A change to what they see or to how something works updates the article that covers it in the same commit, and a new feature gets a section or an article. Articles take their numbers from the code's constants, so those follow it. Dashboard text that needs more than a line links to its article with `LinkHelp`.
+- Public content pages end on a call to action. Shared ones, the help center and the docs, render the `ArticleUpsell` site extension at the end, which adds nothing on a self-hosted server.
 
 ## Code style
 
