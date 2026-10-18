@@ -12,9 +12,9 @@ export default function ApiAndAiPage() {
 			<h2 id="same-actions">The same actions, from anywhere</h2>
 			<p>
 				Everything you do in the dashboard also works from code, through the REST API, and from AI assistants, through the MCP server:
-				writing drafts, sending tests, scheduling, adding contacts, reading reports. Each action runs the same checks and limits as in
-				the dashboard.{isCloud() && " Both need a plan."} The <Link href="/docs">developer docs</Link> have the setup and every
-				endpoint.
+				writing drafts, sending tests, scheduling, adding contacts, building segments, reading reports. Each action runs the same checks
+				and limits as in the dashboard.{isCloud() && " Both need a plan."} The <Link href="/docs">developer docs</Link> have the setup
+				and every endpoint.
 			</p>
 
 			<h2 id="ai-assistants">AI assistants</h2>

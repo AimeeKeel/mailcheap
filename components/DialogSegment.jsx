@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X } from "lucide-react";
 import { countSegment, deleteSegment, saveSegment } from "@/app/(app)/contacts/actions";
+import LinkHelp from "@/components/LinkHelp";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -127,7 +128,9 @@ function FormSegment({ newsletterId, segment, onSaved, isPicking, onDeleted }) {
 		<form onSubmit={save} className="flex flex-col gap-5">
 			<DialogHeader>
 				<DialogTitle>{segment ? "Edit segment" : "New segment"}</DialogTitle>
-				<DialogDescription className="sr-only">Contacts who meet these conditions, kept up to date as they change.</DialogDescription>
+				<DialogDescription>
+					Contacts who meet these conditions, kept up to date. <LinkHelp article="contacts" section="segments" />
+				</DialogDescription>
 			</DialogHeader>
 
 			<input

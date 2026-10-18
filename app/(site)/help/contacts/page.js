@@ -3,7 +3,7 @@ import ArticleHelp from "@/components/ArticleHelp";
 import { TRIAL_CONTACTS } from "@/lib/actions/contacts";
 import { isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
-import { SEGMENT_PRESETS, describeSegment } from "@/lib/segments";
+import { MAX_SEGMENT_CONDITIONS, SEGMENT_PRESETS, describeSegment } from "@/lib/segments";
 
 export const metadata = getHelpPageMetadata("contacts");
 
@@ -68,9 +68,14 @@ export default function ContactsPage() {
 			</ul>
 			<p>
 				Conditions can be on opens and clicks, issues missed in a row, the number of emails opened, the signup date, where they signed
-				up (the signup form, an import, by hand or the API) and the email address. A segment matches all of its conditions, or any of
-				them. In the send step, pick one to send an issue to its contacts only.{" "}
+				up (the signup form, an import, by hand or the API) and the email address, {MAX_SEGMENT_CONDITIONS} at most. A segment matches
+				all of its conditions, or any of them. In the send step, pick one to send an issue to its contacts only.{" "}
 				<Link href={getHelpHref("sending", "who")}>Who gets it</Link>
+			</p>
+			<p>
+				Counts are of active contacts, the ones an issue goes to. Conditions on dates count back from now, so &ldquo;opened in the last
+				30 days&rdquo; follows time, and a send reads its segment when it goes out. A segment that a scheduled or sending issue goes to
+				can&apos;t be deleted until that issue goes elsewhere.
 			</p>
 
 			<h2 id="add">Adding someone by hand</h2>
