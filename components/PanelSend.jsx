@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { CalendarClock, ListFilter, Loader2, Send, X } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { CalendarClock, ListFilter, Loader2, Plus, Send, X } from "lucide-react";
+import { setCampaignSegment } from "@/app/(app)/campaigns/actions";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import CardSettings from "@/components/CardSettings";
+import DialogSegment from "@/components/DialogSegment";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import ListCleanupPreview from "@/components/ListCleanupPreview";
 import NoticeFirstSend from "@/components/NoticeFirstSend";
@@ -21,22 +23,37 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FIRST_SEND } from "@/lib/config";
 import { formatCount, formatNumber, formatSendTime } from "@/lib/format";
 import { getPaceHours } from "@/lib/send-spread";
 import { slugify } from "@/lib/slug";
+import { toast } from "@/lib/toast";
 import { useIsClient } from "@/lib/use-is-client";
 import { cn } from "@/lib/utils";
 
-// The send step: who gets the issue, everyone unless a filter narrows it, then now or at a time, and how fast it goes
-// out. Its button is in the editor's bar, and lib/use-send-campaign.js holds what it does.
+// The send step: who gets the issue, everyone unless a segment or a filter narrows it, then now or at a time, and how
+// fast it goes out. Its button is in the editor's bar, and lib/use-send-campaign.js holds what it does. audienceCount:
+// the segment's active contacts, or everyone's (everyoneCount).
 export default function PanelSend({
 	sending,
 	campaign,
 	newsletter,
 	subject,
 	audienceCount,
+	everyoneCount,
+	segments,
+	isSegmentDeleted,
 	emailsLeft,
 	pace,
 	newContacts,
@@ -44,8 +61,13 @@ export default function PanelSend({
 }) {
 	const isClient = useIsClient();
 	const [isFiltered, setIsFiltered] = useState(Boolean(sending.limit));
+	const [segmentId, setSegmentId] = useState(campaign.segmentId ?? null);
+	const [isCreatingSegment, setIsCreatingSegment] = useState(false);
+	const [isChangingSegment, startChangingSegment] = useTransition();
 	const filterInputRef = useRef(null);
 	const isFilterNewRef = useRef(false);
+	const isOpeningDialogRef = useRef(false);
+	const segment = segments.find(({ id }) => id === segmentId) ?? null;
 	const scheduledAt = campaign.status === "scheduled" ? campaign.scheduledAt : null;
 	// The browser's time zone, which the server doesn't know.
 	const scheduledTime = scheduledAt && isClient ? formatSendTime(scheduledAt) : null;
@@ -65,8 +87,31 @@ export default function PanelSend({
 		sending.setLimit(isOn ? String(getStartingLimit(audienceCount)) : "");
 	}
 
-	// A filter just added takes the focus the menu would give back to its button.
-	function focusNewFilter(event) {
+	// Saved right away: the page counts the new audience, and the list cleanup's preview reads it again.
+	function changeSegment(id) {
+		const previous = segmentId;
+		setSegmentId(id);
+		startChangingSegment(async () => {
+			const result = await setCampaignSegment(campaign._id, id);
+			if (result?.error) {
+				setSegmentId(previous);
+				return void toast.error(result.error);
+			}
+			sending.prepare();
+		});
+	}
+
+	function createSegment() {
+		isOpeningDialogRef.current = true;
+		setIsCreatingSegment(true);
+	}
+
+	// A filter just added takes the focus the menu would give back to its button, and a dialog opening keeps it.
+	function moveMenuFocus(event) {
+		if (isOpeningDialogRef.current) {
+			isOpeningDialogRef.current = false;
+			return event.preventDefault();
+		}
 		if (!isFilterNewRef.current) return;
 		isFilterNewRef.current = false;
 		event.preventDefault();
@@ -77,7 +122,17 @@ export default function PanelSend({
 		<div className="flex flex-col gap-6">
 			<CardSettings
 				title="Who gets it"
-				action={<MenuFilter isFiltered={isFiltered} onToggle={toggleFilter} onCloseAutoFocus={focusNewFilter} />}
+				action={
+					<MenuFilter
+						segments={segments}
+						segmentId={segmentId}
+						onSegmentChange={changeSegment}
+						onNewSegment={createSegment}
+						isFiltered={isFiltered}
+						onToggle={toggleFilter}
+						onCloseAutoFocus={moveMenuFocus}
+					/>
+				}
 			>
 				<RowCampaign label="From">
 					<span className="truncate text-sm">{from}</span>
@@ -86,13 +141,44 @@ export default function PanelSend({
 					<span className="flex min-w-0 items-center gap-2 text-sm">
 						<AvatarNewsletter newsletter={newsletter} size={18} />
 						<span className="truncate">{newsletter.name}</span>
-						<span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
-							{recipients < audienceCount
-								? `${formatNumber(recipients)} of ${formatCount(audienceCount, "contact")}`
-								: `All ${formatCount(audienceCount, "contact")}`}
+						<span
+							className={cn(
+								"ml-auto shrink-0 text-muted-foreground tabular-nums transition-opacity duration-150",
+								isChangingSegment && "opacity-40"
+							)}
+						>
+							{recipients < everyoneCount
+								? `${formatNumber(recipients)} of ${formatCount(everyoneCount, "contact")}`
+								: `All ${formatCount(everyoneCount, "contact")}`}
 						</span>
 					</span>
 				</RowCampaign>
+				{segmentId && (
+					<RowCampaign label="Segment">
+						<span className="flex min-w-0 items-center gap-2 text-sm animate-enter">
+							{segment ? (
+								<>
+									<span className="shrink-0 font-medium">{segment.name}</span>
+									<span className="truncate text-muted-foreground">{segment.description}</span>
+								</>
+							) : isSegmentDeleted && segmentId === campaign.segmentId ? (
+								<span className="truncate text-destructive">Deleted, pick another</span>
+							) : (
+								<Loader2 aria-hidden="true" className="size-4 animate-spin text-muted-foreground" />
+							)}
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Send to everyone"
+								onClick={() => changeSegment(null)}
+								disabled={isChangingSegment}
+								className="ml-auto text-muted-foreground"
+							>
+								<X />
+							</Button>
+						</span>
+					</RowCampaign>
+				)}
 				{isFiltered && (
 					<RowCampaign label="Filter">
 						<span className="flex min-w-0 items-center gap-2 text-sm">
@@ -184,6 +270,13 @@ export default function PanelSend({
 
 			{isOverPlan && <TextPlanLimit emailsLeft={emailsLeft} />}
 
+			<DialogSegment
+				newsletterId={newsletter._id}
+				open={isCreatingSegment}
+				onOpenChange={setIsCreatingSegment}
+				onSaved={changeSegment}
+			/>
+
 			<Dialog open={sending.isConfirmOpen} onOpenChange={sending.setIsConfirmOpen}>
 				<DialogContent className="sm:max-w-sm">
 					<DialogHeader>
@@ -207,9 +300,9 @@ export default function PanelSend({
 	);
 }
 
-// Filters narrow a send that goes to everyone otherwise. The most engaged go first, and the rest can get it later from
-// the campaign's page.
-function MenuFilter({ isFiltered, onToggle, onCloseAutoFocus }) {
+// A segment and filters narrow a send that goes to everyone otherwise. The most engaged go first, and the rest can get
+// it later from the campaign's page.
+function MenuFilter({ segments, segmentId, onSegmentChange, onNewSegment, isFiltered, onToggle, onCloseAutoFocus }) {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
@@ -219,6 +312,23 @@ function MenuFilter({ isFiltered, onToggle, onCloseAutoFocus }) {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" onCloseAutoFocus={onCloseAutoFocus} className="w-64">
+				<DropdownMenuLabel className="text-xs text-muted-foreground">Segment</DropdownMenuLabel>
+				<DropdownMenuRadioGroup value={segmentId ?? EVERYONE} onValueChange={(value) => onSegmentChange(value === EVERYONE ? null : value)}>
+					<DropdownMenuRadioItem value={EVERYONE}>Everyone</DropdownMenuRadioItem>
+					{segments.map(({ id, name, description }) => (
+						<DropdownMenuRadioItem key={id} value={id} className="items-start py-2">
+							<span className="flex min-w-0 flex-col gap-0.5">
+								<span className="truncate">{name}</span>
+								<span className="line-clamp-2 text-xs text-pretty text-muted-foreground">{description}</span>
+							</span>
+						</DropdownMenuRadioItem>
+					))}
+				</DropdownMenuRadioGroup>
+				<DropdownMenuItem onSelect={onNewSegment} className="text-muted-foreground">
+					<Plus />
+					New segment
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
 				<DropdownMenuCheckboxItem checked={isFiltered} onCheckedChange={onToggle} className="items-start py-2">
 					<span className="flex flex-col gap-0.5">
 						<span>Most engaged contacts</span>
@@ -275,6 +385,8 @@ function TextSendTime({ value, isLastIssueTime }) {
 		</p>
 	);
 }
+
+const EVERYONE = "everyone";
 
 // Half the list, to 2 significant digits.
 function getStartingLimit(audienceCount) {

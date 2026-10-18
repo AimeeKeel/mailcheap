@@ -42,6 +42,7 @@ import { getCheckFix } from "@/lib/campaign-steps";
 import { markdownToHtml } from "@/lib/markdown";
 import { getPresendChecks } from "@/lib/presend-checks";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
+import { SEGMENT_DELETED } from "@/lib/segments";
 import { toast } from "@/lib/toast";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { usePaywall } from "@/lib/use-paywall";
@@ -58,6 +59,9 @@ export default function FormCampaign({
 	campaign,
 	newsletter,
 	audienceCount,
+	everyoneCount,
+	segments,
+	isSegmentDeleted,
 	senderProblem,
 	isSendingEnabled,
 	testEmail,
@@ -132,6 +136,7 @@ export default function FormCampaign({
 	const accountProblems = hasPlan ? reviewChecks.filter(({ isAccount, isOk }) => isAccount && !isOk) : [];
 	const blocking = [
 		...(isUploading ? [{ id: "uploading", message: UPLOADING_MESSAGE }] : []),
+		...(isSegmentDeleted ? [{ id: "segment", message: SEGMENT_DELETED }] : []),
 		...reviewChecks.filter(({ isOk, isWarning }) => !isOk && !isWarning),
 	];
 	const sending = useSendCampaign({
@@ -381,6 +386,9 @@ export default function FormCampaign({
 						newsletter={newsletter}
 						subject={values.subject}
 						audienceCount={audienceCount}
+						everyoneCount={everyoneCount}
+						segments={segments}
+						isSegmentDeleted={isSegmentDeleted}
 						emailsLeft={emailsLeft}
 						pace={pace}
 						newContacts={newContacts}

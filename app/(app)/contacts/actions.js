@@ -42,11 +42,40 @@ export async function deleteContact(id) {
 }
 
 // A link to the CSV with the list's filters, valid for an hour.
-export async function exportContacts({ newsletterId, status, query } = {}) {
+export async function exportContacts({ newsletterId, status, query, segmentId } = {}) {
 	const { output, failure } = await runDashboardAction("export_contacts", {
 		...(newsletterId && { newsletter: String(newsletterId) }),
 		...(status && { status }),
 		...(query && { search: String(query) }),
+		...(segmentId && { segment: String(segmentId) }),
 	});
 	return failure ? toFormError(failure) : { url: output.url, count: output.count };
+}
+
+// The segment editor's conditions as it holds them; the action checks them.
+export async function saveSegment(id, { newsletterId, name, match, conditions } = {}) {
+	const input = { name: String(name ?? ""), match, conditions: Array.isArray(conditions) ? conditions : [] };
+	const { output, failure } = id
+		? await runDashboardAction("update_segment", { id: String(id), ...input })
+		: await runDashboardAction("create_segment", { newsletter: String(newsletterId ?? ""), ...input });
+	if (failure) return toFormError(failure);
+	revalidatePath("/contacts");
+	return { id: output.id };
+}
+
+export async function deleteSegment(id) {
+	const { failure } = await runDashboardAction("delete_segment", { id: String(id) });
+	if (failure) return toFormError(failure);
+	revalidatePath("/contacts");
+	return { ok: true };
+}
+
+// The editor's live count while the conditions change.
+export async function countSegment({ newsletterId, match, conditions } = {}) {
+	const { output, failure } = await runDashboardAction("count_segment", {
+		newsletter: String(newsletterId ?? ""),
+		match,
+		conditions: Array.isArray(conditions) ? conditions : [],
+	});
+	return failure ? toFormError(failure) : { contacts: output.contacts };
 }

@@ -55,6 +55,8 @@ contactSchema.index({ accountId: 1, subscribedAt: -1, _id: -1 });
 contactSchema.index({ accountId: 1, status: 1, subscribedAt: -1, _id: -1 });
 contactSchema.index({ newsletterId: 1, subscribedAt: -1, _id: -1 });
 contactSchema.index({ newsletterId: 1, status: 1, subscribedAt: -1, _id: -1 });
+// Segments on opens (lib/segments.js) read a range of it instead of every active contact of a large list.
+contactSchema.index({ newsletterId: 1, status: 1, lastOpenAt: -1 });
 // The list cleanup totals in newsletter settings.
 contactSchema.index({ newsletterId: 1, lastChanceAt: 1 }, { partialFilterExpression: { lastChanceAt: { $exists: true } } });
 // An admin taking an address off the never-email list finds the contacts it stopped, in every account.
