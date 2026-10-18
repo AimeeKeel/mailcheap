@@ -34,7 +34,7 @@ export default function ImportingContactsPage() {
 			</ul>
 			<p>
 				Other columns are skipped. Instead of the file&apos;s statuses, you can import everyone as dormant, for an old list you&apos;d
-				rather wake up slowly: dormant contacts get nothing until you reactivate them.
+				rather wake up slowly: dormant contacts get nothing until you mark them active.
 			</p>
 
 			<h2 id="consent">Consent</h2>

@@ -34,13 +34,15 @@ export default function ContactsPage() {
 					<tr>
 						<td>Dormant</td>
 						<td>
-							Stopped opening and didn&apos;t answer the <Link href={getHelpHref("list-cleanup")}>last-chance email</Link>, or was
-							imported as dormant. Gets no issues until you reactivate them.
+							Stopped opening and didn&apos;t answer the <Link href={getHelpHref("list-cleanup")}>last-chance email</Link>, was
+							imported as dormant, or you marked them dormant. Gets no issues until you mark them active.
 						</td>
 					</tr>
 					<tr>
 						<td>Unsubscribed</td>
-						<td>Unsubscribed, or you unsubscribed them. Only signing up again brings them back.</td>
+						<td>
+							Unsubscribed, or you unsubscribed them. Back if they sign up again, or if you resubscribe them because they asked.
+						</td>
 					</tr>
 					<tr>
 						<td>Bounced</td>
@@ -88,14 +90,24 @@ export default function ContactsPage() {
 				For a whole list, import a CSV file instead: <Link href={getHelpHref("importing-contacts")}>Importing contacts</Link>.
 			</p>
 
-			<h2 id="actions">Unsubscribing, reactivating and deleting</h2>
-			<p>Each contact&apos;s menu has what applies to them:</p>
+			<h2 id="actions">Changing a status, and deleting</h2>
+			<p>Each contact&apos;s menu, at the end of their row, has what applies to them:</p>
 			<ul>
 				<li>
-					<strong>Reactivate</strong> brings a dormant contact back: they get your next issue.
+					<strong>Mark as active</strong> brings back a dormant contact: they get your next issue. On a pending contact, it skips
+					the confirmation email, once you confirm they asked for your emails.
 				</li>
 				<li>
-					<strong>Unsubscribe</strong> stops every email to them, for good. Only they can undo it, by signing up again.
+					<strong>Mark as dormant</strong> stops issues to an active contact without unsubscribing them, as the list cleanup does.
+					Mark them active again any time.
+				</li>
+				<li>
+					<strong>Unsubscribe</strong> stops every email to them.
+				</li>
+				<li>
+					<strong>Resubscribe</strong> brings back someone who unsubscribed. Do it only when they asked: MailCheap asks you to
+					confirm it, and keeps who did it and when. Someone who unsubscribed can&apos;t be marked dormant, so they only come back
+					this way or by signing up again.
 				</li>
 				<li>
 					<strong>Delete contact</strong> removes them with their dates and engagement, and can&apos;t be undone. For someone who
@@ -103,6 +115,11 @@ export default function ContactsPage() {
 					Anyone else can be added again like a new contact.
 				</li>
 			</ul>
+			<p>
+				Bounced and complained contacts keep their status: their address can&apos;t receive email, or they marked one of your
+				emails as spam. No email goes out when you change a status. The{" "}
+				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link> can change statuses too, with the same rules.
+			</p>
 
 			<h2 id="export">Exporting</h2>
 			<p>

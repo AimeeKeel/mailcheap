@@ -66,7 +66,7 @@ export default function WebsitePage() {
 			<h2 id="unsubscribe">Unsubscribing</h2>
 			<p>
 				Every email has an unsubscribe link in its footer and the one-click unsubscribe Gmail and Yahoo show next to the sender. Either
-				one unsubscribes the reader at once and for good: only signing up again brings them back.
+				one unsubscribes the reader at once: only signing up again, or a resubscribe they ask you for, brings them back.
 			</p>
 		</ArticleHelp>
 	);

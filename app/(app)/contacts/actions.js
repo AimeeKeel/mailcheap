@@ -29,8 +29,9 @@ export async function addContact(_state, formData) {
 	return { email: output.email, status: output.status };
 }
 
-export async function setContactStatus(id, status) {
-	const { failure } = await runDashboardAction("update_contact_status", { id: String(id), status });
+// consent: the box the menu's dialog asks for before resubscribing someone or making a pending contact active.
+export async function setContactStatus(id, status, consent = false) {
+	const { failure } = await runDashboardAction("update_contact_status", { id: String(id), status, consent: consent === true });
 	revalidatePath("/contacts");
 	return failure ? toFormError(failure) : { ok: true };
 }

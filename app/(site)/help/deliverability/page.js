@@ -64,7 +64,7 @@ export default function DeliverabilityPage() {
 				<li>
 					Keep <Link href={getHelpHref("list-cleanup")}>list cleanup</Link> on, so readers who stopped opening stop getting issues.
 				</li>
-				<li>Before importing an old list, import it as dormant and reactivate readers you know.</li>
+				<li>Before importing an old list, import it as dormant and mark the readers you know as active.</li>
 				<li>
 					Send from your own domain with a DMARC record. <Link href={getHelpHref("sender-addresses")}>Sender addresses and domains</Link>
 				</li>

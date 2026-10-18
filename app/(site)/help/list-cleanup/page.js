@@ -37,7 +37,7 @@ export default function ListCleanupPage() {
 				</li>
 			</ol>
 			<p>
-				Dormant contacts stay in your list: they&apos;re never unsubscribed or deleted, and you can reactivate any of them from the
+				Dormant contacts stay in your list: they&apos;re never unsubscribed or deleted, and you can mark any of them active from the
 				Contacts page.{isCloud() && " They don't count toward your plan's subscribers."}
 			</p>
 
