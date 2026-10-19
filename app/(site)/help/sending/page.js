@@ -3,6 +3,7 @@ import ArticleHelp from "@/components/ArticleHelp";
 import { FIRST_SEND, LIMITS, isCloud } from "@/lib/config";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
+import { COMPARED_ISSUES, TIMELINE_HOURS } from "@/lib/report-stats";
 
 export const metadata = getHelpPageMetadata("sending");
 
@@ -91,13 +92,24 @@ export default function SendingPage() {
 				Each sent campaign&apos;s page shows how many emails were delivered, opened and clicked, and how many bounced, were marked as
 				spam or led to an unsubscribe, with results by inbox provider, like Gmail or Outlook. It counts the list cleanup&apos;s
 				last-chance emails apart. Opens are an estimate: some inboxes load every email&apos;s images on their own, which counts as an
-				open, and some readers block images.
+				open, and some readers block images. Preview, at the top, shows the email as it went out, in a mail app or in Gmail on a
+				phone.
+			</p>
+			<p>
+				Opened and clicked compare with the newsletter&apos;s last {COMPARED_ISSUES} issues, for example &ldquo;+4.2 pts vs
+				avg&rdquo;: all their opens or clicks over all the contacts they reached, so a small send barely counts. The comparison
+				shows once a send is {TIMELINE_HOURS / 24} days old, since its opens keep coming until then.
+			</p>
+			<p>
+				A chart shows the opens and clicks hour by hour for the first {TIMELINE_HOURS / 24} days after sending, in your timezone:
+				when most opens came, and how fast half of them did. Each contact counts once, at their first open and first click. The
+				opens after those {TIMELINE_HOURS / 24} days are counted under the chart.
 			</p>
 			<p>
 				Its links come next, most clicked first: how many contacts clicked each one, every click, and each link&apos;s share of the
 				contacts who clicked a link. A link counts once whatever its tracking parameters, like utm_source, and link scanners and the
 				unsubscribe link don&apos;t count. An issue sent before clicks were counted per link only has the clicks since then. The
-				API and AI assistants get the same list in the campaign&apos;s report.
+				API and AI assistants get the same numbers, the comparison and the hours included, in the campaign&apos;s report.
 			</p>
 		</ArticleHelp>
 	);

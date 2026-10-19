@@ -163,6 +163,11 @@ describe("clicks per link", () => {
 			{ url: "https://example.com/shop", text: "the shop", clickers: 1, clicks: 1 },
 		]);
 		assert.deepEqual([result.linkClickers, result.linksComplete, result.linksCountedSince], [2, true, null]);
+		const hours = result.timeline.hours;
+		assert.equal(hours.reduce((sum, { opens }) => sum + opens, 0), 2, "each reader's first open counts once, in its hour");
+		assert.equal(hours.reduce((sum, { clicks }) => sum + clicks, 0), 2);
+		assert.ok(hours.every(({ at }) => new Date(at) <= new Date()), "no hours to come");
+		assert.equal(result.comparison, null, "a first issue has nothing to compare with");
 	});
 
 	test("an issue sent before clicks were counted per link has them since its first one; other emails count for nothing", async () => {
