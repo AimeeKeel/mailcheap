@@ -93,6 +93,12 @@ export default function SendingPage() {
 				last-chance emails apart. Opens are an estimate: some inboxes load every email&apos;s images on their own, which counts as an
 				open, and some readers block images.
 			</p>
+			<p>
+				Its links come next, most clicked first: how many contacts clicked each one, every click, and each link&apos;s share of the
+				contacts who clicked a link. A link counts once whatever its tracking parameters, like utm_source, and link scanners and the
+				unsubscribe link don&apos;t count. An issue sent before clicks were counted per link only has the clicks since then. The
+				API and AI assistants get the same list in the campaign&apos;s report.
+			</p>
 		</ArticleHelp>
 	);
 }

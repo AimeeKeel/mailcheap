@@ -66,6 +66,12 @@ const campaignSchema = new mongoose.Schema(
 			unsubscribed: counter,
 			failed: counter,
 		},
+		// Clicks per link (models/CampaignLink.js): contacts who clicked at least one, and when the send started being counted
+		// per link. Counted from its start, it has every click; one that started earlier only has the clicks since.
+		links: {
+			clickers: counter,
+			countedAt: { type: Date },
+		},
 		// The list cleanup at this send: last-chance emails sent instead of the issue, and contacts made dormant.
 		lastChance: {
 			recipients: counter,

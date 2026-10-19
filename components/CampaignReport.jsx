@@ -19,6 +19,7 @@ import ImageFavicon from "@/components/ImageFavicon";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import LinkHelp from "@/components/LinkHelp";
 import PreviewEmail from "@/components/PreviewEmail";
+import TableCampaignLinks from "@/components/TableCampaignLinks";
 import TextEmpty from "@/components/TextEmpty";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,11 +37,13 @@ import { formatCount, formatDate, formatNumber, formatRate } from "@/lib/format"
 import { rateTone } from "@/lib/health";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
+import { getIssueWebUrl } from "@/lib/sending-rules";
 
 export default function CampaignReport({
 	campaign,
 	newsletter,
 	providers,
+	links,
 	remainingCount = 0,
 	emailsLeft = 0,
 	isBlocked = false,
@@ -245,9 +248,18 @@ export default function CampaignReport({
 					</div>
 				)}
 
+				{links?.links.length > 0 && (
+					<TableCampaignLinks
+						style={{ "--stagger": 3 }}
+						stats={links}
+						html={html}
+						webUrl={getIssueWebUrl({ campaign, newsletter })}
+					/>
+				)}
+
 				{newsletter.archiveEnabled && campaign.archiveSlug && (
 					<div
-						style={{ "--stagger": 3 }}
+						style={{ "--stagger": 4 }}
 						className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-xl bg-card px-4 shadow-border transition-colors duration-150 animate-enter focus-within:bg-muted/40"
 					>
 						<span className="text-sm text-muted-foreground">URL</span>
@@ -261,7 +273,7 @@ export default function CampaignReport({
 					</div>
 				)}
 
-				<div style={{ "--stagger": 4 }} className="animate-enter">
+				<div style={{ "--stagger": 5 }} className="animate-enter">
 					<PreviewEmail
 						fit="content"
 						sender={newsletter}

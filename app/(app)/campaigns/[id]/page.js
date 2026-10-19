@@ -5,6 +5,7 @@ import FormCampaign from "@/components/FormCampaign";
 import { scoped } from "@/lib/account-scope";
 import { getAccountSendProblem, hasActiveSubscription, isBlocked } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
+import { findCampaignLinks } from "@/lib/campaign-links";
 import { countNewContacts, countRemainingContacts, getSendVolumes, sendTimesPipeline } from "@/lib/campaign-queries";
 import { isSendingEnabled } from "@/lib/config";
 import { MESSAGE_STATS_GROUP } from "@/lib/message-stats";
@@ -38,9 +39,10 @@ export default async function CampaignPage({ params }) {
 	const plan = await getPlanState(account);
 
 	if (!["draft", "scheduled"].includes(campaign.status)) {
-		const [providers, remainingCount] = await Promise.all([
+		const [providers, remainingCount, links] = await Promise.all([
 			getProviderBreakdown(campaign),
 			countRemainingContacts(campaign),
+			findCampaignLinks(campaign),
 		]);
 		// Only a next step needs them, for what its dialog says.
 		const [volumes, newContacts] =
@@ -55,6 +57,7 @@ export default async function CampaignPage({ params }) {
 				campaign={serialize(campaign)}
 				newsletter={serialize(newsletter)}
 				providers={providers}
+				links={serialize(links)}
 				remainingCount={remainingCount}
 				emailsLeft={plan.emailsLeft}
 				isBlocked={isBlocked(account)}
