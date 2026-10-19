@@ -194,7 +194,7 @@ function SelectFont({ label, value, onChange }) {
 }
 
 // A row of choices drawn rather than named; arrow keys move between them, as in any radio group.
-function Segmented({ label, value, options, onChange }) {
+export function Segmented({ label, value, options, onChange }) {
 	function move(event, index) {
 		const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
 		if (!step) return;

@@ -70,7 +70,8 @@ export default function ContactsPage() {
 			</ul>
 			<p>
 				Conditions can be on opens and clicks, issues missed in a row, the number of emails opened, the signup date, where they signed
-				up (the signup form, an import, by hand or the API) and the email address, {MAX_SEGMENT_CONDITIONS} at most. A segment matches
+				up (your website&apos;s signup form, the form on your own site, an import, by hand or the API) and the email address,{" "}
+				{MAX_SEGMENT_CONDITIONS} at most. A segment matches
 				all of its conditions, or any of them. In the send step, pick one to send an issue to its contacts only.{" "}
 				<Link href={getHelpHref("sending", "who")}>Who gets it</Link>
 			</p>

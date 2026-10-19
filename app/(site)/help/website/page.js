@@ -2,10 +2,12 @@ import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
+import { SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
 
 export const metadata = getHelpPageMetadata("website");
 
 export default function WebsitePage() {
+	const { perIp, perEmail } = SIGNUP_FORM_RATE_LIMITS;
 	const sharedDomain = getSharedDomain();
 	const hasOwnHost = Boolean(getArchiveCnameTarget());
 
@@ -48,8 +50,12 @@ export default function WebsitePage() {
 					into the issue. Closed, it stays away for two weeks.
 				</li>
 				<li>
-					<strong>On your own site or app</strong>: create an API key with the signups only level on the API keys page, then sign
-					people up with one request each. That key can only add contacts, so it&apos;s safe in your website&apos;s code. See{" "}
+					<strong>On your own site</strong>: paste the form from Form for your site, in the newsletter&apos;s settings.{" "}
+					<a href="#form-on-your-site">A signup form on your own site</a>
+				</li>
+				<li>
+					<strong>From your own code</strong>: create an API key with the signups only level on the API keys page, then sign people
+					up with one request each. That key can only add contacts, so it&apos;s safe in your website&apos;s code. See{" "}
 					<Link href="/docs/api#add-contact">add a contact</Link> in the API reference.
 				</li>
 				<li>
@@ -61,6 +67,60 @@ export default function WebsitePage() {
 				email and joins once they click its button. Otherwise they join at once and get your welcome email, if it&apos;s on. Typos like
 				gmial.com, spam traps, domains that can&apos;t receive email and addresses known to bounce are refused at the form, with a
 				suggestion when the address looks misspelled.{isCloud() && " The form also checks that a real browser sent it."}
+			</p>
+
+			<h2 id="form-on-your-site">A signup form on your own site</h2>
+			<p>
+				Turn on Form for your site in the{" "}
+				<Link href={getHelpHref("newsletters")}>newsletter&apos;s settings</Link>, save, then copy one of its two codes to the spot
+				on your site where the form goes:
+			</p>
+			<ul>
+				<li>
+					<strong>Script</strong>: the form in your newsletter&apos;s theme. It says what happened without leaving the page, and what
+					you change in its settings reaches your site on its own.
+				</li>
+				<li>
+					<strong>HTML</strong>: a plain form that works without JavaScript and takes your site&apos;s font. It lands on a page that
+					says what happened, with a link back to your site. Copy it again after you change its button or placeholder.
+				</li>
+			</ul>
+			<p>Where to paste it:</p>
+			<ul>
+				<li>
+					<strong>WordPress</strong>: a Custom HTML block.
+				</li>
+				<li>
+					<strong>Webflow</strong>: an Embed element.
+				</li>
+				<li>
+					<strong>Framer</strong>: an Embed component with HTML.
+				</li>
+				<li>
+					<strong>Squarespace</strong>: a Code block.
+				</li>
+				<li>
+					<strong>Wix</strong>: Embed code, then Embed HTML.
+				</li>
+				<li>
+					<strong>Ghost</strong>: an HTML card.
+				</li>
+				<li>
+					<strong>Carrd</strong>: an Embed element set to Code.
+				</li>
+				<li>
+					<strong>Any other site</strong>: wherever it lets you add HTML.
+				</li>
+			</ul>
+			<p>
+				Signups there follow the newsletter&apos;s confirmed opt-in and welcome email, like your website&apos;s form. In your contacts,
+				their source is Form on your site, with the site&apos;s address, so a segment can pick them.
+			</p>
+			<p>
+				So that a script can&apos;t sign up strangers, the form has a field only bots fill in, waits a moment after the page loads, and
+				takes {perIp.limit} signups per visitor every 10 minutes and {perEmail.limit} per address a day, whichever newsletters ask.
+				Someone who unsubscribed confirms their address before they&apos;re back, even with confirmed opt-in off. List your sites under
+				Where it works and the form only shows there.
 			</p>
 
 			<h2 id="unsubscribe">Unsubscribing</h2>

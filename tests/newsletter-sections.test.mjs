@@ -148,6 +148,7 @@ test("the overview says where each section stands", () => {
 		welcome: { text: "Replaced by the confirmation email", tone: "none" },
 		cleanup: { text: "On · after 8 ignored issues", tone: "on" },
 		website: { text: "Live · field-notes.mailcheap.ai", tone: "on" },
+		form: { text: "Off", tone: "off" },
 	});
 
 	const plain = { ...newsletter, requireConfirmation: false, welcome: { enabled: false }, cleanup: { enabled: false }, archiveEnabled: false };
@@ -159,6 +160,24 @@ test("the overview says where each section stands", () => {
 
 	const cleanupDefaults = getSettingsSummary({ newsletter: { ...newsletter, cleanup: { enabled: true } }, ...context });
 	assert.equal(cleanupDefaults.cleanup.text, "On · after 6 ignored issues", "the default count without one saved");
+});
+
+test("the form for the owner's site says whether it's on, on which sites, and when it waits for a plan", () => {
+	const withForm = (signupForm) => ({ ...newsletter, signupForm });
+	assert.deepEqual(getSettingsSummary({ newsletter: withForm({ enabled: true }), ...context }).form, { text: "On · any site", tone: "on" });
+	assert.deepEqual(getSettingsSummary({ newsletter: withForm({ enabled: true, allowedDomains: ["example.com"] }), ...context }).form, {
+		text: "On · example.com",
+		tone: "on",
+	});
+	assert.equal(
+		getSettingsSummary({ newsletter: withForm({ enabled: true, allowedDomains: ["example.com", "blog.dev", "shop.io"] }), ...context }).form.text,
+		"On · example.com +2"
+	);
+	assert.deepEqual(getSettingsSummary({ newsletter: withForm({ enabled: true }), ...context, hasPlan: false }).form, {
+		text: "Needs a plan",
+		tone: "warning",
+	});
+	assert.deepEqual(getSettingsSummary({ newsletter: withForm({ enabled: false }), ...context, hasPlan: false }).form, { text: "Off", tone: "off" });
 });
 
 test("the welcome email shows paused while the month's emails are used up", () => {

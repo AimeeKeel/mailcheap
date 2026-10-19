@@ -56,6 +56,15 @@ const newsletterSchema = new mongoose.Schema(
 			previewText: { type: String, trim: true },
 			markdown: { type: String },
 		},
+		// The signup form its owner pastes on their own site (lib/signup-form.js), off until they turn it on. No domains:
+		// any site can hold it.
+		signupForm: {
+			enabled: { type: Boolean, default: false },
+			layout: { type: String },
+			buttonText: { type: String, trim: true },
+			placeholder: { type: String, trim: true },
+			allowedDomains: { type: [String], default: undefined },
+		},
 		// Its look on its website and in its emails (lib/themes.js): a preset, and only what was changed on top of it.
 		theme: {
 			preset: { type: String, trim: true },

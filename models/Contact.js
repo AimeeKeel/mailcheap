@@ -10,6 +10,8 @@ const contactSchema = new mongoose.Schema(
 		email: { type: String, required: true, lowercase: true, trim: true },
 		status: { type: String, enum: CONTACT_STATUSES, default: "active" },
 		source: { type: String, trim: true },
+		// Signed up with the form on the owner's site (source "embed"): that site's host, as the browser named it.
+		sourceDomain: { type: String, trim: true },
 		importId: { type: mongoose.Schema.Types.ObjectId, ref: "ContactImport" },
 		// Added by hand on the dashboard: the user who said this person agreed to get the newsletter, and when.
 		consent: {

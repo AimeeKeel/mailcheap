@@ -114,6 +114,12 @@ export default function NewslettersPage() {
 				{CLEANUP_LIMITS.maxDays} days. <Link href={getHelpHref("list-cleanup")}>List cleanup</Link>
 			</p>
 
+			<h2 id="form-for-your-site">Form for your site</h2>
+			<p>
+				A signup form to paste on your own site, off until you turn it on. Here you preview it, set its button and placeholder, copy
+				its code, and list the sites it works on. <Link href={getHelpHref("website", "form-on-your-site")}>A signup form on your own site</Link>
+			</p>
+
 			<h2 id="design">Design</h2>
 			<p>
 				Your newsletter&apos;s theme: the fonts, colors, corners, shadows and spacing of its website and its emails. Pick one, then

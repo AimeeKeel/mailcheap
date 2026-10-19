@@ -666,7 +666,7 @@ function SectionWebsite({ draft, set, update, newsletter, sharedDomain, appUrl, 
 }
 
 // A card of fields. A title gets a row on top with the action on its right.
-function Section({ title, action, stagger, children }) {
+export function Section({ title, action, stagger, children }) {
 	return (
 		<section style={{ "--stagger": stagger }} className="rounded-xl bg-card shadow-border animate-enter">
 			{title && (
@@ -720,7 +720,7 @@ function getFromHint({ isShared, isDomainUnverified, fromDomain, hasDomains }) {
 
 // The whole row is the field's label, unless it holds more than the field (buttons, a list): then only its name is,
 // for htmlFor, and as="div" has no field to name.
-function Field({ label, hint, isWarning, htmlFor, as, children }) {
+export function Field({ label, hint, isWarning, htmlFor, as, children }) {
 	const Row = htmlFor || as === "div" ? "div" : "label";
 	const Name = htmlFor ? "label" : "span";
 	return (
