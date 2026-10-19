@@ -18,8 +18,15 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FIELD_TYPES, checkFieldDefinition, cleanTags, fieldKeyFromLabel } from "@/lib/contact-fields";
-import { MAX_IMPORT_ROWS_PER_REQUEST, guessFieldType, mapColumns, normalizeImportRow, suggestProfileColumns } from "@/lib/csv-import";
+import { FIELD_TYPES, cleanTags, fieldKeyFromLabel } from "@/lib/contact-fields";
+import {
+	MAX_IMPORT_ROWS_PER_REQUEST,
+	canBeNewField,
+	guessFieldType,
+	mapColumns,
+	normalizeImportRow,
+	suggestProfileColumns,
+} from "@/lib/csv-import";
 import { CONSENT_TEXT, DROP_REASONS, addDropped } from "@/lib/import-checks";
 import { formatNumber } from "@/lib/format";
 import { toast } from "@/lib/toast";
@@ -228,9 +235,19 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 						{extraColumns.length > 0 && (
 							<div className="flex flex-col gap-1.5">
 								<span className="text-sm font-medium">Other columns</span>
+								<span className="text-xs text-muted-foreground">
+									Skip leaves a column out. Pick one of your fields or a new field to keep its values.
+								</span>
 								<ul className="flex max-h-52 flex-col divide-y divide-border/60 overflow-y-auto rounded-xl shadow-border">
 									{extraColumns.map((item) => (
-										<RowColumn key={item.column} item={item} fields={fields} isDisabled={isImporting} onChange={mapColumn} />
+										<RowColumn
+											key={item.column}
+											item={item}
+											fields={fields}
+											columns={extraColumns}
+											isDisabled={isImporting}
+											onChange={mapColumn}
+										/>
 									))}
 								</ul>
 							</div>
@@ -307,8 +324,8 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 }
 
 // A column of the file and where it goes. A new field takes the column's name, as a type guessed from its values.
-function RowColumn({ item, fields, isDisabled, onChange }) {
-	const canBeNewField = !checkFieldDefinition({ label: item.column, type: item.newType }, fields).problem;
+function RowColumn({ item, fields, columns, isDisabled, onChange }) {
+	const isNewFieldAllowed = canBeNewField(item, columns, fields);
 	return (
 		<li className="flex items-center gap-2 py-1.5 pr-1.5 pl-3">
 			<span className="min-w-0 flex-1 truncate text-sm">{item.column}</span>
@@ -321,13 +338,13 @@ function RowColumn({ item, fields, isDisabled, onChange }) {
 					<SelectItem value="skip">Skip</SelectItem>
 					<SelectItem value="first_name">First name</SelectItem>
 					<SelectItem value="tags">Tags</SelectItem>
-					{(fields.length > 0 || canBeNewField) && <SelectSeparator />}
+					{(fields.length > 0 || isNewFieldAllowed) && <SelectSeparator />}
 					{fields.map(({ key, label }) => (
 						<SelectItem key={key} value={`field:${key}`}>
 							{label}
 						</SelectItem>
 					))}
-					{canBeNewField && <SelectItem value={`new:${item.newType}`}>New {FIELD_TYPES[item.newType].label.toLowerCase()} field</SelectItem>}
+					{isNewFieldAllowed && <SelectItem value={`new:${item.newType}`}>New {FIELD_TYPES[item.newType].label.toLowerCase()} field</SelectItem>}
 				</SelectContent>
 			</Select>
 		</li>

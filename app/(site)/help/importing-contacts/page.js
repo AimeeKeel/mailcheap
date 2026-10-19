@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import { FIRST_SEND, isCloud } from "@/lib/config";
+import { MAX_CONTACT_FIELDS } from "@/lib/contact-fields";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { CONSENT_TEXT } from "@/lib/import-checks";
 
@@ -37,6 +38,11 @@ export default function ImportingContactsPage() {
 				field named after the column, or nowhere. MailCheap suggests the first name (First Name, first_name, or the first word of a
 				Name column) and tags (Tags, Groups) on its own. A tags column can list several, separated by commas. Tag everyone in this
 				import adds tags to the whole file, to find these contacts later.
+			</p>
+			<p>
+				Custom fields from beehiiv, Mailchimp or Kit come along too: in their full export, each custom field is a column. The first
+				time, pick New field for each one you want to keep; MailCheap guesses text, number or date from its values. The next import
+				puts those columns into your fields on its own. An account holds up to {MAX_CONTACT_FIELDS} fields.
 			</p>
 			<p>
 				For contacts already in your list, a first name and fields in the file replace theirs, and tags are added to theirs. Instead
