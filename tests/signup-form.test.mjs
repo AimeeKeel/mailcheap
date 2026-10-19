@@ -4,12 +4,14 @@ import {
 	SIGNUP_FORM_RATE_LIMITS,
 	getEmbedCode,
 	getFramePolicy,
+	getSignupFormHeading,
 	getSignupFormProblem,
 	isAllowedHost,
 	normalizeDomain,
 	normalizeDomains,
 	toSignupFormSettings,
 } from "../lib/signup-form.js";
+import { renderFormPage } from "../lib/signup-form-page.js";
 import { activate, as, callApi, catchRedirect, form, signIn, startTestApp } from "./helpers/app.mjs";
 import { flushAfter } from "./stubs/next-server.mjs";
 
@@ -36,6 +38,9 @@ test("the form's settings fall back to their defaults and refuse what doesn't fi
 	assert.deepEqual(toSignupFormSettings(undefined), {
 		enabled: false,
 		layout: "inline",
+		headline: null,
+		subheadline: null,
+		askFirstName: false,
 		buttonText: "Subscribe",
 		placeholder: "you@example.com",
 		allowedDomains: [],
@@ -56,6 +61,32 @@ test("the code to paste points at the server, escapes the owner's text and hides
 	assert.ok(html.includes('name="website" tabindex="-1"'), "the field only bots fill in");
 	assert.ok(!html.includes("<script>") && html.includes("&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;"));
 	assert.ok(html.includes('placeholder="Your &lt;email&gt;"'));
+});
+
+test("the card's headline follows the newsletter until its owner writes one, and an empty one shows nothing", () => {
+	const newsletter = { name: "Field notes", description: "One idea a week.", theme: {} };
+	const settings = (signupForm) => toSignupFormSettings(signupForm);
+	assert.deepEqual(getSignupFormHeading(settings({}), newsletter), { headline: "Field notes", subheadline: "One idea a week." });
+	assert.deepEqual(getSignupFormHeading(settings({ headline: " Join 2,000 readers ", subheadline: "" }), newsletter), {
+		headline: "Join 2,000 readers",
+		subheadline: "",
+	});
+	assert.equal(getSignupFormProblem(settings({ headline: "x".repeat(81) })), "Keep the headline under 80 characters");
+
+	const html = (signupForm) =>
+		getEmbedCode({ appUrl: "https://mailcheap.test", newsletterId: NEWSLETTER_ID, settings: settings(signupForm), theme: {}, newsletter }).html;
+	assert.ok(!html({}).includes("Field notes"), "inline: the form alone");
+	const card = html({ layout: "card", headline: "<b>Join</b>" });
+	assert.ok(card.startsWith("<div ") && card.endsWith("</div>"));
+	assert.ok(card.includes(">&lt;b&gt;Join&lt;/b&gt;</p>") && card.includes(">One idea a week.</p>"));
+	assert.ok(!html({ layout: "card", headline: "", subheadline: "" }).includes("<p "), "nothing above the form");
+	assert.ok(html({ askFirstName: true }).includes('name="first_name"'));
+	assert.ok(!html({}).includes("first_name"));
+
+	const page = (signupForm) => renderFormPage({ newsletter, settings: settings(signupForm), endpoint: "#", isPreview: true });
+	assert.ok(page({ layout: "card", headline: "Join us" }).includes('<h1 class="mc-title">Join us</h1><p class="mc-description mc-muted">One idea a week.</p>'));
+	assert.ok(!page({ layout: "card", headline: "", subheadline: "" }).includes("<h1"));
+	assert.ok(page({ layout: "card", askFirstName: true }).includes('name="first_name"'));
 });
 
 test("with a list of sites, the browser keeps the frame off every other site", () => {
@@ -177,6 +208,17 @@ describe("signups from forms on other sites", () => {
 		assert.equal(await m.Message.countDocuments({ accountId: user.accountId, kind: "welcome", contactId: contact._id }), 1);
 	});
 
+	test("a form that asks for a first name saves it on the new contact, and one that doesn't ignores it", async () => {
+		const user = await customer("embed-name@example.com", { signupForm: { askFirstName: true } });
+		const named = await post(user.newsletterId, { email: "named@example.org", first_name: "  Ada \n", token: token(user.newsletterId, "https://site.example") });
+		assert.equal(named.status, 200);
+		assert.equal((await findContact(user, "named@example.org")).firstName, "Ada");
+
+		const other = await customer("embed-unnamed@example.com");
+		await post(other.newsletterId, { email: "unnamed@example.org", first_name: "Bob", token: token(other.newsletterId, "https://site.example") });
+		assert.equal((await findContact(other, "unnamed@example.org")).firstName, undefined);
+	});
+
 	test("someone who unsubscribed confirms by email before they're back, even with confirmed opt-in off", async () => {
 		const user = await customer("embed-returning@example.com");
 		await m.Contact.create({ accountId: user.accountId, newsletterId: user.newsletterId, email: "left@example.org", status: "unsubscribed" });
@@ -292,5 +334,15 @@ describe("signups from forms on other sites", () => {
 			m.newsletters.saveSignupForm(user.newsletterId, { enabled: true, layout: "card", allowedDomains: ["https://www.Blog.dev/x", "blog.dev"] })
 		);
 		assert.deepEqual([saved.signupForm.layout, saved.signupForm.allowedDomains], ["card", ["blog.dev"]]);
+
+		const titled = await as(user, () => m.newsletters.saveSignupForm(user.newsletterId, { headline: "Join us", subheadline: "", askFirstName: true }));
+		assert.deepEqual(
+			[titled.signupForm.headline, titled.signupForm.subheadline, titled.signupForm.askFirstName, titled.signupForm.allowedDomains],
+			["Join us", "", true, ["blog.dev"]]
+		);
+		const reset = await as(user, () => m.newsletters.saveSignupForm(user.newsletterId, { headline: null }));
+		assert.deepEqual([reset.signupForm.headline, reset.signupForm.subheadline], [null, ""], "null follows the newsletter's name again");
+		const tooLong = await as(user, () => m.newsletters.saveSignupForm(user.newsletterId, { headline: "x".repeat(81) }));
+		assert.ok(tooLong.error);
 	});
 });

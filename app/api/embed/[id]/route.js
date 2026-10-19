@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { after } from "next/server";
 import { sendAlert } from "@/lib/alerts";
 import { getAppSecret, getAppUrl } from "@/lib/config";
+import { cleanFirstName } from "@/lib/contact-fields";
 import { getSignupProblem } from "@/lib/contacts";
 import { connectDb } from "@/lib/db";
 import { findSignupNewsletter } from "@/lib/public-newsletters";
@@ -88,7 +89,14 @@ export async function POST(request, { params }) {
 		);
 	}
 
-	const { isPending, inbox } = await addSignup({ newsletter, email, source: EMBED_SOURCE, sourceDomain: host, confirmReturning: true });
+	const { isPending, inbox } = await addSignup({
+		newsletter,
+		email,
+		source: EMBED_SOURCE,
+		sourceDomain: host,
+		firstName: settings.askFirstName ? cleanFirstName(fields.firstName) : "",
+		confirmReturning: true,
+	});
 	return reply.done({ result: isPending ? "pending" : "subscribed", inbox });
 }
 
@@ -123,7 +131,7 @@ async function readFields(request) {
 		const body = isJson ? await request.json() : Object.fromEntries(await request.formData());
 		if (!isPlainObject(body)) return null;
 		const read = (key) => (typeof body[key] === "string" ? body[key] : "");
-		return { email: read("email"), website: read("website"), token: read("token") };
+		return { email: read("email"), firstName: read("first_name") || read("firstName"), website: read("website"), token: read("token") };
 	} catch {
 		return null;
 	}

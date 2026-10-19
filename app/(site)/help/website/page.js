@@ -82,9 +82,14 @@ export default function WebsitePage() {
 				</li>
 				<li>
 					<strong>HTML</strong>: a plain form that works without JavaScript and takes your site&apos;s font. It lands on a page that
-					says what happened, with a link back to your site. Copy it again after you change its button or placeholder.
+					says what happened, with a link back to your site. Copy it again after you change its text or layout.
 				</li>
 			</ul>
+			<p>
+				Inline is the email field and its button alone. Card puts them in a box under a headline and a line of text: they start as
+				your newsletter&apos;s name and description, and follow them until you write your own. Clear one to hide it. Turn on First
+				name to ask for it above the email, so <code>{"{{first_name}}"}</code> can greet new readers; they can leave it empty.
+			</p>
 			<p>Where to paste it:</p>
 			<ul>
 				<li>

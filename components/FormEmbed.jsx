@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { getSectionPath } from "@/lib/newsletter-sections";
-import { SIGNUP_FORM_DEFAULTS, SIGNUP_FORM_LIMITS, getEmbedCode, toSignupFormSettings } from "@/lib/signup-form";
+import { SIGNUP_FORM_DEFAULTS, SIGNUP_FORM_LIMITS, getEmbedCode, getSignupFormHeading, toSignupFormSettings } from "@/lib/signup-form";
 import { renderFormPage } from "@/lib/signup-form-page";
 import { toast } from "@/lib/toast";
 import { useIsClient } from "@/lib/use-is-client";
@@ -25,12 +25,12 @@ import { usePaywall } from "@/lib/use-paywall";
 export default function FormEmbed({ newsletter, appUrl }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
-	const [saved, setSaved] = useState(() => toDraft(newsletter.signupForm));
+	const [saved, setSaved] = useState(() => toDraft(newsletter.signupForm, newsletter));
 	const [draft, setDraft] = useState(saved);
 	const [savedAt, setSavedAt] = useState(null);
 	const [isSaving, startSaving] = useTransition();
-	const settings = toSignupFormSettings(toInput(draft));
-	const code = getEmbedCode({ appUrl, newsletterId: newsletter._id, settings, theme: newsletter.theme });
+	const settings = toSignupFormSettings(toInput(draft, newsletter));
+	const code = getEmbedCode({ appUrl, newsletterId: newsletter._id, settings, theme: newsletter.theme, newsletter });
 
 	function set(key, value) {
 		setDraft((current) => ({ ...current, [key]: value }));
@@ -38,11 +38,11 @@ export default function FormEmbed({ newsletter, appUrl }) {
 
 	function save(event) {
 		event.preventDefault();
-		const signupForm = toInput(draft);
+		const signupForm = toInput(draft, newsletter);
 		startSaving(async () => {
 			const result = await saveSignupForm(newsletter._id, signupForm);
 			if (result?.error) return void toast.error(result.error);
-			const next = toDraft(result.signupForm);
+			const next = toDraft(result.signupForm, newsletter);
 			setSaved(next);
 			setDraft(next);
 			setSavedAt(Date.now());
@@ -85,13 +85,37 @@ export default function FormEmbed({ newsletter, appUrl }) {
 			<Section
 				title="Preview"
 				stagger={2}
-				action={
-					<div className="w-36">
-						<Segmented label="Layout" value={draft.layout} options={LAYOUT_OPTIONS} onChange={(layout) => set("layout", layout)} />
-					</div>
-				}
+				action={<Segmented size="sm" label="Layout" value={draft.layout} options={LAYOUT_OPTIONS} onChange={(layout) => set("layout", layout)} />}
 			>
 				<PreviewSignupForm newsletter={newsletter} settings={settings} />
+				{draft.layout === "card" && (
+					<>
+						<Field label="Headline" hint={draft.headline ? null : "Empty: no headline."}>
+							<Input
+								value={draft.headline}
+								maxLength={SIGNUP_FORM_LIMITS.headline}
+								placeholder={newsletter.name}
+								onChange={(event) => set("headline", event.target.value)}
+							/>
+						</Field>
+						<Field label="Text" hint={draft.subheadline ? null : "Under the headline. Empty: none."}>
+							<Textarea
+								value={draft.subheadline}
+								rows={2}
+								maxLength={SIGNUP_FORM_LIMITS.subheadline}
+								placeholder="Optional"
+								className="min-h-0 resize-none"
+								onChange={(event) => set("subheadline", event.target.value)}
+							/>
+						</Field>
+					</>
+				)}
+				<Field label="First name" as="div">
+					<label className="flex items-center gap-3 text-sm text-muted-foreground sm:pt-2">
+						<Switch checked={draft.askFirstName} onCheckedChange={(isChecked) => set("askFirstName", isChecked)} />
+						Ask for it above the email, optional for readers
+					</label>
+				</Field>
 				<Field label="Button">
 					<Input
 						value={draft.buttonText}
@@ -126,7 +150,12 @@ export default function FormEmbed({ newsletter, appUrl }) {
 					/>
 				</Field>
 			</Section>
-			<BarSave isDirty={toKey(draft) !== toKey(saved)} isSaving={isSaving} savedAt={savedAt} onDiscard={discard} />
+			<BarSave
+				isDirty={JSON.stringify(toInput(draft, newsletter)) !== JSON.stringify(toInput(saved, newsletter))}
+				isSaving={isSaving}
+				savedAt={savedAt}
+				onDiscard={discard}
+			/>
 		</form>
 	);
 }
@@ -213,22 +242,29 @@ function CodeSignupForm({ code }) {
 			<TabsContent value="html" className="flex flex-col gap-2">
 				<BlockCode title="HTML" code={code.html} />
 				<p className="text-xs text-pretty text-muted-foreground">
-					Works without JavaScript and takes your site&apos;s font. Copy it again after changing the button or placeholder.
+					Works without JavaScript and takes your site&apos;s font. Copy it again after changing the form&apos;s text or layout.
 				</p>
 			</TabsContent>
 		</Tabs>
 	);
 }
 
-function toDraft(signupForm) {
+// The headline's fields start from what the card shows, so the newsletter's name and description are there to edit.
+function toDraft(signupForm, newsletter) {
 	const { allowedDomains, ...settings } = toSignupFormSettings(signupForm);
-	return { ...settings, domains: allowedDomains.join("\n") };
+	return { ...settings, ...getSignupFormHeading(settings, newsletter), domains: allowedDomains.join("\n") };
 }
 
-function toInput(draft) {
+// Left as the newsletter's name or description, the headline keeps following them, through a rename too.
+function toInput(draft, newsletter) {
+	const headline = draft.headline.trim();
+	const subheadline = draft.subheadline.trim();
 	return {
 		enabled: draft.enabled,
 		layout: draft.layout,
+		headline: headline === newsletter.name ? null : headline,
+		subheadline: subheadline === (newsletter.description ?? "") ? null : subheadline,
+		askFirstName: draft.askFirstName,
 		buttonText: draft.buttonText.trim(),
 		placeholder: draft.placeholder.trim(),
 		allowedDomains: draft.domains
@@ -238,11 +274,7 @@ function toInput(draft) {
 	};
 }
 
-function toKey(draft) {
-	return JSON.stringify(toInput(draft));
-}
-
 const LAYOUT_OPTIONS = [
-	{ value: "inline", label: "Inline", content: <span className="text-xs font-medium">Inline</span> },
-	{ value: "card", label: "Card", content: <span className="text-xs font-medium">Card</span> },
+	{ value: "inline", label: "Inline", content: "Inline" },
+	{ value: "card", label: "Card", content: "Card" },
 ];

@@ -61,6 +61,10 @@ const newsletterSchema = new mongoose.Schema(
 		signupForm: {
 			enabled: { type: Boolean, default: false },
 			layout: { type: String },
+			// The card's text above the form: unset follows the newsletter's name and description, empty hides it.
+			headline: { type: String, trim: true },
+			subheadline: { type: String, trim: true },
+			askFirstName: { type: Boolean },
 			buttonText: { type: String, trim: true },
 			placeholder: { type: String, trim: true },
 			allowedDomains: { type: [String], default: undefined },
