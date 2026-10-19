@@ -2,6 +2,7 @@ import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import { TRIAL_CONTACTS } from "@/lib/actions/contacts";
 import { isCloud } from "@/lib/config";
+import { MAX_CONTACT_FIELDS, MAX_TAGS, MAX_TAG_LENGTH } from "@/lib/contact-fields";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { MAX_SEGMENT_CONDITIONS, SEGMENT_PRESETS, describeSegment } from "@/lib/segments";
 
@@ -12,8 +13,8 @@ export default function ContactsPage() {
 		<ArticleHelp slug="contacts">
 			<h2 id="statuses">Statuses</h2>
 			<p>
-				The Contacts page lists the open newsletter&apos;s contacts, newest signups first. Filter them by status, or search by email
-				address.
+				The Contacts page lists the open newsletter&apos;s contacts, newest signups first. Filter them by status or by tag, or search
+				by email address.
 			</p>
 			<table>
 				<thead>
@@ -55,6 +56,31 @@ export default function ContactsPage() {
 				</tbody>
 			</table>
 
+			<h2 id="details">First names, tags and fields</h2>
+			<p>
+				Besides an email address, each contact can have a first name, tags and values for your own fields. Open a contact&apos;s menu
+				and click Edit details to change them.
+			</p>
+			<ul>
+				<li>
+					<strong>First name</strong>: what <code>{"{{first_name}}"}</code> shows in your emails.{" "}
+					<Link href={getHelpHref("writing", "first-name")}>Greeting readers by name</Link>
+				</li>
+				<li>
+					<strong>Tags</strong>: labels like vip or podcast, {MAX_TAGS} per contact at most. Tags are lowercase, up to {MAX_TAG_LENGTH}{" "}
+					characters, without commas. Tag lists everyone the page shows with its filters, or takes a tag off them.
+				</li>
+				<li>
+					<strong>Fields</strong>: your own, like a company or a birthday, as text, a number or a date, {MAX_CONTACT_FIELDS} at most.
+					Add them from Fields, at the top of the Contacts page. They&apos;re shared by your newsletters. Deleting a field hides its
+					values, and adding it again brings them back.
+				</li>
+			</ul>
+			<p>
+				A signup form, an import and the <Link href={getHelpHref("api-and-ai")}>API</Link> can fill them in too. When someone signs
+				up again, their first name and fields only fill in what&apos;s missing, and new tags are added to theirs.
+			</p>
+
 			<h2 id="segments">Segments</h2>
 			<p>
 				A segment picks some of your contacts with a few conditions, and keeps up to date as they change. The Contacts page shows each
@@ -70,9 +96,9 @@ export default function ContactsPage() {
 			</ul>
 			<p>
 				Conditions can be on opens and clicks, issues missed in a row, the number of emails opened, the signup date, where they signed
-				up (your website&apos;s signup form, the form on your own site, an import, by hand or the API) and the email address,{" "}
-				{MAX_SEGMENT_CONDITIONS} at most. A segment matches
-				all of its conditions, or any of them. In the send step, pick one to send an issue to its contacts only.{" "}
+				up (your website&apos;s signup form, the form on your own site, an import, by hand or the API), the email address, a tag,
+				whether they have a first name, and your own fields, {MAX_SEGMENT_CONDITIONS} at most. A segment matches all of its
+				conditions, or any of them. In the send step, pick one to send an issue to its contacts only.{" "}
 				<Link href={getHelpHref("sending", "who")}>Who gets it</Link>
 			</p>
 			<p>
@@ -94,6 +120,9 @@ export default function ContactsPage() {
 			<h2 id="actions">Changing a status, and deleting</h2>
 			<p>Each contact&apos;s menu, at the end of their row, has what applies to them:</p>
 			<ul>
+				<li>
+					<strong>Edit details</strong> changes their first name, tags and fields.
+				</li>
 				<li>
 					<strong>Mark as active</strong> brings back a dormant contact: they get your next issue. On a pending contact, it skips
 					the confirmation email, once you confirm they asked for your emails.
@@ -124,8 +153,8 @@ export default function ContactsPage() {
 
 			<h2 id="export">Exporting</h2>
 			<p>
-				Export downloads the contacts that match your filters as a CSV file. Its columns go back in through the import as they are, so
-				it&apos;s also a backup.
+				Export downloads the contacts that match your filters as a CSV file, with their first name, tags and a column per field. Its
+				columns go back in through the import as they are, so it&apos;s also a backup.
 			</p>
 
 			<h2 id="undeliverable">Addresses no one can reach</h2>

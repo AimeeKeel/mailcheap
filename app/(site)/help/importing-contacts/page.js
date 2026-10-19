@@ -33,8 +33,15 @@ export default function ImportingContactsPage() {
 				</li>
 			</ul>
 			<p>
-				Other columns are skipped. Instead of the file&apos;s statuses, you can import everyone as dormant, for an old list you&apos;d
-				rather wake up slowly: dormant contacts get nothing until you mark them active.
+				The other columns are listed under Other columns, each going where you pick: a first name, tags, one of your fields, a new
+				field named after the column, or nowhere. MailCheap suggests the first name (First Name, first_name, or the first word of a
+				Name column) and tags (Tags, Groups) on its own. A tags column can list several, separated by commas. Tag everyone in this
+				import adds tags to the whole file, to find these contacts later.
+			</p>
+			<p>
+				For contacts already in your list, a first name and fields in the file replace theirs, and tags are added to theirs. Instead
+				of the file&apos;s statuses, you can import everyone as dormant, for an old list you&apos;d rather wake up slowly: dormant
+				contacts get nothing until you mark them active.
 			</p>
 
 			<h2 id="consent">Consent</h2>

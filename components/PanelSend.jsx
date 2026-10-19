@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FIRST_SEND } from "@/lib/config";
 import { formatCount, formatNumber, formatSendTime } from "@/lib/format";
+import { withMergeFallbacks } from "@/lib/merge-tags";
 import { getPaceHours } from "@/lib/send-spread";
 import { slugify } from "@/lib/slug";
 import { toast } from "@/lib/toast";
@@ -156,7 +157,7 @@ export default function PanelSend({
 						<InputCampaignSlug
 							campaignId={campaign._id}
 							initialSlug={campaign.archiveSlug ?? ""}
-							placeholder={slugify(subject, 80) || "issue"}
+							placeholder={slugify(withMergeFallbacks(subject), 80) || "issue"}
 							urlBase={archiveUrlBase}
 						/>
 					</RowCampaign>

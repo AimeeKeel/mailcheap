@@ -2,9 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileUp, Loader2, Upload } from "lucide-react";
+import { ArrowRight, FileUp, Loader2, Upload } from "lucide-react";
 import Papa from "papaparse";
-import { importContacts } from "@/app/(app)/contacts/actions";
+import { createContactField, importContacts } from "@/app/(app)/contacts/actions";
+import InputTags from "@/components/InputTags";
+import { useContactOptions } from "@/components/ProviderContactOptions";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -15,8 +17,9 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MAX_IMPORT_ROWS_PER_REQUEST, mapColumns, normalizeImportRow } from "@/lib/csv-import";
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FIELD_TYPES, checkFieldDefinition, cleanTags, fieldKeyFromLabel } from "@/lib/contact-fields";
+import { MAX_IMPORT_ROWS_PER_REQUEST, guessFieldType, mapColumns, normalizeImportRow, suggestProfileColumns } from "@/lib/csv-import";
 import { CONSENT_TEXT, DROP_REASONS, addDropped } from "@/lib/import-checks";
 import { formatNumber } from "@/lib/format";
 import { toast } from "@/lib/toast";
@@ -25,33 +28,38 @@ import { cn } from "@/lib/utils";
 // Into the newsletter the page shows.
 export default function DialogImportContacts({ newsletter, label = "Import", variant = "outline" }) {
 	const router = useRouter();
+	const { fields, tags: tagOptions } = useContactOptions();
 	const [isOpen, setIsOpen] = useState(false);
 	const [mode, setMode] = useState("file");
 	const [file, setFile] = useState(null);
 	const [parsed, setParsed] = useState(null);
+	// The columns the import doesn't read on its own, each into "first_name", "tags", "field:<key>", "new:<type>" or "skip".
+	const [extraColumns, setExtraColumns] = useState([]);
+	const [importTags, setImportTags] = useState([]);
 	const [progress, setProgress] = useState(null);
 	const [hasConsent, setHasConsent] = useState(false);
 	const [summary, setSummary] = useState(null);
 	const [isImporting, startImporting] = useTransition();
+	const profile = useMemo(() => getProfileColumns(extraColumns, fields), [extraColumns, fields]);
 
 	// Invalid rows still go to the server, which checks every row again and counts them in the import.
 	const { rows, invalidRows, duplicates } = useMemo(() => {
 		if (!parsed) return { rows: [], invalidRows: [], duplicates: 0 };
-		const options = mode === "dormant" ? { status: "dormant" } : {};
+		const options = { ...(mode === "dormant" && { status: "dormant" }), profile };
 		const byEmail = new Map();
 		const invalid = [];
 		for (const row of parsed.rows) {
 			const normalized = normalizeImportRow(row, parsed.columns, options);
 			if (!normalized)
 				invalid.push({ email: String(row[parsed.columns.email] ?? "").slice(0, 254), status: "active" });
-			else if (!byEmail.has(normalized.email)) byEmail.set(normalized.email, normalized);
+			else if (!byEmail.has(normalized.email)) byEmail.set(normalized.email, withTags(normalized, importTags));
 		}
 		return {
 			rows: [...byEmail.values()],
 			invalidRows: invalid,
 			duplicates: parsed.rows.length - invalid.length - byEmail.size,
 		};
-	}, [parsed, mode]);
+	}, [parsed, mode, profile, importTags]);
 	const statusCounts = useMemo(
 		() =>
 			Object.entries(Object.groupBy(rows, ({ status }) => status)).map(([status, group]) => [
@@ -64,6 +72,8 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 	function reset() {
 		setFile(null);
 		setParsed(null);
+		setExtraColumns([]);
+		setImportTags([]);
 		setProgress(null);
 		setHasConsent(false);
 		setSummary(null);
@@ -77,19 +87,47 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 			header: true,
 			skipEmptyLines: true,
 			complete: ({ data, meta }) => {
-				const columns = mapColumns(meta.fields ?? []);
+				const headers = meta.fields ?? [];
+				const columns = mapColumns(headers);
 				if (!columns.email) {
 					toast.error("No email column found");
 					return reset();
 				}
 				setParsed({ rows: data, columns });
+				setExtraColumns(
+					suggestProfileColumns(headers, fields).map((item) => ({
+						...item,
+						newType: guessFieldType(data.map((row) => row[item.column])),
+					}))
+				);
 			},
 			error: () => toast.error("Could not read this file"),
 		});
 	}
 
+	// One column for the first name and one for tags: picking another moves it.
+	function mapColumn(column, target) {
+		setExtraColumns((current) =>
+			current.map((item) => {
+				if (item.column === column) return { ...item, target };
+				return (target === "first_name" || target === "tags") && item.target === target ? { ...item, target: "skip" } : item;
+			})
+		);
+	}
+
+	// Fields made from columns come first, so the rows' values for them are kept.
+	async function createNewFields() {
+		for (const { column, target } of extraColumns.filter((item) => item.target.startsWith("new:"))) {
+			const result = await createContactField({ label: column, type: target.slice("new:".length) });
+			if (result?.error && !result.error.startsWith("There's already")) return result.error;
+		}
+		return null;
+	}
+
 	function runImport() {
 		startImporting(async () => {
+			const fieldProblem = await createNewFields();
+			if (fieldProblem) return void toast.error(fieldProblem);
 			const allRows = [...rows, ...invalidRows];
 			const totals = { created: 0, existing: 0, dropped: {} };
 			let importId;
@@ -187,6 +225,30 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 							</div>
 						)}
 
+						{extraColumns.length > 0 && (
+							<div className="flex flex-col gap-1.5">
+								<span className="text-sm font-medium">Other columns</span>
+								<ul className="flex max-h-52 flex-col divide-y divide-border/60 overflow-y-auto rounded-xl shadow-border">
+									{extraColumns.map((item) => (
+										<RowColumn key={item.column} item={item} fields={fields} isDisabled={isImporting} onChange={mapColumn} />
+									))}
+								</ul>
+							</div>
+						)}
+
+						{parsed && (
+							<div className="flex flex-col gap-1.5">
+								<span className="text-sm font-medium">Tag everyone in this import</span>
+								<InputTags
+									value={importTags}
+									onChange={setImportTags}
+									suggestions={tagOptions.map(({ name }) => name)}
+									max={10}
+									placeholder="Optional, e.g. from-substack"
+								/>
+							</div>
+						)}
+
 						<label className="flex items-start gap-2.5 text-sm">
 							<input
 								type="checkbox"
@@ -242,6 +304,53 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 			</DialogContent>
 		</Dialog>
 	);
+}
+
+// A column of the file and where it goes. A new field takes the column's name, as a type guessed from its values.
+function RowColumn({ item, fields, isDisabled, onChange }) {
+	const canBeNewField = !checkFieldDefinition({ label: item.column, type: item.newType }, fields).problem;
+	return (
+		<li className="flex items-center gap-2 py-1.5 pr-1.5 pl-3">
+			<span className="min-w-0 flex-1 truncate text-sm">{item.column}</span>
+			<ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+			<Select value={item.target} onValueChange={(target) => onChange(item.column, target)} disabled={isDisabled}>
+				<SelectTrigger size="sm" className="w-40 shrink-0" aria-label={`Where ${item.column} goes`}>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent align="end">
+					<SelectItem value="skip">Skip</SelectItem>
+					<SelectItem value="first_name">First name</SelectItem>
+					<SelectItem value="tags">Tags</SelectItem>
+					{(fields.length > 0 || canBeNewField) && <SelectSeparator />}
+					{fields.map(({ key, label }) => (
+						<SelectItem key={key} value={`field:${key}`}>
+							{label}
+						</SelectItem>
+					))}
+					{canBeNewField && <SelectItem value={`new:${item.newType}`}>New {FIELD_TYPES[item.newType].label.toLowerCase()} field</SelectItem>}
+				</SelectContent>
+			</Select>
+		</li>
+	);
+}
+
+// What normalizeImportRow reads into each contact: { firstName: column, tags: column, fields: [{ column, key, type }] }.
+function getProfileColumns(extraColumns, fields) {
+	const columnFor = (target) => extraColumns.find((item) => item.target === target)?.column;
+	return {
+		firstName: columnFor("first_name"),
+		tags: columnFor("tags"),
+		fields: extraColumns.flatMap(({ column, target }) => {
+			if (target.startsWith("new:")) return [{ column, key: fieldKeyFromLabel(column), type: target.slice("new:".length) }];
+			const field = target.startsWith("field:") && fields.find(({ key }) => key === target.slice("field:".length));
+			return field ? [{ column, key: field.key, type: field.type }] : [];
+		}),
+	};
+}
+
+function withTags(row, tags) {
+	if (tags.length === 0) return row;
+	return { ...row, tags: cleanTags([...(row.tags ?? []), ...tags]) };
 }
 
 function SummaryImport({ summary }) {

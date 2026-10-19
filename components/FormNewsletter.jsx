@@ -17,6 +17,7 @@ import { CLEANUP_LIMITS, LAST_CHANCE_DAYS, getCleanupSettings } from "@/lib/clea
 import { CONFIRM_URL_PLACEHOLDER } from "@/lib/confirmation-content";
 import { formatNumber } from "@/lib/format";
 import { KEEP_URL_PLACEHOLDER, getLastChanceContent } from "@/lib/last-chance-content";
+import { fillSampleName } from "@/lib/merge-tags";
 import {
 	getDraftConfirmation,
 	getDraftFromEmail,
@@ -315,9 +316,12 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud }) {
 	const deferredConfirmation = useDeferredValue(confirmation);
 	const html = useMemo(
 		() =>
-			renderEmail({ ...deferredConfirmation, newsletter: { name, postalAddress, theme: newsletter.theme } })
-				.html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#")
-				.replaceAll(CONFIRM_URL_PLACEHOLDER, "#"),
+			fillSampleName(
+				renderEmail({ ...deferredConfirmation, newsletter: { name, postalAddress, theme: newsletter.theme } })
+					.html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#")
+					.replaceAll(CONFIRM_URL_PLACEHOLDER, "#"),
+				{ isHtml: true }
+			),
 		[deferredConfirmation, name, postalAddress, newsletter.theme]
 	);
 
@@ -394,12 +398,15 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled,
 	const deferredWelcome = useDeferredValue(welcome);
 	const html = useMemo(
 		() =>
-			renderEmail({
-				markdown: deferredWelcome.markdown,
-				subject: deferredWelcome.subject,
-				previewText: deferredWelcome.previewText,
-				newsletter: { name, postalAddress, theme: newsletter.theme },
-			}).html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"),
+			fillSampleName(
+				renderEmail({
+					markdown: deferredWelcome.markdown,
+					subject: deferredWelcome.subject,
+					previewText: deferredWelcome.previewText,
+					newsletter: { name, postalAddress, theme: newsletter.theme },
+				}).html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"),
+				{ isHtml: true }
+			),
 		[deferredWelcome, name, postalAddress, newsletter.theme]
 	);
 

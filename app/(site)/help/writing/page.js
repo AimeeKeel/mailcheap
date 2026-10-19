@@ -63,6 +63,21 @@ export default function WritingPage() {
 				other change.
 			</p>
 
+			<h2 id="first-name">Greeting readers by name</h2>
+			<p>
+				<code>{"{{first_name}}"}</code> shows each reader&apos;s first name. Type <kbd>/</kbd> and pick First name, or click the person
+				icon at the end of the subject. Both add <code>{"{{first_name|there}}"}</code>: the word after the bar is what readers without a
+				first name see, so &ldquo;Hi {"{{first_name|there}}"}&rdquo; reads &ldquo;Hi Jane&rdquo; or &ldquo;Hi there&rdquo;. Change it,
+				or remove it with the bar to show nothing.
+			</p>
+			<p>
+				It works in the subject, the preview text and the content, and in your welcome and confirmation emails. Your website and its
+				issue pages always show the fallback, so no reader&apos;s name is ever public. The preview and test emails show the name Jane,
+				or in a test email your own first name if you&apos;re one of your contacts with one. The review step flags any other{" "}
+				<code>{"{{...}}"}</code>, like a tag from another platform, since it would go out as written. First names come from{" "}
+				<Link href={getHelpHref("contacts", "details")}>your contacts</Link>.
+			</p>
+
 			<h2 id="preview">Preview and test emails</h2>
 			<p>
 				Preview, in the write step and in the <strong>⋯</strong> menu at any step, shows the email in a mail app&apos;s window on a

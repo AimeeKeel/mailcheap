@@ -88,7 +88,7 @@ export default async function CampaignPage({ params }) {
 			segments={segments.map(({ _id, name, match, conditions }) => ({
 				id: String(_id),
 				name,
-				description: describeSegment({ match, conditions }),
+				description: describeSegment({ match, conditions }, account.contactFields ?? []),
 			}))}
 			isSegmentDeleted={isSegmentDeleted}
 			senderProblem={sender.problem ?? null}

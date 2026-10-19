@@ -35,6 +35,7 @@ import { getArchiveUrls } from "@/lib/archive-hosts";
 import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
 import { formatCount, formatDate, formatNumber, formatRate } from "@/lib/format";
 import { rateTone } from "@/lib/health";
+import { fillSampleName } from "@/lib/merge-tags";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
 import { getIssueWebUrl } from "@/lib/sending-rules";
@@ -277,9 +278,9 @@ export default function CampaignReport({
 					<PreviewEmail
 						fit="content"
 						sender={newsletter}
-						subject={campaign.subject}
-						previewText={campaign.previewText}
-						html={withResponsiveImages(html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"))}
+						subject={fillSampleName(campaign.subject)}
+						previewText={fillSampleName(campaign.previewText)}
+						html={withResponsiveImages(fillSampleName(html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"), { isHtml: true }))}
 						// Rendered next to PreviewEmail's own children, so dev React asks for a key.
 						toolbar={
 							<span key="toolbar" className="truncate text-xs text-muted-foreground">

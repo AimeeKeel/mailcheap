@@ -12,6 +12,7 @@ import { SlashCommand } from "@/components/MenuSlash";
 import { BlockHandle } from "@/lib/editor-block-handle";
 import { Callout } from "@/lib/editor-callout";
 import { ImageAligned } from "@/lib/editor-image";
+import { MergeTags } from "@/lib/editor-merge-tags";
 import { toast } from "@/lib/toast";
 import { IMAGE_TYPES, getDisplaySize, prepareImage, uploadImage } from "@/lib/upload-image";
 
@@ -41,6 +42,7 @@ export default function EditorRich({ content, onChange }) {
 			}),
 			Callout,
 			BlockHandle,
+			MergeTags,
 			Placeholder.configure({
 				placeholder: ({ node }) => (node.type.name === "heading" ? "Heading" : "Write, or press / for commands"),
 			}),
