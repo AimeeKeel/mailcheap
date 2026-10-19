@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
+import LinkApp from "@/components/LinkApp";
 import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
@@ -21,13 +22,19 @@ export default function WebsitePage() {
 					<>
 						{" "}
 						It lives at <code>your-newsletter.{sharedDomain}</code>
-						{hasOwnHost && ", or on a subdomain of your own domain once you add it on the Domains page"}.
+						{hasOwnHost && (
+							<>
+								, or on a subdomain of your own domain once you add it on the <LinkApp href="/domains">Domains page</LinkApp>
+							</>
+						)}
+						.
 					</>
 				)}
 				{isCloud() && " It stays online while your account has a plan."}
 			</p>
 			<p>
-				Its description, social links, author bio and photo are in the Website section of the{" "}
+				Its description, social links, author bio and photo are in the{" "}
+				<LinkApp href="/newsletters/website">Website section</LinkApp> of the{" "}
 				<Link href={getHelpHref("newsletters", "website")}>newsletter&apos;s settings</Link>, where you can also turn it off. Search
 				engines get a sitemap of your issues, and each page has its own picture for when it&apos;s shared.
 			</p>
@@ -50,16 +57,19 @@ export default function WebsitePage() {
 					into the issue. Closed, it stays away for two weeks.
 				</li>
 				<li>
-					<strong>On your own site</strong>: paste the form from Form for your site, in the newsletter&apos;s settings.{" "}
+					<strong>On your own site</strong>: paste the form from{" "}
+					<LinkApp href="/newsletters/form">Form for your site</LinkApp>, in the newsletter&apos;s settings.{" "}
 					<a href="#form-on-your-site">A signup form on your own site</a>
 				</li>
 				<li>
-					<strong>From your own code</strong>: create an API key with the signups only level on the API keys page, then sign people
+					<strong>From your own code</strong>: create an API key with the signups only level on the{" "}
+					<LinkApp href="/api-keys">API keys page</LinkApp>, then sign people
 					up with one request each. That key can only add contacts, so it&apos;s safe in your website&apos;s code. See{" "}
 					<Link href="/docs/api#add-contact">add a contact</Link> in the API reference.
 				</li>
 				<li>
-					<strong>By hand or from a file</strong>: on the Contacts page. <Link href={getHelpHref("contacts")}>Contacts</Link>
+					<strong>By hand or from a file</strong>: on the <LinkApp href="/contacts">Contacts page</LinkApp>.{" "}
+					<Link href={getHelpHref("contacts")}>Contacts</Link>
 				</li>
 			</ul>
 			<p>
@@ -71,7 +81,7 @@ export default function WebsitePage() {
 
 			<h2 id="form-on-your-site">A signup form on your own site</h2>
 			<p>
-				Turn on Form for your site in the{" "}
+				Turn on <LinkApp href="/newsletters/form">Form for your site</LinkApp> in the{" "}
 				<Link href={getHelpHref("newsletters")}>newsletter&apos;s settings</Link>, save, then copy one of its two codes to the spot
 				on your site where the form goes:
 			</p>

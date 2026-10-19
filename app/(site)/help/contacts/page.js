@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
+import LinkApp from "@/components/LinkApp";
 import { TRIAL_CONTACTS } from "@/lib/actions/contacts";
 import { isCloud } from "@/lib/config";
 import { MAX_CONTACT_FIELDS, MAX_TAGS, MAX_TAG_LENGTH } from "@/lib/contact-fields";
@@ -13,8 +14,8 @@ export default function ContactsPage() {
 		<ArticleHelp slug="contacts">
 			<h2 id="statuses">Statuses</h2>
 			<p>
-				The Contacts page lists the open newsletter&apos;s contacts, newest signups first. Filter them by status or by tag, or search
-				by email address.
+				The <LinkApp href="/contacts">Contacts page</LinkApp> lists the open newsletter&apos;s contacts, newest signups first. Filter
+				them by status or by tag, or search by email address.
 			</p>
 			<table>
 				<thead>
@@ -72,7 +73,8 @@ export default function ContactsPage() {
 				</li>
 				<li>
 					<strong>Fields</strong>: your own, like a company or a birthday, as text, a number or a date, {MAX_CONTACT_FIELDS} at most.
-					Add them from Fields, at the top of the Contacts page. They&apos;re shared by your newsletters. Deleting a field hides its
+					Add them from Fields, at the top of the <LinkApp href="/contacts">Contacts page</LinkApp>. They&apos;re shared by your
+					newsletters. Deleting a field hides its
 					values, and adding it again brings them back.
 				</li>
 			</ul>
@@ -83,9 +85,9 @@ export default function ContactsPage() {
 
 			<h2 id="segments">Segments</h2>
 			<p>
-				A segment picks some of your contacts with a few conditions, and keeps up to date as they change. The Contacts page shows each
-				one as a card with its count: click it to list its contacts, and the export follows. New segment opens the editor, with a few
-				starting points:
+				A segment picks some of your contacts with a few conditions, and keeps up to date as they change. The{" "}
+				<LinkApp href="/contacts">Contacts page</LinkApp> shows each one as a card with its count: click it to list its contacts, and
+				the export follows. New segment opens the editor, with a few starting points:
 			</p>
 			<ul>
 				{SEGMENT_PRESETS.map((segment) => (
@@ -109,7 +111,8 @@ export default function ContactsPage() {
 
 			<h2 id="add">Adding someone by hand</h2>
 			<p>
-				Click Add a contact and type their email address. It works like a signup on your website: they get your confirmation email if
+				On the <LinkApp href="/contacts">Contacts page</LinkApp>, click Add a contact and type their email address. It works like a
+				signup on your website: they get your confirmation email if
 				the newsletter confirms signups, or your welcome email if it&apos;s on.
 				{isCloud() && ` Without a plan, you can add ${TRIAL_CONTACTS.limit} contacts a day, enough to try it on yourself.`}
 			</p>

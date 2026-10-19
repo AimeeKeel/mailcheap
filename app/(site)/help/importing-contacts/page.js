@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
+import LinkApp from "@/components/LinkApp";
 import { FIRST_SEND, isCloud } from "@/lib/config";
 import { MAX_CONTACT_FIELDS } from "@/lib/contact-fields";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
@@ -12,8 +13,9 @@ export default function ImportingContactsPage() {
 		<ArticleHelp slug="importing-contacts">
 			<h2 id="export">Export from your current platform</h2>
 			<p>
-				Substack, beehiiv, Mailchimp, Kit, Buttondown and most other platforms export subscribers as a CSV file. Then, on the Contacts
-				page, click Import contacts and choose the file.{isCloud() && " Importing needs a plan."}
+				Substack, beehiiv, Mailchimp, Kit, Buttondown and most other platforms export subscribers as a CSV file. Then, on the{" "}
+				<LinkApp href="/contacts">Contacts page</LinkApp>, click Import contacts and choose the file.
+				{isCloud() && " Importing needs a plan."}
 			</p>
 			<p>
 				From beehiiv: open{" "}

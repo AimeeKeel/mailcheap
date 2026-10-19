@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
+import LinkApp from "@/components/LinkApp";
 import { DELETION_GRACE_DAYS } from "@/lib/account-deletion";
 import { isGoogleEnabled } from "@/lib/auth";
 import { isCloud } from "@/lib/config";
@@ -13,20 +14,25 @@ export default function AccountPage() {
 			<h2 id="sign-in">Signing in</h2>
 			<p>
 				You sign in {isGoogleEnabled() ? "with Google, or " : ""}with a code MailCheap emails to your address. The address can&apos;t
-				be changed. Your name and photo are on the Account page, opened from the menu at the bottom of the sidebar, along with
+				be changed. Your name and photo are on the <LinkApp href="/account">Account page</LinkApp>, opened from the menu at the bottom
+				of the sidebar, along with
 				{isCloud() ? " your plan and" : ""} the deletion of your account.
 			</p>
 			<p>
-				Apps you connected with your sign-in, like ChatGPT or Claude, are on the API keys page, where you can disconnect each one.{" "}
+				Apps you connected with your sign-in, like ChatGPT or Claude, are on the <LinkApp href="/api-keys">API keys page</LinkApp>,
+				where you can disconnect each one.{" "}
 				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
 			</p>
 
 			<h2 id="delete">Deleting your account</h2>
-			<p>Two things come first, and the Account page shows them when they apply:</p>
+			<p>
+				Two things come first, and the <LinkApp href="/account">Account page</LinkApp> shows them when they apply:
+			</p>
 			<ul>
 				{isCloud() && (
 					<li>
-						<strong>Cancel your plan</strong> in the billing portal: deleting your account doesn&apos;t stop Stripe from billing it.
+						<strong>Cancel your plan</strong> from the <LinkApp href="/billing">billing page</LinkApp>: deleting your account
+						doesn&apos;t stop Stripe from billing it.
 						You can delete it once the plan has ended.
 					</li>
 				)}

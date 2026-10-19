@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
+import LinkApp from "@/components/LinkApp";
 import { FIRST_SEND, LIMITS, isCloud } from "@/lib/config";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
@@ -18,7 +19,9 @@ export default function SendingPage() {
 				<li>a subject, and content;</li>
 				<li>the unsubscribe link, which MailCheap adds to every issue written in the editor;</li>
 				<li>a size under 100 KB, since Gmail cuts off longer emails;</li>
-				<li>a postal address, set in the newsletter&apos;s settings;</li>
+				<li>
+					a postal address, set in the <LinkApp href="/newsletters/sender">newsletter&apos;s settings</LinkApp>;
+				</li>
 				<li>a from address the newsletter is allowed to send from.</li>
 			</ul>
 			<p>

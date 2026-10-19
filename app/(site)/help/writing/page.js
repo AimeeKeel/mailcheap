@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
+import LinkApp from "@/components/LinkApp";
 import { isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { UNSUBSCRIBE_PLACEHOLDER } from "@/lib/render-email";
@@ -11,7 +12,8 @@ export default function WritingPage() {
 		<ArticleHelp slug="writing">
 			<h2 id="steps">Write, review, send</h2>
 			<p>
-				Start a draft from the Campaigns page. A campaign goes through three steps, shown at the top: Write, where you type the
+				Start a draft from the <LinkApp href="/campaigns">Campaigns page</LinkApp>. A campaign goes through three steps, shown at the
+				top: Write, where you type the
 				subject, the preview text and the issue; Review, a checklist of what to fix before it can go out; and Send, where you pick who
 				gets it and when. Everything saves as you type, and a check shows each time it&apos;s saved.
 			</p>
