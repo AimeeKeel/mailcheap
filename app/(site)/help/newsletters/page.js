@@ -81,11 +81,23 @@ export default function NewslettersPage() {
 				The built-in confirmation email follows your newsletter&apos;s name and description. You can write your own subject, preview
 				text and content, as long as it keeps the button.
 			</p>
+			<p>
+				New subscribers get the confirmation email or your welcome email, not both. Turning on double opt-in while the welcome email
+				is on turns the welcome email off when you save, and the page says so first. From the API or an AI assistant, send both
+				changes in the same request.
+			</p>
+			{isCloud() && (
+				<p>
+					Confirmation emails count toward your plan&apos;s emails, and still go out once the month&apos;s emails are used up.{" "}
+					<Link href={getHelpHref("plans", "emails")}>What counts as an email</Link>
+				</p>
+			)}
 
 			<h2 id="welcome-email">Welcome email</h2>
 			<p>
 				An email each new subscriber gets when they join, written in Markdown. Send yourself a test of it from the same section.
-				Newsletters that confirm signups say it all in the confirmation email, so they send no welcome email.
+				While double opt-in is on, new subscribers get the confirmation email instead: turning the welcome email on turns double
+				opt-in off when you save, and the page says so first.
 			</p>
 			{isCloud() && (
 				<p>

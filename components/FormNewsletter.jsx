@@ -1,8 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { Check, ExternalLink, FlaskConical, Loader2, X } from "lucide-react";
+import { Check, CircleAlert, ExternalLink, FlaskConical, Loader2, X } from "lucide-react";
 import { checkSlug, saveNewsletter, sendWelcomeTest } from "@/app/(app)/newsletters/actions";
 import BarSave from "@/components/BarSave";
 import ButtonCopy from "@/components/ButtonCopy";
@@ -26,7 +25,6 @@ import {
 	getSlugChanges,
 	getWebsiteAddress,
 } from "@/lib/newsletter-form";
-import { getSectionPath } from "@/lib/newsletter-sections";
 import { getSlugFormatProblem } from "@/lib/newsletter-settings";
 import { MAX_AUTHOR_BIO_LENGTH, MAX_DESCRIPTION_LENGTH } from "@/lib/newsletters";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail } from "@/lib/render-email";
@@ -42,7 +40,8 @@ const IMAGE_PREVIEW_PATTERN = /^(https:\/\/\S+\.\S{2,}\/\S+|\/\S+\.\w{3,4})$/;
 // One section of the open newsletter's settings, on its own page (lib/newsletter-sections.js), which saves only that
 // section's fields. It saves from onSubmit, not a form action: React resets a form after its action, which turned the
 // switches back to how the page opened and dropped what an error refused. Discard goes back to what the newsletter has
-// saved. welcomePause: the notice to show while the month's emails are used up and welcome emails are skipped.
+// saved. welcomePause: the notice to show while the month's emails are used up and welcome emails are skipped. isCloud:
+// MailCheap Cloud, whose plans count the confirmation and welcome emails among their monthly emails.
 // defaultPostalAddress: what its emails print until it has its own (lib/postal-address.js); the editor's checks link
 // to the field with #postal-address. hasArchiveHost: the server hosts websites on customers' own subdomains.
 // hasSentIssue: an issue went out, so the website can be live (lib/archive-data.js).
@@ -59,6 +58,7 @@ export default function FormNewsletter({
 	testEmail,
 	cleanupTotals,
 	welcomePause,
+	isCloud = false,
 }) {
 	const [draft, setDraft] = useState(() => getNewsletterDraft({ newsletter, domains, sharedDomain, defaultPostalAddress }));
 	const draftKey = getDraftKey(draft, { newsletter, sharedDomain });
@@ -102,7 +102,7 @@ export default function FormNewsletter({
 		setDiscardCount((count) => count + 1);
 	}
 
-	const form = { draft, setDraft, set, update, newsletter, sender, discardCount };
+	const form = { draft, setDraft, set, update, newsletter, sender, discardCount, isCloud };
 
 	return (
 		<form onSubmit={save} className="flex flex-col gap-4">
@@ -303,9 +303,11 @@ function SectionSender({ draft, set, update, domains, sharedDomain, fromEmail, d
 	);
 }
 
-// Until it's edited, the built-in confirmation email follows the name and the description.
-function SectionSignups({ draft, setDraft, set, newsletter, sender }) {
+// Until it's edited, the built-in confirmation email follows the name and the description. Turned on while the welcome
+// email goes out, it says that saving turns the welcome email off (readSettingsForm sends both).
+function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud }) {
 	const { name, description, confirmationEdits, isConfirmationRequired, postalAddress } = draft;
+	const isWelcomeReplaced = isConfirmationRequired && !newsletter.requireConfirmation && Boolean(newsletter.welcome?.enabled);
 	const confirmation = useMemo(
 		() => getDraftConfirmation({ name, description, confirmationEdits }, newsletter),
 		[name, description, confirmationEdits, newsletter]
@@ -313,10 +315,10 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender }) {
 	const deferredConfirmation = useDeferredValue(confirmation);
 	const html = useMemo(
 		() =>
-			renderEmail({ ...deferredConfirmation, newsletter: { name, postalAddress, theme: newsletter?.theme } })
+			renderEmail({ ...deferredConfirmation, newsletter: { name, postalAddress, theme: newsletter.theme } })
 				.html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#")
 				.replaceAll(CONFIRM_URL_PLACEHOLDER, "#"),
-		[deferredConfirmation, name, postalAddress, newsletter?.theme]
+		[deferredConfirmation, name, postalAddress, newsletter.theme]
 	);
 
 	function updateConfirmation(key) {
@@ -342,7 +344,9 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender }) {
 			<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
 				New subscribers get an email and only join once they click its button, so fake and mistyped addresses never reach
 				the list.{isConfirmationRequired && " It's the only email they get: say what comes next."}
+				{isCloud && " Confirmation emails count toward your plan's monthly emails."}
 			</p>
+			{isWelcomeReplaced && <NoticeSwitch>Saving turns off the welcome email: new subscribers get this email instead.</NoticeSwitch>}
 			{isConfirmationRequired && (
 				<>
 					<Field label="Subject">
@@ -379,11 +383,14 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender }) {
 	);
 }
 
-function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled, testEmail, welcomePause }) {
+// Its switch works while signups confirm too: turned on, it says that saving turns double opt-in off (readSettingsForm
+// sends both).
+function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled, testEmail, welcomePause, isCloud }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const [isTesting, startTesting] = useTransition();
-	const { name, postalAddress, isConfirmationRequired, isWelcomeEnabled, welcome } = draft;
+	const { name, postalAddress, isWelcomeEnabled, welcome } = draft;
+	const isConfirmationOn = Boolean(newsletter.requireConfirmation);
 	const deferredWelcome = useDeferredValue(welcome);
 	const html = useMemo(
 		() =>
@@ -391,9 +398,9 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled,
 				markdown: deferredWelcome.markdown,
 				subject: deferredWelcome.subject,
 				previewText: deferredWelcome.previewText,
-				newsletter: { name, postalAddress, theme: newsletter?.theme },
+				newsletter: { name, postalAddress, theme: newsletter.theme },
 			}).html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"),
-		[deferredWelcome, name, postalAddress, newsletter?.theme]
+		[deferredWelcome, name, postalAddress, newsletter.theme]
 	);
 
 	function updateWelcome(key) {
@@ -424,21 +431,17 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled,
 		<Section
 			title="Send to new subscribers"
 			stagger={1}
-			collapsedNote={
-				isConfirmationRequired && (
-					<>
-						Not sent while new signups confirm, since the confirmation email replaces it. Its content is kept.{" "}
-						<Link
-							href={getSectionPath("signups")}
-							className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 transition-colors duration-150 hover:decoration-foreground"
-						>
-							Confirm signups
-						</Link>
-					</>
-				)
-			}
 			action={<Switch name="welcomeEnabled" checked={isWelcomeEnabled} onCheckedChange={switchWelcome} aria-label="Welcome email" />}
 		>
+			<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
+				{isConfirmationOn && !isWelcomeEnabled
+					? "Double opt-in is on, so new subscribers get the confirmation email instead. Turning this on turns double opt-in off."
+					: "Each new subscriber gets it when they join."}
+				{isCloud && " Welcome emails count toward your plan's monthly emails."}
+			</p>
+			{isConfirmationOn && isWelcomeEnabled && (
+				<NoticeSwitch>Saving turns off double opt-in: new subscribers join right away, without confirming their address.</NoticeSwitch>
+			)}
 			{welcomePause && isWelcomeEnabled && <NoticeWelcomePaused {...welcomePause} className="px-4 py-3" />}
 			<Field label="Subject">
 				<Input name="welcomeSubject" value={welcome.subject} onChange={updateWelcome("subject")} />
@@ -483,9 +486,9 @@ function SectionCleanup({ draft, setDraft, set, newsletter, sender, fromEmail, t
 	const savedCleanup = getCleanupSettings(newsletter);
 	const lastChance = useMemo(() => {
 		const content = getLastChanceContent({ name, fromEmail });
-		const { html } = renderEmail({ ...content, newsletter: { name, postalAddress, theme: newsletter?.theme } });
+		const { html } = renderEmail({ ...content, newsletter: { name, postalAddress, theme: newsletter.theme } });
 		return { ...content, html: html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#").replaceAll(KEEP_URL_PLACEHOLDER, "#") };
-	}, [name, fromEmail, postalAddress, newsletter?.theme]);
+	}, [name, fromEmail, postalAddress, newsletter.theme]);
 
 	function updateCleanup(key) {
 		return (event) => {
@@ -662,23 +665,31 @@ function SectionWebsite({ draft, set, update, newsletter, sharedDomain, appUrl, 
 	);
 }
 
-// A card of fields. A title gets a row on top with the action on its right. With a collapsedNote, the note stands in for
-// the action and the fields, which aren't sent with the form.
-function Section({ title, action, stagger, collapsedNote, children }) {
+// A card of fields. A title gets a row on top with the action on its right.
+function Section({ title, action, stagger, children }) {
 	return (
 		<section style={{ "--stagger": stagger }} className="rounded-xl bg-card shadow-border animate-enter">
 			{title && (
 				<div className="flex h-12 items-center justify-between gap-3 px-4">
 					<h2 className="text-sm font-medium">{title}</h2>
-					{!collapsedNote && action}
+					{action}
 				</div>
 			)}
-			{collapsedNote ? (
-				<p className="border-t border-border/60 px-4 py-3 text-sm text-pretty text-muted-foreground">{collapsedNote}</p>
-			) : (
-				children && <div className={cn("divide-y divide-border/60", title && "border-t border-border/60")}>{children}</div>
-			)}
+			{children && <div className={cn("divide-y divide-border/60", title && "border-t border-border/60")}>{children}</div>}
 		</section>
+	);
+}
+
+// What saving also changes in another section, said before it's saved.
+function NoticeSwitch({ children }) {
+	return (
+		<p
+			role="status"
+			className="flex items-start gap-2 bg-amber-50 px-4 py-3 text-sm text-pretty text-amber-900 animate-enter dark:bg-amber-500/10 dark:text-amber-200"
+		>
+			<CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+			{children}
+		</p>
 	);
 }
 

@@ -62,9 +62,23 @@ test("a section's page sends its own fields only, so saving it leaves the other 
 		author: { bio: "I write.", imageUrl: "https://cdn.example.com/jane.png" },
 		socialLinks: ["https://x.com/jane", "https://youtube.com/@jane"],
 	});
+	// Double opt-in and the welcome email, on here, also turn the other off.
+	const linked = { signups: ["welcome"], welcome: ["requireConfirmation"] };
 	for (const { id } of SETTINGS_SECTIONS) {
-		assert.deepEqual(Object.keys(readSettingsForm(fullForm(id))).sort(), [...SECTION_FIELDS[id]].sort(), id);
+		assert.deepEqual(Object.keys(readSettingsForm(fullForm(id))).sort(), [...SECTION_FIELDS[id], ...(linked[id] ?? [])].sort(), id);
 	}
+});
+
+test("double opt-in turned on turns the welcome email off in the same save, and the reverse", () => {
+	assert.deepEqual(readSettingsForm(fullForm("signups")).welcome, { enabled: false });
+	assert.equal(readSettingsForm(fullForm("welcome")).requireConfirmation, false);
+
+	const welcomeOff = fullForm("welcome");
+	welcomeOff.delete("welcomeEnabled");
+	assert.equal("requireConfirmation" in readSettingsForm(welcomeOff), false, "a welcome email turned off leaves double opt-in");
+	const signupsOff = fullForm("signups");
+	signupsOff.delete("requireConfirmation");
+	assert.equal("welcome" in readSettingsForm(signupsOff), false, "double opt-in turned off leaves the welcome email");
 });
 
 test("a switch only counts on its own page: off there, untouched elsewhere", () => {
@@ -89,6 +103,7 @@ test("a collapsed email section sends nothing of it, so what it saved stays", ()
 
 	assert.deepEqual(readSettingsForm(fullForm("welcome")), {
 		welcome: { enabled: true, subject: "Welcome", previewText: "", markdown: "Hi" },
+		requireConfirmation: false,
 	});
 });
 
@@ -98,6 +113,7 @@ test("without a section the form sends every field, as the one-page settings did
 	assert.equal(settings.postalAddress, "1 Main St, Paris");
 	assert.equal(settings.cleanup.enabled, true);
 	assert.equal(settings.welcome.subject, "Welcome");
+	assert.equal(settings.welcome.enabled, false, "double opt-in on keeps the welcome email off");
 
 	for (const section of ["design", "unknown"]) assert.deepEqual(readSettingsForm(fullForm(section)), {}, section);
 });
