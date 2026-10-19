@@ -15,6 +15,15 @@ export default function ImportingContactsPage() {
 				Substack, beehiiv, Mailchimp, Kit, Buttondown and most other platforms export subscribers as a CSV file. Then, on the Contacts
 				page, click Import contacts and choose the file.{isCloud() && " Importing needs a plan."}
 			</p>
+			<p>
+				From beehiiv: open{" "}
+				<a href="https://app.beehiiv.com/settings/publication/export_data" target="_blank" rel="noopener">
+					Settings, then Export data
+				</a>
+				, and under Export subscribers (full version), click Export all subscribers, so custom fields, tags and stats come along.
+				beehiiv emails you the file; it&apos;s also under Historical exports on that page, with a Download link. The quick version
+				works too, but only brings email and status.
+			</p>
 
 			<h2 id="columns">What the import reads</h2>
 			<ul>
@@ -32,17 +41,22 @@ export default function ImportingContactsPage() {
 					<strong>Open and click rates</strong>, when the platform exports them: your sends reach the most engaged first, so your
 					best readers get your first issue first.
 				</li>
+				<li>
+					<strong>Opens and clicks</strong>: the last open and click, and how many emails each person opened and clicked, when the
+					export has them (beehiiv&apos;s full export does). Segments on opens and clicks work from your first day.
+				</li>
 			</ul>
 			<p>
 				The other columns are listed under Other columns, each going where you pick: a first name, tags, one of your fields, a new
-				field named after the column, or nowhere. MailCheap suggests the first name (First Name, first_name, or the first word of a
-				Name column) and tags (Tags, Groups) on its own. A tags column can list several, separated by commas. Tag everyone in this
-				import adds tags to the whole file, to find these contacts later.
+				field named after the column, or nowhere. MailCheap picks on its own: the first name (First Name, first_name, or the first
+				word of a Name column), tags (Tags, Groups), and a new field for each custom field and for where readers came from
+				(beehiiv&apos;s acquisition source, channel, campaign and referring URL), as text, a number or a date from its values. The
+				platform&apos;s own columns, like ids, plans, revenue, counters and devices, stay on Skip. Check the list before you import.
 			</p>
 			<p>
-				Custom fields from beehiiv, Mailchimp or Kit come along too: in their full export, each custom field is a column. The first
-				time, pick New field for each one you want to keep; MailCheap guesses text, number or date from its values. The next import
-				puts those columns into your fields on its own. An account holds up to {MAX_CONTACT_FIELDS} fields.
+				A tags column can list several, separated by commas. Tag everyone in this import adds tags to the whole file, to find these
+				contacts later. An account holds up to {MAX_CONTACT_FIELDS} fields: past that, the other columns stay on Skip. The next
+				import puts the same columns into your fields on its own.
 			</p>
 			<p>
 				For contacts already in your list, a first name and fields in the file replace theirs, and tags are added to theirs. Instead

@@ -23,6 +23,7 @@ import {
 	MAX_IMPORT_ROWS_PER_REQUEST,
 	canBeNewField,
 	guessFieldType,
+	labelFromColumn,
 	mapColumns,
 	normalizeImportRow,
 	suggestProfileColumns,
@@ -102,7 +103,7 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 				}
 				setParsed({ rows: data, columns });
 				setExtraColumns(
-					suggestProfileColumns(headers, fields).map((item) => ({
+					suggestProfileColumns(headers, fields, data).map((item) => ({
 						...item,
 						newType: guessFieldType(data.map((row) => row[item.column])),
 					}))
@@ -125,7 +126,7 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 	// Fields made from columns come first, so the rows' values for them are kept.
 	async function createNewFields() {
 		for (const { column, target } of extraColumns.filter((item) => item.target.startsWith("new:"))) {
-			const result = await createContactField({ label: column, type: target.slice("new:".length) });
+			const result = await createContactField({ label: labelFromColumn(column), type: target.slice("new:".length) });
 			if (result?.error && !result.error.startsWith("There's already")) return result.error;
 		}
 		return null;
