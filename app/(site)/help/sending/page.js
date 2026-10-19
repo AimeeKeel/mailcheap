@@ -29,19 +29,14 @@ export default function SendingPage() {
 			<h2 id="who">Who gets it</h2>
 			<p>
 				By default, every active contact of the newsletter gets the issue, most engaged first: those who open and click the most get
-				it before the others. The Filter menu narrows it two ways:
+				it before the others. To send to only some of them, pick one of your segments in To, which shows how many contacts it reaches
+				out of all of them. New segment makes one without leaving the step, like your most engaged contacts.{" "}
+				<Link href={getHelpHref("contacts", "segments")}>Segments</Link>
 			</p>
-			<ul>
-				<li>
-					<strong>A segment</strong>, to send to the contacts it picks.{" "}
-					<Link href={getHelpHref("contacts", "segments")}>Segments</Link>
-				</li>
-				<li>
-					<strong>Most engaged contacts</strong>, to send to only how many you type, by opens and clicks. The rest can get it later,
-					from the campaign&apos;s page.
-				</li>
-			</ul>
-			<p>A draft whose segment was deleted waits until you pick another.</p>
+			<p>
+				A draft whose segment was deleted waits until you pick another.
+				{isCloud() && " A send can't go over what your plan has left this month: pick a smaller segment, or upgrade."}
+			</p>
 			<p>
 				The same step shows the issue&apos;s web page address, which you can change, and what the{" "}
 				<Link href={getHelpHref("list-cleanup")}>list cleanup</Link> will do at this send.
@@ -86,8 +81,9 @@ export default function SendingPage() {
 
 			<h2 id="send-to-more">Sending to more</h2>
 			<p>
-				After a send to only part of your list, Send to more on the campaign&apos;s page sends it to the next most engaged contacts who
-				haven&apos;t got it yet. You pick how many, and each time starts a new step, so you can check the report in between.
+				A send capped at a number of contacts, which the API can set, goes to the most engaged first. Send to more on the
+				campaign&apos;s page then sends it to the next most engaged contacts who haven&apos;t got it yet. You pick how many, and each
+				time starts a new step, so you can check the report in between.
 			</p>
 
 			<h2 id="report">The report</h2>

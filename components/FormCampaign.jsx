@@ -385,7 +385,6 @@ export default function FormCampaign({
 						campaign={campaign}
 						newsletter={newsletter}
 						subject={values.subject}
-						audienceCount={audienceCount}
 						everyoneCount={everyoneCount}
 						segments={segments}
 						isSegmentDeleted={isSegmentDeleted}
