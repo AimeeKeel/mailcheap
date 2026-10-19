@@ -3,16 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { runDashboardAction, toFormError } from "@/lib/actions/dashboard";
 
-export async function importContacts({ newsletterId, rows, consent, importId, duplicates }) {
+// One chunk of a file: the first starts the import (with the file's name and its row count), the next ones pass its
+// importId. The rows go in in the background; getImports follows them.
+export async function importContacts({ newsletterId, rows, consent, importId, duplicates, total, fileName }) {
 	const { output, failure } = await runDashboardAction("import_contacts", {
 		newsletter: String(newsletterId ?? ""),
 		contacts: Array.isArray(rows) ? rows : [],
 		consent: consent === true,
 		...(importId && { importId: String(importId) }),
-		...(duplicates && { duplicates }),
+		...(!importId && duplicates && { duplicates }),
+		...(!importId && total && { total }),
+		...(!importId && fileName && { fileName: String(fileName).slice(0, 200) }),
 	});
 	if (failure) return toFormError(failure);
-	revalidatePath("/contacts");
+	return output;
+}
+
+// The newsletter's latest imports, for the card that follows them on the contacts page.
+export async function getImports(newsletterId) {
+	const { output, failure } = await runDashboardAction("list_imports", { ...(newsletterId && { newsletter: String(newsletterId) }), limit: 3 });
+	if (failure) return toFormError(failure);
 	return output;
 }
 

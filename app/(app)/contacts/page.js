@@ -7,6 +7,7 @@ import AvatarContact from "@/components/AvatarContact";
 import BadgeStatus from "@/components/BadgeStatus";
 import ButtonExportContacts from "@/components/ButtonExportContacts";
 import CardAddContacts from "@/components/CardAddContacts";
+import CardImports from "@/components/CardImports";
 import DialogAddContact from "@/components/DialogAddContact";
 import DialogContactFields from "@/components/DialogContactFields";
 import DialogImportContacts from "@/components/DialogImportContacts";
@@ -35,6 +36,7 @@ import { cleanTag, contactFieldValues } from "@/lib/contact-fields";
 import { CONTACTS_PAGE_SIZE, findContactsPage, listContactTags } from "@/lib/contacts";
 import { getAddContactCurl } from "@/lib/docs/reference";
 import { formatDate, formatNumber } from "@/lib/format";
+import { listImports } from "@/lib/import-jobs";
 import { toNewsletterOption } from "@/lib/newsletters";
 import { countSegmentCards, listLiveSegments } from "@/lib/segment-queries";
 import { compileSegment, describeSegment } from "@/lib/segments";
@@ -60,13 +62,14 @@ export default async function ContactsPage({ searchParams }) {
 	const segment = segments.find(({ _id }) => String(_id) === params.segment) ?? null;
 	const segmentId = segment ? String(segment._id) : null;
 
-	const [{ contacts, counts, totalAll, total }, cardCounts, tags] = newsletterId
+	const [{ contacts, counts, totalAll, total }, cardCounts, tags, imports] = newsletterId
 		? await Promise.all([
 				findContactsPage(account, { newsletterId, status, query, tag, page, segmentFilter: segment && { $and: [compileSegment(segment)] } }),
 				countSegmentCards(account, newsletterId, segments),
 				listContactTags(account, newsletterId),
+				listImports(account, { newsletterId: selected._id, limit: 3 }),
 			])
-		: [{ contacts: [], counts: {}, totalAll: 0, total: 0 }, null, []];
+		: [{ contacts: [], counts: {}, totalAll: 0, total: 0 }, null, [], []];
 	const pageCount = Math.max(1, Math.ceil(total / CONTACTS_PAGE_SIZE));
 	// totalAll counts within the search, the tag and the segment.
 	const hasContacts =
@@ -100,6 +103,7 @@ export default async function ContactsPage({ searchParams }) {
 			</HeaderPage>
 
 			<div className="flex flex-col gap-4">
+				{newsletterId && <CardImports key={newsletterId} newsletterId={newsletterId} imports={imports} />}
 				{hasContacts && (
 					<>
 						<ListSegments
