@@ -285,8 +285,17 @@ describe("segments through the API", () => {
 		const url = await as(owner, () =>
 			catchRedirect(m.newsletters.saveNewsletter(null, form({ name: "Second", slug: "segment-owner-second", postalAddress: "1 Main St, Paris" })))
 		);
-		const second = (await api(owner.key, "POST", "/segments", { newsletter: url.split("/").at(-1), name: "There", conditions: [{ field: "opened", op: "never" }] })).body;
+		const secondId = url.split("/").at(-1);
+		const second = (await api(owner.key, "POST", "/segments", { newsletter: secondId, name: "There", conditions: [{ field: "opened", op: "never" }] })).body;
 		const id = (await api(owner.key, "POST", "/campaigns", { subject: "Issue" })).body.id;
 		assert.match(assertError(await api(owner.key, "PATCH", `/campaigns/${id}`, { segment: second.id }), 400, "validation_failed"), /another newsletter/);
+
+		// The list and the export refuse a segment of another newsletter than the one asked for, and follow the segment's own.
+		for (const path of ["/contacts", "/contacts/export"]) {
+			const mismatch = await api(owner.key, "GET", `${path}?newsletter=${owner.newsletterId}&segment=${second.id}`);
+			assert.match(assertError(mismatch, 400, "validation_failed"), /another newsletter/, path);
+			assert.equal((await api(owner.key, "GET", `${path}?newsletter=${secondId}&segment=${second.id}`)).status, 200, path);
+			assert.equal((await api(owner.key, "GET", `${path}?segment=${second.id}`)).status, 200, path);
+		}
 	});
 });
