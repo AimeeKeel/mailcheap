@@ -43,6 +43,8 @@ const SITE_EXTENSIONS = Object.entries({
 const nextConfig = {
 	poweredByHeader: false,
 	turbopack: { resolveAlias: Object.fromEntries(SITE_EXTENSIONS) },
+	// Read from disk by its route, so the build can't see it's needed.
+	outputFileTracingIncludes: { "/embed/botid": ["./node_modules/botid/dist/client/core/index.mjs"] },
 	images: {
 		remotePatterns: [
 			{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" },

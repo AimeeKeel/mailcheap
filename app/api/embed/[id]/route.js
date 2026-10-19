@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { after } from "next/server";
 import { sendAlert } from "@/lib/alerts";
+import { isBotRequest } from "@/lib/bot-check";
 import { getAppSecret, getAppUrl } from "@/lib/config";
 import { cleanFirstName } from "@/lib/contact-fields";
 import { getSignupProblem } from "@/lib/contacts";
@@ -20,12 +21,23 @@ import { addSignup } from "@/lib/signups";
 import { isObjectIdString, isPlainObject, normalizeEmail } from "@/lib/validation";
 
 // Signups from the forms owners paste on their own sites (lib/signup-form.js). The framed form posts JSON from its own
-// page; the plain HTML form posts from anywhere and lands on /embed/<id>/done. BotID can't run on other sites, so the
-// checks are a hidden field, the framed form's signed load time and site, the browser's Origin, the owner's list of
-// sites, and limits per visitor and per address: an address gets a few signups a day, whichever newsletters ask, so a
-// script can't flood a stranger with confirmation emails.
-const { perIp: PER_IP, perEmail: PER_EMAIL, perNewsletter: PER_NEWSLETTER } = SIGNUP_FORM_RATE_LIMITS;
+// page, on MailCheap's host, where Vercel BotID proves a browser sent it; the plain HTML form posts from anywhere and
+// lands on /embed/<id>/done. Scripts can name any site, so the owner's list of sites keeps the form off other sites'
+// pages and turns the plain form off, and scripts meet the other checks: a hidden field, the framed form's signed load
+// time, BotID, the browser's Origin, and limits per visitor, per address and per newsletter. An address gets a few
+// signups a day, whichever newsletters ask, and past its limit a newsletter's form pauses, so no script can flood
+// strangers with confirmation emails.
+const {
+	perIp: PER_IP,
+	perEmail: PER_EMAIL,
+	perNewsletter: PER_NEWSLETTER,
+	perNewsletterPlain: PER_NEWSLETTER_PLAIN,
+	perNewsletterPlainDaily: PER_NEWSLETTER_PLAIN_DAILY,
+} = SIGNUP_FORM_RATE_LIMITS;
 const FORM_OFF = "This form isn't taking signups";
+const NOT_A_BROWSER = "Couldn't sign you up. Try again from the form.";
+const OTHER_SITE = "This form doesn't take signups on this site";
+const WINDOWS = { "10 m": "10 minutes", "1 d": "a day" };
 const CORS_HEADERS = {
 	"access-control-allow-origin": "*",
 	"access-control-allow-methods": "POST, OPTIONS",
@@ -61,13 +73,18 @@ export async function POST(request, { params }) {
 		const token = readFormToken(fields.token, { newsletterId: id });
 		if (!token || token.age > MAX_FORM_AGE_MS) return reply.error(400, "This form expired. Reload the page and try again.");
 		if (token.age < MIN_FILL_MS) return reply.error(400, "One second, then try again.");
+		if (await isBotRequest("signup from a form on another site")) return reply.error(403, NOT_A_BROWSER);
 		host = getHost(token.origin);
 	} else {
+		if (settings.allowedDomains.length) {
+			await alertPlainFormOff(newsletter);
+			return reply.error(403, OTHER_SITE);
+		}
 		const origin = request.headers.get("origin");
-		if (origin === null) return reply.error(400, "Couldn't sign you up. Try again from the form.");
+		if (origin === null) return reply.error(400, NOT_A_BROWSER);
 		host = getHost(origin) ?? getHost(request.headers.get("referer"));
 	}
-	if (!isAllowedHost(host, settings.allowedDomains)) return reply.error(403, "This form doesn't take signups on this site");
+	if (!isAllowedHost(host, settings.allowedDomains)) return reply.error(403, OTHER_SITE);
 
 	const email = normalizeEmail(fields.email);
 	if (!email) return reply.error(400, "Enter a valid email");
@@ -77,16 +94,11 @@ export async function POST(request, { params }) {
 	const problem = await getSignupProblem(email);
 	if (problem) return reply.error(400, problem);
 
-	if (await isRateLimited({ ...PER_NEWSLETTER, key: id })) {
-		after(() =>
-			sendAlert({
-				accountId: newsletter.accountId,
-				key: `embed-flood:${newsletter.slug}`,
-				title: "Signup form flood",
-				detail: `Over ${PER_NEWSLETTER.limit} signups to ${newsletter.name} from forms on other sites in 10 minutes. They still go through (${PER_IP.limit} per visitor per 10 minutes); check new contacts for junk, or list your sites in the form's settings.`,
-				path: "/newsletters/form",
-			})
-		);
+	const isPlain = !fields.token;
+	for (const limit of isPlain ? [PER_NEWSLETTER_PLAIN, PER_NEWSLETTER_PLAIN_DAILY] : [PER_NEWSLETTER]) {
+		if (!(await isRateLimited({ ...limit, key: id }))) continue;
+		await alertFlood(newsletter, { limit, isPlain });
+		return reply.error(429, "This form is busy. Try again in a few minutes.");
 	}
 
 	const { isPending, inbox } = await addSignup({
@@ -98,6 +110,38 @@ export async function POST(request, { params }) {
 		confirmReturning: true,
 	});
 	return reply.done({ result: isPending ? "pending" : "subscribed", inbox });
+}
+
+// Once an hour at most: the form refuses signups until they slow down. The limiter answers every refused request of a
+// flood, so only the first reaches the alerts and their database.
+async function alertFlood(newsletter, { limit, isPlain }) {
+	const key = `${newsletter._id}${isPlain ? ":plain" : ""}`;
+	if (await isRateLimited({ name: "embed-flood-alert", limit: 1, window: "1 h", key })) return;
+	const form = isPlain ? "its HTML form" : "its forms on other sites";
+	after(() =>
+		sendAlert({
+			accountId: newsletter.accountId,
+			key: `embed-flood${isPlain ? "-plain" : ""}:${newsletter.slug}`,
+			title: "Signup form paused",
+			detail: `Over ${limit.limit} signups to ${newsletter.name} from ${form} in ${WINDOWS[limit.window]}, so it refuses new ones until they slow down: no confirmation or welcome email goes to addresses a script typed.${isPlain ? " The script form takes more, since it checks for a real browser." : ""} Check new contacts for junk.`,
+			path: "/newsletters/form",
+		})
+	);
+}
+
+// Once a day at most: a plain form still on the owner's site would lose every signup without a word.
+async function alertPlainFormOff(newsletter) {
+	if (await isRateLimited({ name: "embed-plain-off-alert", limit: 1, window: "1 d", key: String(newsletter._id) })) return;
+	after(() =>
+		sendAlert({
+			accountId: newsletter.accountId,
+			key: `embed-plain-off:${newsletter.slug}`,
+			title: "HTML signup form refused",
+			detail: `A signup to ${newsletter.name} came from its HTML form, which is off while the form's settings list your sites: a plain form can't prove which site it's on. If that form is on your site, paste the script there instead.`,
+			path: "/newsletters/form",
+			cooldownMinutes: 24 * 60,
+		})
+	);
 }
 
 // JSON for the framed form and for scripts that ask for it; a redirect to the result page for the plain HTML form.

@@ -139,7 +139,7 @@ export default function FormEmbed({ newsletter, appUrl }) {
 			<Section title="Where it works" stagger={4}>
 				<Field
 					label="Your sites"
-					hint={`One per line, like example.com, which covers its subdomains. Empty: any site. Up to ${SIGNUP_FORM_LIMITS.domains}.`}
+					hint={`One per line, like example.com, which covers its subdomains. Empty: any site. Up to ${SIGNUP_FORM_LIMITS.domains}. Browsers then show the form only there, and only the script works.`}
 				>
 					<Textarea
 						value={draft.domains}
@@ -240,10 +240,18 @@ function CodeSignupForm({ code }) {
 				</p>
 			</TabsContent>
 			<TabsContent value="html" className="flex flex-col gap-2">
-				<BlockCode title="HTML" code={code.html} />
-				<p className="text-xs text-pretty text-muted-foreground">
-					Works without JavaScript and takes your site&apos;s font. Copy it again after changing the form&apos;s text or layout.
-				</p>
+				{code.html ? (
+					<>
+						<BlockCode title="HTML" code={code.html} />
+						<p className="text-xs text-pretty text-muted-foreground">
+							Works without JavaScript and takes your site&apos;s font. Copy it again after changing the form&apos;s text or layout.
+						</p>
+					</>
+				) : (
+					<p className="rounded-lg bg-muted/60 px-3 py-2.5 text-xs text-pretty text-muted-foreground">
+						Off while your sites are listed: a plain form can&apos;t prove which site it&apos;s on. Use the script.
+					</p>
+				)}
 			</TabsContent>
 		</Tabs>
 	);

@@ -8,7 +8,7 @@ import { SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
 export const metadata = getHelpPageMetadata("website");
 
 export default function WebsitePage() {
-	const { perIp, perEmail } = SIGNUP_FORM_RATE_LIMITS;
+	const { perIp, perEmail, perNewsletter, perNewsletterPlain } = SIGNUP_FORM_RATE_LIMITS;
 	const sharedDomain = getSharedDomain();
 	const hasOwnHost = Boolean(getArchiveCnameTarget());
 
@@ -92,7 +92,8 @@ export default function WebsitePage() {
 				</li>
 				<li>
 					<strong>HTML</strong>: a plain form that works without JavaScript and takes your site&apos;s font. It lands on a page that
-					says what happened, with a link back to your site. Copy it again after you change its text or layout.
+					says what happened, with a link back to your site. Copy it again after you change its text or layout. It&apos;s off while
+					your sites are listed.
 				</li>
 			</ul>
 			<p>
@@ -132,10 +133,15 @@ export default function WebsitePage() {
 				their source is Form on your site, with the site&apos;s address, so a segment can pick them.
 			</p>
 			<p>
-				So that a script can&apos;t sign up strangers, the form has a field only bots fill in, waits a moment after the page loads, and
-				takes {perIp.limit} signups per visitor every 10 minutes and {perEmail.limit} per address a day, whichever newsletters ask.
-				Someone who unsubscribed confirms their address before they&apos;re back, even with confirmed opt-in off. List your sites under
-				Where it works and the form only shows there.
+				So that a script can&apos;t sign up strangers, the form has a field only bots fill in, waits a moment after the page loads
+				{isCloud() && ", checks that a real browser sent the script form"} and takes {perIp.limit} signups per visitor every 10
+				minutes and {perEmail.limit} per address a day, whichever newsletters ask. Past {perNewsletter.limit} signups in 10 minutes,
+				or {perNewsletterPlain.limit} from the HTML form, it refuses new ones until they slow down, and you get an alert. Someone who
+				unsubscribed confirms their address before they&apos;re back, even with confirmed opt-in off.
+			</p>
+			<p>
+				List your sites under Where it works and browsers only show the form there. Only the script works then, since a plain form
+				can&apos;t prove which site it&apos;s on. The list keeps the form off other sites; the checks above stop scripts.
 			</p>
 
 			<h2 id="unsubscribe">Unsubscribing</h2>

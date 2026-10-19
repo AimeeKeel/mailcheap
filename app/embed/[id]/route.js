@@ -1,3 +1,4 @@
+import { isBotIdEnabled } from "@/lib/bot-check";
 import { connectDb } from "@/lib/db";
 import { findSignupNewsletter } from "@/lib/public-newsletters";
 import { getFramePolicy, getHost, getSignupFormPaths, isAllowedHost, toSignupFormSettings } from "@/lib/signup-form";
@@ -8,7 +9,8 @@ import { isObjectIdString } from "@/lib/validation";
 const HEADERS = { "content-type": "text/html; charset=utf-8", "cache-control": "private, no-store" };
 
 // The signup form in the frame public/embed.js adds to the owner's site. Its token carries the time it loaded and the
-// page holding it, as that page's browser names it in the referrer: sites keep the origin in it by default.
+// page holding it, as that page's browser names it in the referrer: sites keep the origin in it by default. A script
+// can name any page, so the post also proves a browser sent it (app/api/embed/[id]/route.js).
 export async function GET(request, { params }) {
 	const { id } = await params;
 	if (!isObjectIdString(id)) return respond(renderNoticePage("This signup form doesn't exist."), 404);
@@ -23,7 +25,7 @@ export async function GET(request, { params }) {
 	if (!isAllowedHost(host, settings.allowedDomains)) return respond(renderNoticePage("This form doesn't work on this site."), 403);
 
 	const token = createFormToken({ newsletterId: id, origin: host ? new URL(referer).origin : "" });
-	const html = renderFormPage({ newsletter, settings, endpoint: getSignupFormPaths(id).endpoint, token });
+	const html = renderFormPage({ newsletter, settings, endpoint: getSignupFormPaths(id).endpoint, token, botId: isBotIdEnabled() });
 	return respond(html, 200, getFramePolicy(settings.allowedDomains));
 }
 

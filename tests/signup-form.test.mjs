@@ -12,7 +12,8 @@ import {
 	toSignupFormSettings,
 } from "../lib/signup-form.js";
 import { renderFormPage } from "../lib/signup-form-page.js";
-import { activate, as, callApi, catchRedirect, form, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, as, callApi, catchRedirect, form, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
+import { setBotIdVerdict } from "./stubs/botid-server.mjs";
 import { flushAfter } from "./stubs/next-server.mjs";
 
 // The signup form owners paste on their own sites (lib/signup-form.js): the code it gives, its settings, the endpoint
@@ -63,6 +64,24 @@ test("the code to paste points at the server, escapes the owner's text and hides
 	assert.ok(html.includes('placeholder="Your &lt;email&gt;"'));
 });
 
+test("with a list of sites there's no plain form to paste: only the framed one can prove which site it's on", () => {
+	const settings = toSignupFormSettings({ allowedDomains: ["example.com"] });
+	const { script, html } = getEmbedCode({ appUrl: "https://mailcheap.test", newsletterId: NEWSLETTER_ID, settings, theme: {} });
+	assert.ok(script.includes(`data-form="${NEWSLETTER_ID}"`));
+	assert.equal(html, null);
+});
+
+test("the frame proves a browser sent its form only where BotID runs, and never in the preview", () => {
+	const newsletter = { name: "Field notes", theme: {} };
+	const endpoint = `/api/embed/${NEWSLETTER_ID}`;
+	const page = (options) => renderFormPage({ newsletter, settings: toSignupFormSettings({}), endpoint, token: "t", ...options });
+	const checked = page({ botId: true });
+	assert.ok(checked.includes('<script type="module">import{initBotId}from"/embed/botid";'));
+	assert.ok(checked.includes(`initBotId({protect:[{path:"${endpoint}",method:"POST"}]})`));
+	assert.ok(!page({}).includes("initBotId"));
+	assert.ok(!page({ botId: true, isPreview: true }).includes("initBotId"));
+});
+
 test("the card's headline follows the newsletter until its owner writes one, and an empty one shows nothing", () => {
 	const newsletter = { name: "Field notes", description: "One idea a week.", theme: {} };
 	const settings = (signupForm) => toSignupFormSettings(signupForm);
@@ -109,13 +128,17 @@ describe("signups from forms on other sites", () => {
 			endpoint: await import("../app/api/embed/[id]/route.js"),
 			frame: await import("../app/embed/[id]/route.js"),
 			done: await import("../app/embed/[id]/done/route.js"),
+			botid: await import("../app/embed/botid/route.js"),
 			tokens: await import("../lib/signup-form-token.js"),
 			Contact: (await import("../models/Contact.js")).default,
 			Message: (await import("../models/Message.js")).default,
 		};
 	});
 
-	after(() => app?.stop());
+	after(() => {
+		setBotIdVerdict("human");
+		return app?.stop();
+	});
 
 	// A paying customer with a newsletter and the form on. fields: the newsletter's other settings.
 	async function customer(email, { signupForm = {}, ...fields } = {}) {
@@ -250,11 +273,9 @@ describe("signups from forms on other sites", () => {
 	test("a list of sites keeps the form to them, in the frame and at the endpoint", async () => {
 		const user = await customer("embed-sites@example.com", { signupForm: { allowedDomains: ["https://www.Example.com/"] } });
 		const id = user.newsletterId;
-		const fromSite = (origin) => post(id, { email: `${new URL(origin).hostname}@example.org` }, { headers: { origin } });
-		assert.equal((await fromSite("https://blog.example.com")).status, 200);
-		assert.equal((await fromSite("https://other.io")).status, 403);
-		const framedElsewhere = await post(id, { email: "framed-elsewhere@example.org", token: token(id, "https://other.io") });
-		assert.equal(framedElsewhere.status, 403);
+		const framed = (origin) => post(id, { email: `${new URL(origin).hostname}@example.org`, token: token(id, origin) });
+		assert.equal((await framed("https://blog.example.com")).status, 200);
+		assert.equal((await framed("https://other.io")).status, 403);
 
 		const load = (referer) =>
 			m.frame.GET(new Request(`http://localhost:3000/embed/${id}`, { headers: referer ? { referer } : {} }), { params: Promise.resolve({ id }) });
@@ -264,6 +285,70 @@ describe("signups from forms on other sites", () => {
 		assert.ok((await onSite.text()).includes('name="token"'));
 		assert.equal((await load("https://other.io/")).status, 403);
 		assert.equal((await load(null)).status, 403, "a page that hides its address can't prove it's one of them");
+	});
+
+	test("with a list of sites, a script can't pass for one of them: the plain form is off and the framed one needs a browser", async (t) => {
+		t.mock.method(console, "warn", () => {});
+		const user = await customer("embed-forged@example.com", { signupForm: { allowedDomains: ["example.com"] } });
+		const id = user.newsletterId;
+		// A script names a listed site in the Origin no browser elsewhere would send.
+		const forged = await post(id, { email: "forged@example.org" }, { headers: { origin: "https://example.com", referer: "https://example.com/" } });
+		assert.deepEqual([forged.status, (await forged.json()).error], [403, "This form doesn't take signups on this site"]);
+		await flushAfter();
+		const alerts = platformEmails.filter(({ subject }) => subject === "[MailCheap] HTML signup form refused");
+		assert.deepEqual(alerts.at(-1)?.to, ["embed-forged@example.com"], "its owner learns the plain form is off");
+
+		// Or it loads the frame with a listed site as its referrer for a token, which only a browser can then use.
+		const scripted = token(id, "https://example.com");
+		await withEnv({ VERCEL: "1" }, async () => {
+			setBotIdVerdict("bot");
+			const refused = await post(id, { email: "scripted@example.org", token: scripted });
+			assert.deepEqual([refused.status, (await refused.json()).error], [403, "Couldn't sign you up. Try again from the form."]);
+			setBotIdVerdict("human");
+			assert.equal((await post(id, { email: "person@example.org", token: scripted })).status, 200);
+		});
+		assert.deepEqual(await m.Contact.find({ accountId: user.accountId }).distinct("email"), ["person@example.org"]);
+	});
+
+	test("on Vercel, the frame loads BotID's browser code from MailCheap's own host", async () => {
+		const user = await customer("embed-botid@example.com");
+		const id = user.newsletterId;
+		const load = async () =>
+			(
+				await m.frame.GET(new Request(`http://localhost:3000/embed/${id}`, { headers: { referer: "https://site.example/" } }), {
+					params: Promise.resolve({ id }),
+				})
+			).text();
+		assert.ok(!(await load()).includes("initBotId"), "a self-hosted server has no BotID");
+		assert.equal((await m.botid.GET()).status, 404);
+		await withEnv({ VERCEL: "1" }, async () => {
+			assert.ok((await load()).includes(`initBotId({protect:[{path:"/api/embed/${id}",method:"POST"}]})`));
+			const code = await m.botid.GET();
+			assert.equal(code.headers.get("content-type"), "text/javascript; charset=utf-8");
+			assert.match(await code.text(), /export\{\w+ as initBotId/);
+		});
+	});
+
+	test("past its limit, a newsletter's form refuses signups until they slow down, and its owner hears once", async (t) => {
+		t.mock.method(console, "warn", () => {});
+		const user = await customer("embed-flood@example.com");
+		const id = user.newsletterId;
+		const { perNewsletterPlain } = SIGNUP_FORM_RATE_LIMITS;
+		const plain = (email) => post(id, { email }, { headers: { origin: "https://site.example" } });
+		for (let index = 0; index < perNewsletterPlain.limit; index++) assert.equal((await plain(`plain-${index}@example.org`)).status, 200);
+		const emailsBefore = platformEmails.length;
+		for (const email of ["flood-one@example.org", "flood-two@example.org"]) {
+			const refused = await plain(email);
+			assert.deepEqual([refused.status, (await refused.json()).error], [429, "This form is busy. Try again in a few minutes."]);
+			await flushAfter();
+		}
+		const alerts = platformEmails.slice(emailsBefore).filter(({ subject }) => subject === "[MailCheap] Signup form paused");
+		assert.equal(alerts.length, 1);
+		assert.match(alerts[0].text, /Over 20 signups to embed-flood from its HTML form in 10 minutes, so it refuses new ones/);
+		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId }), perNewsletterPlain.limit, "nobody the flood typed joins");
+
+		// The framed form, which proves a browser sent it, keeps its own, larger share.
+		assert.equal((await post(id, { email: "reader@example.org", token: token(id, "https://site.example") })).status, 200);
 	});
 
 	test("visitors and addresses get a few signups at a time, whichever newsletters ask", async () => {
@@ -306,7 +391,10 @@ describe("signups from forms on other sites", () => {
 		assert.deepEqual([body.enabled, body.buttonText, body.allowedDomains], [true, "Join", ["example.com"]]);
 		assert.equal(body.endpoint, `http://localhost:3000/api/embed/${user.newsletterId}`);
 		assert.ok(body.script.includes(`data-form="${user.newsletterId}"`));
-		assert.ok(body.html.includes(">Join</button>"));
+		assert.equal(body.html, null, "with sites listed, only the script works");
+		await callApi("PATCH", `/api/v1/newsletters/${user.newsletterId}`, { key, body: { signupForm: { allowedDomains: [] } } });
+		const anySite = await callApi("GET", `/api/v1/newsletters/${user.newsletterId}/signup-form`, { key });
+		assert.ok(anySite.body.html.includes(">Join</button>"));
 
 		const refused = await callApi("PATCH", `/api/v1/newsletters/${user.newsletterId}`, { key, body: { signupForm: { allowedDomains: ["not a site"] } } });
 		assert.equal(refused.status, 400);
