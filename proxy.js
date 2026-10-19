@@ -7,6 +7,9 @@ import { siteExtensions } from "@/lib/site-extensions";
 
 // No route can live under an underscore folder, so this always renders the not-found page with a 404.
 const NOT_FOUND_PATH = "/_not-on-this-server";
+// Vercel BotID's script and its calls (lib/bot-check.js), which next.config rewrites to Vercel. They pass on every host and
+// without a session, or every form it checks would look sent by a bot.
+const BOTID_PATH_PREFIX = "/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/";
 
 // Reachable without a session: recipients, mail providers, AWS, Stripe, QStash, Vercel Cron, API-key
 // and OAuth clients (REST and MCP, OAuth discovery), the docs, the help center and uptime checks. The consent
@@ -63,6 +66,7 @@ function rewriteTo(request, pathname) {
 
 export async function proxy(request) {
 	const { pathname } = request.nextUrl;
+	if (pathname.startsWith(BOTID_PATH_PREFIX)) return NextResponse.next();
 
 	const { isArchiveHost, slug: archiveSlug } = await resolveArchiveHost(request.headers.get("host"));
 	if (isArchiveHost) {

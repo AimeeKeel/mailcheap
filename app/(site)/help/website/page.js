@@ -60,7 +60,7 @@ export default function WebsitePage() {
 				With <Link href={getHelpHref("newsletters", "confirm-signups")}>confirmed opt-in</Link> on, a new signup gets the confirmation
 				email and joins once they click its button. Otherwise they join at once and get your welcome email, if it&apos;s on. Typos like
 				gmial.com, spam traps, domains that can&apos;t receive email and addresses known to bounce are refused at the form, with a
-				suggestion when the address looks misspelled.
+				suggestion when the address looks misspelled.{isCloud() && " The form also checks that a real browser sent it."}
 			</p>
 
 			<h2 id="unsubscribe">Unsubscribing</h2>

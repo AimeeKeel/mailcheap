@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { withBotId } from "botid/next/config";
 
 // No script-src: Next.js's inline scripts would need per-request nonces, which archive pages can't have
 // while they're cached (ISR). script-src-attr still blocks inline event handlers everywhere.
@@ -57,4 +58,6 @@ const nextConfig = {
 	},
 };
 
-export default nextConfig;
+// Vercel BotID's script and its calls go through MailCheap's own paths, rewritten to Vercel, with frame headers of their own
+// after the ones above (lib/bot-check.js). Only on Vercel, where its check runs.
+export default process.env.VERCEL ? withBotId(nextConfig) : nextConfig;
