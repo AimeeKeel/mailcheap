@@ -4,11 +4,13 @@ import { isValidObjectId } from "mongoose";
 import { revalidatePath } from "next/cache";
 import { blockAccount, unblockAccount } from "@/lib/account-blocks";
 import { setLimitOverrides, setSendSpread } from "@/lib/accounts";
+import { dismissAlertType, dismissAttention, getAttentionDetails } from "@/lib/admin-alerts";
 import { requireAdmin } from "@/lib/auth";
 import { grantFreePlan, revokeFreePlan } from "@/lib/billing";
 import { isCloud } from "@/lib/config";
 import { getGlobalSuppression, removeGlobalSuppression } from "@/lib/global-suppressions";
 import { getPlan } from "@/lib/plans";
+import { serialize } from "@/lib/serialize";
 import { normalizeEmail } from "@/lib/validation";
 
 const MAX_REASON_LENGTH = 200;
@@ -29,6 +31,33 @@ function readEndDate(value) {
 	const text = String(value ?? "").trim();
 	if (!text) return null;
 	return DATE_PATTERN.test(text) ? new Date(`${text}T00:00:00Z`) : new Date(Number.NaN);
+}
+
+// An item of "Needs a look" (kind: alert, account or campaign) for its dialog: what happened, who was told, and
+// what happened around it.
+export async function loadAttention(kind, id) {
+	await requireAdmin();
+	const details = await getAttentionDetails({ kind: String(kind), id: String(id) });
+	return details ? { details: serialize(details) } : { error: "Not found" };
+}
+
+// It leaves "Needs a look" until it happens again.
+export async function dismissAttentionAction(kind, id) {
+	const admin = await requireAdmin();
+	if (!(await dismissAttention({ kind: String(kind), id: String(id), by: admin.email }))) return { error: "Not found" };
+	console.info(`[admin] ${admin.email} dismissed ${kind} ${id}`);
+	revalidatePath("/admin");
+	return { ok: true };
+}
+
+// The alert and every other one of its kind still showing.
+export async function dismissAlertTypeAction(id) {
+	const admin = await requireAdmin();
+	const count = await dismissAlertType({ id: String(id), by: admin.email });
+	if (count === null) return { error: "Not found" };
+	console.info(`[admin] ${admin.email} dismissed ${count} alerts like ${id}`);
+	revalidatePath("/admin");
+	return { ok: true, count };
 }
 
 // reason: what the account's owner reads on their dashboard.
