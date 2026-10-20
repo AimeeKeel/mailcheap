@@ -5,6 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
 import CampaignReport from "@/components/CampaignReport";
+import CardContentReview from "@/components/CardContentReview";
 import TextEmpty from "@/components/TextEmpty";
 import { describeBlocker, getAccountStatus, getSendingStatus, isBlocked } from "@/lib/account-state";
 import { getCampaignForAdmin } from "@/lib/admin-stats";
@@ -13,6 +14,7 @@ import { requireAdmin } from "@/lib/auth";
 import { findCampaignLinks } from "@/lib/campaign-links";
 import { getCampaignActivity, getCampaignComparison } from "@/lib/campaign-report";
 import { isCloud } from "@/lib/config";
+import { REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
 import { toPreviewHtml } from "@/lib/email-preview";
 import { formatDate, formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { getAccountPlan, isOnFreePlan } from "@/lib/plans";
@@ -70,6 +72,14 @@ export default async function AdminCampaignPage({ params }) {
 			>
 				<ListDetails {...found} newsletter={newsletter} timeZone={timeZone} />
 			</CampaignReport>
+			{campaign.review && (
+				<CardContentReview
+					campaignId={String(campaign._id)}
+					review={serialize(campaign.review)}
+					isPending={campaign.status === "paused" && campaign.pauseCode === REVIEW_PAUSE_CODE}
+					ownerEmail={found.ownerEmail}
+				/>
+			)}
 			<section style={{ "--stagger": 7 }} className="mt-6 flex flex-col gap-3 animate-enter">
 				<h2 className="text-sm font-medium text-muted-foreground">Email</h2>
 				{/* No permissions at all: nothing in it runs, submits or navigates the page. */}

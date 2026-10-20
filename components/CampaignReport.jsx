@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { isPlanLimitCode } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
+import { REVIEW_CODES, REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
 import { formatCount, formatNumber, formatPoints, formatRate, formatWeekdayHour } from "@/lib/format";
 import { rateTone } from "@/lib/health";
 import { toPreviewHtml } from "@/lib/email-preview";
@@ -55,6 +56,8 @@ export default function CampaignReport({
 }) {
 	const { stats } = campaign;
 	const id = campaign._id.toString();
+	// Held by the content check (lib/content-review.js): only MailCheap's review starts it, so it has no Resume.
+	const reviewCode = campaign.status === "paused" && REVIEW_CODES.has(campaign.pauseCode) ? campaign.pauseCode : null;
 	const isOnArchive = newsletter.archiveEnabled && Boolean(campaign.archiveSlug) && campaign.archiveListed !== false;
 	const reached = reachedOf(stats);
 	const progress = stats.recipients ? Math.min(stats.sent / stats.recipients, 1) : 0;
@@ -79,7 +82,7 @@ export default function CampaignReport({
 				title={campaign.subject || "Untitled"}
 				backHref={backHref}
 				icon={<AvatarNewsletter newsletter={newsletter} size={28} />}
-				meta={<BadgeStatus status={campaign.status} />}
+				meta={<BadgeStatus status={campaign.status} label={reviewCode && (reviewCode === REVIEW_PAUSE_CODE ? "In review" : "Not sent")} />}
 			>
 				{!readOnly && (
 					<>
@@ -102,7 +105,7 @@ export default function CampaignReport({
 								Pause
 							</ButtonCampaignAction>
 						)}
-						{campaign.status === "paused" && (
+						{campaign.status === "paused" && !reviewCode && (
 							<GatePlan reason="send">
 								<ButtonCampaignAction
 									action={resumeCampaign}
@@ -133,7 +136,7 @@ export default function CampaignReport({
 				{campaign.status === "paused" && campaign.pauseReason && (
 					<TextPauseReason reason={campaign.pauseReason} code={campaign.pauseCode} canUpgrade={!readOnly} />
 				)}
-				{["sending", "paused"].includes(campaign.status) && (
+				{["sending", "paused"].includes(campaign.status) && !(reviewCode && !stats.recipients) && (
 					<div className="flex flex-col gap-2 animate-enter">
 						<div className="flex justify-between text-sm tabular-nums">
 							<span className="text-muted-foreground">
@@ -345,6 +348,13 @@ function TableProviders({ providers, style }) {
 }
 
 function TextPauseReason({ reason, code, canUpgrade }) {
+	if (REVIEW_CODES.has(code)) {
+		return (
+			<p className="rounded-xl bg-muted/60 px-4 py-3 text-sm text-pretty animate-enter">
+				{reason} <LinkHelp article="sending" section="content-check" />
+			</p>
+		);
+	}
 	return (
 		<p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-500/10 px-4 py-3 text-sm animate-enter">
 			<span className="text-pretty">Paused: {reason}</span>

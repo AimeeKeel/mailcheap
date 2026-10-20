@@ -83,6 +83,21 @@ export default function SendingPage() {
 				<Link href={getHelpHref("deliverability", "pauses")}>Bounces, complaints and pauses</Link>
 			</p>
 
+			{isCloud() && (
+				<>
+					<h2 id="content-check">The content check</h2>
+					<p>
+						Before an issue goes out, an automated check reads its subject and content for phishing, malware, scams and explicit
+						content. It never reads your contacts. Almost every issue goes straight out.
+					</p>
+					<p>
+						When an issue looks clearly harmful, its send waits and its page says In review: a person at MailCheap looks at it,
+						usually within a few hours, then sends it as you wrote it or tells you why it can&apos;t go out.{" "}
+						<Link href="/acceptable-use">Acceptable use policy</Link>
+					</p>
+				</>
+			)}
+
 			<h2 id="send-to-more">Sending to more</h2>
 			<p>
 				A send capped at a number of contacts, which the API can set, goes to the most engaged first. Send to more on the
