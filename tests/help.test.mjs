@@ -7,6 +7,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import NoticeWarmup from "../components/NoticeWarmup.jsx";
 import { HELP_ARTICLES, getHelpArticles } from "../lib/help.js";
+import { listAppPages } from "./helpers/app-pages.mjs";
 
 // The help center (app/(site)/help): its articles, the dashboard's links into it and its links into the dashboard, and
 // the send step's warm-up notice that links to it. Its pages opening without a session, in the sitemap and with their
@@ -23,18 +24,6 @@ function readSource(path) {
 async function listSources(folder) {
 	const files = await readdir(join(ROOT, folder), { recursive: true });
 	return files.filter((file) => /\.jsx?$/.test(file)).map((file) => `${folder}/${file}`);
-}
-
-// The app's pages, by path: each app/**/page.js without its route groups. Pages with a dynamic segment are left out, since
-// an article can't know their id.
-async function listPagePaths() {
-	const files = await readdir(join(ROOT, "app"), { recursive: true });
-	return new Set(
-		files
-			.filter((file) => /(^|\/)page\.js$/.test(file))
-			.map((file) => `/${file.split("/").slice(0, -1).filter((part) => !/^\(.+\)$/.test(part)).join("/")}`)
-			.filter((path) => !path.includes("["))
-	);
 }
 
 test("every article in lib/help.js has its page, and every page there is in the list", async () => {
@@ -76,7 +65,7 @@ test("every link into the help center opens one of its articles, at a section th
 });
 
 test("every link from the help center and the docs into the dashboard opens a page the app has", async () => {
-	const pages = await listPagePaths();
+	const pages = await listAppPages();
 	const files = [...(await listSources(HELP_DIR)), ...(await listSources("app/(site)/docs"))];
 	const links = [];
 	for (const file of files) {
