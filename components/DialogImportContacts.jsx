@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ChevronDown, FileUp, Loader2, Upload } from "lucide-react";
 import Papa from "papaparse";
@@ -9,6 +10,7 @@ import BadgeStatus from "@/components/BadgeStatus";
 import { notifyFinished } from "@/components/CardImports";
 import InputTags from "@/components/InputTags";
 import { useContactOptions } from "@/components/ProviderContactOptions";
+import ZoneUpload from "@/components/ZoneUpload";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -31,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { cleanTags } from "@/lib/contact-fields";
 import {
+	CSV_ACCEPT,
 	MAX_IMPORT_ROWS,
 	assignColumnTarget,
 	canBeNewField,
@@ -45,6 +48,8 @@ import {
 import { formatNumber } from "@/lib/format";
 import { CONSENT_TEXT } from "@/lib/import-checks";
 import { toast } from "@/lib/toast";
+import { acceptsFile, useFileDrop, usePageFileDrop } from "@/lib/use-file-drop";
+import { usePaywall } from "@/lib/use-paywall";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_MB = 100;
@@ -52,9 +57,11 @@ const PREVIEW_ROWS = 6;
 
 // Into the newsletter the page shows. The file is read in the browser: a preview of the first contacts and where each
 // column goes, then its rows go to MailCheap in chunks and are imported in the background, which the contacts page
-// follows (CardImports). Closing the dialog while the rows are sent doesn't stop them.
+// follows (CardImports). Closing the dialog while the rows are sent doesn't stop them. A CSV dropped on the dialog, or
+// anywhere on the page, is read like one picked; without a plan, the page drop opens the paywall, like the button.
 export default function DialogImportContacts({ newsletter, label = "Import", variant = "outline" }) {
 	const router = useRouter();
+	const paywall = usePaywall();
 	const { fields, tags: tagOptions } = useContactOptions();
 	const [isOpen, setIsOpen] = useState(false);
 	const [file, setFile] = useState(null);
@@ -89,6 +96,30 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 		setImportTags([]);
 		setHasConsent(false);
 		setSending(null);
+	}
+
+	const isSending = sending !== null;
+	const { isDragging, dropProps } = useFileDrop({ accept: CSV_ACCEPT, onFile: takeFile, onReject: rejectFile });
+	const isPageDragging = usePageFileDrop({
+		accept: CSV_ACCEPT,
+		onFile(selected) {
+			if (!newsletter || isSending) return;
+			if (paywall && !paywall.hasPlan) return paywall.open("import");
+			setIsOpen(true);
+			takeFile(selected);
+		},
+		onReject: rejectFile,
+	});
+
+	function rejectFile() {
+		toast.error("Drop a CSV file");
+	}
+
+	// A new file replaces the last one; the options, tags and consent already set stay.
+	function takeFile(selected) {
+		if (isSending) return;
+		if (!acceptsFile(selected, CSV_ACCEPT)) return rejectFile();
+		readFile(selected);
 	}
 
 	function readFile(selected) {
@@ -158,12 +189,23 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 		});
 	}
 
-	const isSending = sending !== null;
-
 	// Between the title and the button, scrolling when the preview and the columns are taller than the window.
 	function renderBody() {
 		if (isSending) return <StatusSending sending={sending} />;
-		if (!parsed) return <ZoneFile onFile={readFile} />;
+		if (!parsed) {
+			return (
+				<ZoneUpload
+					icon={FileUp}
+					title="Drop a CSV file or choose one"
+					hint={`Up to ${formatNumber(MAX_IMPORT_ROWS)} rows`}
+					dropTitle="Drop to read it"
+					accept={CSV_ACCEPT}
+					isDragging={isDragging}
+					onFile={takeFile}
+					className="py-10"
+				/>
+			);
+		}
 		return (
 			<div className="flex min-w-0 flex-col gap-6">
 				<SummaryFile file={file} rowCount={parsed.rows.length} contacts={rows} hasEmail={Boolean(columns.email)} onReplace={reset} />
@@ -189,79 +231,83 @@ export default function DialogImportContacts({ newsletter, label = "Import", var
 	}
 
 	return (
-		<Dialog
-			open={isOpen}
-			onOpenChange={(open) => {
-				setIsOpen(open);
-				if (!open && !isSending) reset();
-			}}
-		>
-			<DialogTrigger asChild>
-				<Button variant={variant} disabled={!newsletter}>
-					<Upload data-icon="inline-start" />
-					{label}
-				</Button>
-			</DialogTrigger>
-			<DialogContent
-				className={cn(
-					"max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]",
-					parsed && !isSending ? "sm:max-w-2xl" : "sm:max-w-md"
-				)}
+		<>
+			{isPageDragging && !isOpen && <OverlayDrop />}
+			<Dialog
+				open={isOpen}
+				onOpenChange={(open) => {
+					setIsOpen(open);
+					if (!open && !isSending) reset();
+				}}
 			>
-				<DialogHeader>
-					<DialogTitle>Import contacts</DialogTitle>
-					<DialogDescription>
-						Into <span className="font-medium text-foreground">{newsletter?.name}</span>.{" "}
-						{parsed
-							? "Check the first contacts and where each column goes."
-							: "A CSV with an email column: exports from beehiiv, Substack, Mailchimp, Kit and others work as they are."}
-					</DialogDescription>
-				</DialogHeader>
-
-				<div className="-mx-4 min-h-0 overflow-y-auto px-4 pb-1">{renderBody()}</div>
-
-				<DialogFooter>
-					{isSending ? (
-						<Button variant="outline" onClick={() => setIsOpen(false)} className="min-w-24">
-							Close
-						</Button>
-					) : (
-						parsed && (
-							<Button onClick={runImport} disabled={!newsletter || rows.length === 0 || !hasConsent || isImporting} className="min-w-24">
-								{isImporting ? <Loader2 className="animate-spin" /> : `Import ${formatNumber(rows.length)} ${rows.length === 1 ? "contact" : "contacts"}`}
-							</Button>
-						)
+				<DialogTrigger asChild>
+					<Button variant={variant} disabled={!newsletter}>
+						<Upload data-icon="inline-start" />
+						{label}
+					</Button>
+				</DialogTrigger>
+				<DialogContent
+					{...dropProps}
+					className={cn(
+						"max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]",
+						parsed && !isSending ? "sm:max-w-2xl" : "sm:max-w-md"
 					)}
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				>
+					{isDragging && parsed && (
+						<div className="pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-xl bg-popover/85 p-6 text-center backdrop-blur-[2px] animate-fade-in">
+							<span className="flex flex-col items-center gap-2">
+								<FileUp className="size-5 text-muted-foreground" aria-hidden="true" />
+								<span className="text-sm font-medium">Drop to use this file instead</span>
+							</span>
+						</div>
+					)}
+					<DialogHeader>
+						<DialogTitle>Import contacts</DialogTitle>
+						<DialogDescription>
+							Into <span className="font-medium text-foreground">{newsletter?.name}</span>.{" "}
+							{parsed
+								? "Check the first contacts and where each column goes."
+								: "A CSV with an email column: exports from beehiiv, Substack, Mailchimp, Kit and others work as they are."}
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="-mx-4 min-h-0 overflow-y-auto px-4 pb-1">{renderBody()}</div>
+
+					{(isSending || parsed) && (
+						<DialogFooter>
+							{isSending ? (
+								<Button variant="outline" onClick={() => setIsOpen(false)} className="min-w-24">
+									Close
+								</Button>
+							) : (
+								<Button onClick={runImport} disabled={!newsletter || rows.length === 0 || !hasConsent || isImporting} className="min-w-24">
+									{isImporting ? <Loader2 className="animate-spin" /> : `Import ${formatNumber(rows.length)} ${rows.length === 1 ? "contact" : "contacts"}`}
+								</Button>
+							)}
+						</DialogFooter>
+					)}
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
 
-function ZoneFile({ onFile }) {
-	const [isOver, setIsOver] = useState(false);
-	return (
-		<label
-			onDragOver={(event) => {
-				event.preventDefault();
-				setIsOver(true);
-			}}
-			onDragLeave={() => setIsOver(false)}
-			onDrop={(event) => {
-				event.preventDefault();
-				setIsOver(false);
-				onFile(event.dataTransfer.files?.[0]);
-			}}
-			className={cn(
-				"flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl px-4 py-10 text-center shadow-border transition-[box-shadow,background-color] duration-150 hover:bg-muted/40 hover:shadow-border-hover",
-				isOver && "bg-muted/60 shadow-border-hover"
-			)}
+// While a file is dragged over the page. It lets the drag through to the page underneath, where the drop is caught.
+function OverlayDrop() {
+	return createPortal(
+		<div
+			aria-hidden="true"
+			className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-background/60 p-6 backdrop-blur-[2px] animate-fade-in"
 		>
-			<FileUp className="size-5 text-muted-foreground" aria-hidden="true" />
-			<span className="text-sm font-medium">{isOver ? "Drop to read it" : "Drop a CSV file or choose one"}</span>
-			<span className="text-xs text-muted-foreground">Up to {formatNumber(MAX_IMPORT_ROWS)} rows</span>
-			<input type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => onFile(event.target.files?.[0])} />
-		</label>
+			<div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-foreground/25 bg-background px-10 py-8 text-center shadow-lg">
+				<span className="mb-1 grid size-11 place-items-center rounded-full bg-muted shadow-border">
+					<FileUp className="size-5" />
+				</span>
+				<span className="text-sm font-medium">Drop to import contacts</span>
+				<span className="text-xs text-muted-foreground">A CSV with an email column</span>
+			</div>
+		</div>,
+		document.body
 	);
 }
 

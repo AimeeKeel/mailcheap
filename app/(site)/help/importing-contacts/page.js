@@ -15,7 +15,7 @@ export default function ImportingContactsPage() {
 			<h2 id="export">Export from your current platform</h2>
 			<p>
 				Substack, beehiiv, Mailchimp, Kit, Buttondown and most other platforms export subscribers as a CSV file. Then, on the{" "}
-				<LinkApp href="/contacts">Contacts page</LinkApp>, click Import contacts and choose the file.
+				<LinkApp href="/contacts">Contacts page</LinkApp>, click Import contacts and choose the file, or drop it anywhere on the page.
 				{isCloud() && " Importing needs a plan."}
 			</p>
 			<p>
