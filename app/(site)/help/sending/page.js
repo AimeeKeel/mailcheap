@@ -2,6 +2,7 @@ import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
 import { FIRST_SEND, LIMITS, isCloud } from "@/lib/config";
+import { CLASSIFIER_CHECKS } from "@/lib/content-review-codes";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { COMPARED_ISSUES, TIMELINE_HOURS } from "@/lib/report-stats";
@@ -94,6 +95,11 @@ export default function SendingPage() {
 						When an issue looks clearly harmful, its send waits and its page says In review: a person at MailCheap looks at it,
 						usually within a few hours, then sends it as you wrote it or tells you why it can&apos;t go out.{" "}
 						<Link href="/acceptable-use">Acceptable use policy</Link>
+					</p>
+					<p>
+						The same happens when an issue&apos;s text speaks to the check itself, and to new content past{" "}
+						{formatNumber(CLASSIFIER_CHECKS.limit)} issues an hour from one account. An issue whose content was already checked
+						still goes straight out.
 					</p>
 				</>
 			)}

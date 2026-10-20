@@ -18,6 +18,8 @@ const reviewSchema = new mongoose.Schema(
 		scores: { type: Map, of: Number },
 		model: { type: String },
 		checkedAt: { type: Date },
+		// Another of the account's issues with the same content and rules, whose check (or approval) this one reuses.
+		reusedFrom: { type: mongoose.Schema.Types.ObjectId },
 		decision: { type: String, enum: ["approved", "rejected"] },
 		decidedBy: { type: String },
 		decidedAt: { type: Date },
