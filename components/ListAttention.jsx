@@ -24,6 +24,7 @@ export default function ListAttention({ attention, now }) {
 			title: campaign.subject || "Untitled",
 			detail: [campaign.ownerEmail, campaign.reason].filter(Boolean).join(" · "),
 			at: campaign.at,
+			href: `/admin/campaigns/${campaign.id}`,
 		})),
 		...attention.alerts.map((alert) => ({
 			id: `alert-${alert.id}`,

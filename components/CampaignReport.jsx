@@ -25,14 +25,17 @@ import { getArchiveUrls } from "@/lib/archive-hosts";
 import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
 import { formatCount, formatNumber, formatPoints, formatRate, formatWeekdayHour } from "@/lib/format";
 import { rateTone } from "@/lib/health";
+import { toPreviewHtml } from "@/lib/email-preview";
 import { fillSampleName } from "@/lib/merge-tags";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
-import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
+import { renderEmail } from "@/lib/render-email";
 import { TIMELINE_HOURS, findPeak, hoursToHalf, reachedOf } from "@/lib/report-stats";
 import { getIssueWebUrl } from "@/lib/sending-rules";
 import { timeZoneLabel } from "@/lib/time-zone";
 import { cn } from "@/lib/utils";
 
+// readOnly: an admin looking at a customer's campaign (app/admin/campaigns/[id]): its numbers without its owner's
+// actions, and children above them.
 export default function CampaignReport({
 	campaign,
 	newsletter,
@@ -46,6 +49,9 @@ export default function CampaignReport({
 	isBlocked = false,
 	pace = null,
 	newContacts = 0,
+	readOnly = false,
+	backHref = "/campaigns",
+	children,
 }) {
 	const { stats } = campaign;
 	const id = campaign._id.toString();
@@ -71,57 +77,61 @@ export default function CampaignReport({
 		<>
 			<HeaderPage
 				title={campaign.subject || "Untitled"}
-				backHref="/campaigns"
+				backHref={backHref}
 				icon={<AvatarNewsletter newsletter={newsletter} size={28} />}
 				meta={<BadgeStatus status={campaign.status} />}
 			>
-				{campaign.status === "sent" && remainingCount > 0 && isSendingEnabled() && !isBlocked && (
-					<GatePlan reason="send">
-						<DialogSendMore
-							campaignId={id}
-							sentCount={stats.recipients}
-							remainingCount={remainingCount}
-							emailsLeft={emailsLeft}
-							isCleanupEnabled={Boolean(newsletter.cleanup?.enabled)}
-							pace={pace}
-							newContacts={newContacts}
+				{!readOnly && (
+					<>
+						{campaign.status === "sent" && remainingCount > 0 && isSendingEnabled() && !isBlocked && (
+							<GatePlan reason="send">
+								<DialogSendMore
+									campaignId={id}
+									sentCount={stats.recipients}
+									remainingCount={remainingCount}
+									emailsLeft={emailsLeft}
+									isCleanupEnabled={Boolean(newsletter.cleanup?.enabled)}
+									pace={pace}
+									newContacts={newContacts}
+								/>
+							</GatePlan>
+						)}
+						{campaign.status === "sending" && (
+							<ButtonCampaignAction action={pauseCampaign} id={id}>
+								<Pause data-icon="inline-start" />
+								Pause
+							</ButtonCampaignAction>
+						)}
+						{campaign.status === "paused" && (
+							<GatePlan reason="send">
+								<ButtonCampaignAction
+									action={resumeCampaign}
+									id={id}
+									disabledReason={isBlocked ? "The account is blocked" : isSendingEnabled() ? null : "Sending is off"}
+								>
+									<Play data-icon="inline-start" />
+									Resume
+								</ButtonCampaignAction>
+							</GatePlan>
+						)}
+						<ButtonPreview
+							html={toPreviewHtml(html)}
+							sender={sender}
+							subject={fillSampleName(campaign.subject)}
+							previewText={fillSampleName(campaign.previewText)}
 						/>
-					</GatePlan>
-				)}
-				{campaign.status === "sending" && (
-					<ButtonCampaignAction action={pauseCampaign} id={id}>
-						<Pause data-icon="inline-start" />
-						Pause
-					</ButtonCampaignAction>
-				)}
-				{campaign.status === "paused" && (
-					<GatePlan reason="send">
-						<ButtonCampaignAction
-							action={resumeCampaign}
+						<MenuReport
 							id={id}
-							disabledReason={isBlocked ? "The account is blocked" : isSendingEnabled() ? null : "Sending is off"}
-						>
-							<Play data-icon="inline-start" />
-							Resume
-						</ButtonCampaignAction>
-					</GatePlan>
+							pageUrl={isOnArchive ? getArchiveUrls(newsletter).post(campaign.archiveSlug) : null}
+							isPinned={Boolean(campaign.archivePinned)}
+						/>
+					</>
 				)}
-				<ButtonPreview
-					html={withResponsiveImages(fillSampleName(html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"), { isHtml: true }))}
-					sender={sender}
-					subject={fillSampleName(campaign.subject)}
-					previewText={fillSampleName(campaign.previewText)}
-				/>
-				<MenuReport
-					id={id}
-					pageUrl={isOnArchive ? getArchiveUrls(newsletter).post(campaign.archiveSlug) : null}
-					isPinned={Boolean(campaign.archivePinned)}
-				/>
 			</HeaderPage>
 
 			<div className="flex flex-col gap-6">
 				{campaign.status === "paused" && campaign.pauseReason && (
-					<TextPauseReason reason={campaign.pauseReason} code={campaign.pauseCode} />
+					<TextPauseReason reason={campaign.pauseReason} code={campaign.pauseCode} canUpgrade={!readOnly} />
 				)}
 				{["sending", "paused"].includes(campaign.status) && (
 					<div className="flex flex-col gap-2 animate-enter">
@@ -156,6 +166,8 @@ export default function CampaignReport({
 						)}
 					</div>
 				)}
+
+				{children}
 
 				<div className="flex flex-col gap-3">
 					<div style={{ "--stagger": 1 }} className="grid grid-cols-3 gap-3 animate-enter">
@@ -206,7 +218,7 @@ export default function CampaignReport({
 
 				{providers.length > 0 && <TableProviders style={{ "--stagger": 5 }} providers={providers} />}
 
-				{newsletter.archiveEnabled && campaign.archiveSlug && (
+				{!readOnly && newsletter.archiveEnabled && campaign.archiveSlug && (
 					<div
 						style={{ "--stagger": 6 }}
 						className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-xl bg-card px-4 shadow-border transition-colors duration-150 animate-enter focus-within:bg-muted/40"
@@ -332,11 +344,11 @@ function TableProviders({ providers, style }) {
 	);
 }
 
-function TextPauseReason({ reason, code }) {
+function TextPauseReason({ reason, code, canUpgrade }) {
 	return (
 		<p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-500/10 px-4 py-3 text-sm animate-enter">
 			<span className="text-pretty">Paused: {reason}</span>
-			{isPlanLimitCode(code) && (
+			{canUpgrade && isPlanLimitCode(code) && (
 				<Link href="/billing" className="font-medium underline underline-offset-4">
 					Upgrade
 				</Link>
