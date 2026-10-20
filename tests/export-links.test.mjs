@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { before, test } from "node:test";
+import { contactListFilter } from "../lib/contacts.js";
 import { getCsvHeader, toCsvRow } from "../lib/contacts-csv.js";
 import { EXPORT_LINK_MS, createExportToken, verifyExportToken } from "../lib/export-token.js";
 import { mapColumns, suggestProfileColumns } from "../lib/csv-import.js";
@@ -35,6 +36,19 @@ test("an export link carries the account and filters, signed, for an hour", () =
 	assert.equal(verifyExportToken(`${payload}.${signature.slice(0, -1)}A`, now), null);
 	assert.equal(verifyExportToken("nonsense", now), null);
 	assert.equal(verifyExportToken(undefined, now), null);
+});
+
+test("a list or export filter keeps every condition, the segment's joining under $and", () => {
+	const segmentFilter = { newsletterId: NEWSLETTER, $and: [{ lastOpenAt: null }] };
+	const filter = contactListFilter(ACCOUNT, { newsletterId: NEWSLETTER, status: "active", query: "jane", tag: "vip", segmentFilter });
+	assert.deepEqual(Object.keys(filter).sort(), ["$and", "accountId", "email", "newsletterId", "status", "tags"]);
+	assert.equal(String(filter.accountId), ACCOUNT);
+	assert.deepEqual([String(filter.newsletterId), filter.email, filter.tags, filter.status], [NEWSLETTER, { $regex: "^jane" }, "vip", "active"]);
+	assert.deepEqual(filter.$and, [{ newsletterId: NEWSLETTER }, { lastOpenAt: null }], "the segment narrows, it replaces nothing");
+
+	const page = contactListFilter(ACCOUNT, { newsletterId: NEWSLETTER, segmentFilter: { $and: [{ source: "import" }] } });
+	assert.deepEqual(page.$and, [{ source: "import" }], "the contacts page's segment filter has no newsletter of its own");
+	assert.equal(contactListFilter(ACCOUNT, { newsletterId: NEWSLETTER }).$and, undefined, "no segment, no $and");
 });
 
 test("links signed with another secret don't open", () => {

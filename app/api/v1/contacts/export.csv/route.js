@@ -1,10 +1,9 @@
 import { scoped } from "@/lib/account-scope";
 import { ERROR_CODES, hasActiveSubscription } from "@/lib/account-state";
-import { contactSearchFilter } from "@/lib/contacts";
 import { getCsvHeader, toCsvRow } from "@/lib/contacts-csv";
 import { connectDb } from "@/lib/db";
 import { verifyExportToken } from "@/lib/export-token";
-import { findSegmentListFilter } from "@/lib/segment-queries";
+import { findExportFilter } from "@/lib/segment-queries";
 import Account from "@/models/Account";
 import Contact from "@/models/Contact";
 import Newsletter from "@/models/Newsletter";
@@ -26,13 +25,8 @@ export async function GET(request) {
 	const newsletters = new Map(
 		(await Newsletter.find(scoped(account)).select({ slug: 1 }).lean()).map(({ _id, slug }) => [String(_id), slug])
 	);
-	const segmentFilter = link.segmentId ? await findSegmentListFilter(account, link.segmentId) : null;
-	if (link.segmentId && !segmentFilter) return fail(404, "not_found", "The segment was deleted: export again");
-	const filter = {
-		...segmentFilter,
-		...contactSearchFilter(account, { newsletterId: link.newsletterId, query: link.query, tag: link.tag }),
-		...(link.status && { status: link.status }),
-	};
+	const filter = await findExportFilter(account, link);
+	if (!filter) return fail(404, "not_found", "The segment was deleted: export again");
 	const cursor = Contact.find(filter).sort({ subscribedAt: -1, _id: -1 }).lean().cursor();
 	const encoder = new TextEncoder();
 	let isStarted = false;
