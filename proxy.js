@@ -39,6 +39,8 @@ const PUBLIC_PATHS = [
 	/^\/archive\//,
 	/^\/api\/unsubscribe$/,
 	/^\/api\/views$/,
+	/^\/summary\/[A-Za-z0-9_.-]+$/,
+	/^\/api\/summary\/unsubscribe$/,
 	/^\/embed\.js$/,
 	/^\/embed\/[^/]+(\/done)?$/,
 	/^\/api\/embed\/[^/]+$/,

@@ -5,6 +5,7 @@ import { DELETION_GRACE_DAYS } from "@/lib/account-deletion";
 import { isGoogleEnabled } from "@/lib/auth";
 import { isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
+import { SUMMARY_BARS, SUMMARY_HOUR } from "@/lib/summary";
 
 export const metadata = getHelpPageMetadata("account");
 
@@ -23,6 +24,30 @@ export default function AccountPage() {
 				where you can disconnect each one.{" "}
 				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
 			</p>
+
+			{isCloud() && (
+				<>
+					<h2 id="summary-email" data-cloud>Summary emails</h2>
+					<p>
+						With a paid plan, MailCheap can email you your newsletter&apos;s numbers every Monday at {SUMMARY_HOUR} AM, your time.
+						It says who joined and who left against the week before, your total, new subscribers over the last{" "}
+						{SUMMARY_BARS.weekly} weeks, and your latest
+						issue&apos;s opens and clicks against your average, with its most clicked link. With several newsletters, the one with
+						the most subscribers comes first and the others get a line each.
+					</p>
+					<p>
+						On the <LinkApp href="/account">Account page</LinkApp>, pick Weekly, Daily for yesterday&apos;s numbers every
+						morning, which skips the days with no news, or Off; Preview there shows your next summary. The link at the bottom of
+						each summary changes it without signing in, and your mail app&apos;s Unsubscribe button turns it off in one click.
+						&quot;Your time&quot; is your browser&apos;s, the last time you opened the dashboard. Summaries don&apos;t count toward
+						your plan&apos;s emails.
+					</p>
+					<p>
+						Share this week opens a page with your newsletter&apos;s name and its own totals, never a subscriber, to post on X or
+						LinkedIn. <Link href="/docs/api#get-summary">Get a summary</Link> in the API returns the same numbers.
+					</p>
+				</>
+			)}
 
 			<h2 id="delete">Deleting your account</h2>
 			<p>

@@ -80,6 +80,8 @@ test("an article's sections come with their ids and the words a reader sees", ()
 		},
 		{ id: "own", title: "Your own domain", text: "Add up to … domains. Bounces" },
 	]);
+	const cloudOnly = `<ArticleHelp slug="x">{isCloud() && (<><h2 id="summary" data-cloud>Summary emails</h2><p>Every Monday.</p></>)}</ArticleHelp>`;
+	assert.deepEqual(getSections(cloudOnly), [{ id: "summary", title: "Summary emails", text: "Every Monday.", isCloudOnly: true }]);
 });
 
 test("the index has every article's sections and the docs' endpoints; a self-hosted server leaves out cloud-only articles", async () => {
@@ -95,6 +97,9 @@ test("the index has every article's sections and the docs' endpoints; a self-hos
 	assert.ok(hrefs.has("/docs/mcp#claude"));
 	assert.ok(![...hrefs].some((href) => /^\/help\/(warm-up|plans)/.test(href)), "cloud-only articles stay out");
 	assert.ok(cloud.some(({ href }) => href === "/help/warm-up#what"));
+	assert.ok(!hrefs.has("/help/account#summary-email"), "and so do cloud-only sections");
+	assert.ok(hrefs.has("/help/account#delete"));
+	assert.ok(cloud.some(({ href }) => href === "/help/account#summary-email"));
 
 	for (const href of hrefs) {
 		const [, slug, section] = href.match(/^\/help\/([^#]+)(?:#(.+))?$/) ?? [];
