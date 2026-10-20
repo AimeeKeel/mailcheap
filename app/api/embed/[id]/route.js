@@ -24,15 +24,16 @@ import { isObjectIdString, isPlainObject, normalizeEmail } from "@/lib/validatio
 // page, on MailCheap's host, where Vercel BotID proves a browser sent it; the plain HTML form posts from anywhere and
 // lands on /embed/<id>/done. Scripts can name any site, so the owner's list of sites keeps the form off other sites'
 // pages and turns the plain form off, and scripts meet the other checks: a hidden field, the framed form's signed load
-// time, BotID, the browser's Origin, and limits per visitor, per address and per newsletter. An address gets a few
-// signups a day, whichever newsletters ask, and past its limit a newsletter's form pauses, so no script can flood
-// strangers with confirmation emails.
+// time and its one signup per token, BotID, the browser's Origin, and limits per visitor, per address and per
+// newsletter. An address gets a few signups a day, whichever newsletters ask, and past its limit a newsletter's form
+// pauses, so no script can flood strangers with confirmation emails.
 const {
 	perIp: PER_IP,
 	perEmail: PER_EMAIL,
 	perNewsletter: PER_NEWSLETTER,
 	perNewsletterPlain: PER_NEWSLETTER_PLAIN,
 	perNewsletterPlainDaily: PER_NEWSLETTER_PLAIN_DAILY,
+	perToken: PER_TOKEN,
 } = SIGNUP_FORM_RATE_LIMITS;
 const FORM_OFF = "This form isn't taking signups";
 const NOT_A_BROWSER = "Couldn't sign you up. Try again from the form.";
@@ -69,12 +70,15 @@ export async function POST(request, { params }) {
 	// The framed form names the page it was on in its token, from when it loaded; for the plain form, the browser names it.
 	// Every browser sends an Origin with a form posted from another site: without one, a script is posting.
 	let host;
+	let formToken = null;
 	if (fields.token) {
-		const token = readFormToken(fields.token, { newsletterId: id });
-		if (!token || token.age > MAX_FORM_AGE_MS) return reply.error(400, "This form expired. Reload the page and try again.");
-		if (token.age < MIN_FILL_MS) return reply.error(400, "One second, then try again.");
-		if (await isBotRequest("signup from a form on another site")) return reply.error(403, NOT_A_BROWSER);
-		host = getHost(token.origin);
+		formToken = readFormToken(fields.token, { newsletterId: id });
+		if (!formToken || formToken.age > MAX_FORM_AGE_MS) return reply.error(400, "This form expired. Reload the page and try again.");
+		if (formToken.age < MIN_FILL_MS) return reply.error(400, "One second, then try again.");
+		// With sites listed, BotID is what stops a script that names one of them, so a check that fails refuses the signup.
+		const failClosed = settings.allowedDomains.length > 0;
+		if (await isBotRequest("signup from a form on another site", { failClosed })) return reply.error(403, NOT_A_BROWSER);
+		host = getHost(formToken.origin);
 	} else {
 		if (settings.allowedDomains.length) {
 			await alertPlainFormOff(newsletter);
@@ -99,6 +103,10 @@ export async function POST(request, { params }) {
 		if (!(await isRateLimited({ ...limit, key: id }))) continue;
 		await alertFlood(newsletter, { limit, isPlain });
 		return reply.error(429, "This form is busy. Try again in a few minutes.");
+	}
+	// Last, so a typo doesn't use it up: the limiter counts atomically, so two posts of one token can't both get through.
+	if (formToken && (await isRateLimited({ ...PER_TOKEN, key: formToken.id }))) {
+		return reply.error(400, "This form was already used. Reload the page to sign up another address.");
 	}
 
 	const { isPending, inbox } = await addSignup({

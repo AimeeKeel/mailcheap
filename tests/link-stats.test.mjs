@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import mongoose from "mongoose";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { formatLinkUrl, getLinkKey, getLinkLabels, isSystemLink, normalizeLink } from "../lib/link-stats.js";
 import { getClickUrl, readClickToken } from "../lib/tracking.js";
 import { activate, as, catchRedirect, form, jsonRequest, signIn, startTestApp } from "./helpers/app.mjs";
@@ -19,6 +21,20 @@ test("a link counts once whatever its tracking parameters, its parameters' order
 	assert.notEqual(getLinkKey("https://example.com/a"), getLinkKey("https://example.com/b"));
 	assert.equal(getLinkKey("https://example.com/a").length, 16);
 	for (const href of ["mailto:hi@example.com", "javascript:alert(1)", "not a url", "", null]) assert.equal(normalizeLink(href), null, href);
+});
+
+test("the report links only web addresses: anything else stays text", async () => {
+	const { default: TableCampaignLinks } = await import("../components/TableCampaignLinks.jsx");
+	const link = (url) => ({ key: getLinkKey(url), url, clickers: 1, clicks: 1 });
+	const html = renderToStaticMarkup(
+		createElement(TableCampaignLinks, {
+			stats: { links: [link("https://example.com/post"), link("javascript:alert(1)")], clickers: 2, isComplete: true },
+			html: "",
+		})
+	);
+	assert.ok(html.includes('href="https://example.com/post"'));
+	assert.ok(!html.includes('href="javascript:'), "a stored javascript: address never becomes a link");
+	assert.ok(html.includes("javascript:alert(1)"), "it still shows, as text");
 });
 
 test("MailCheap's own unsubscribe, keep and confirm pages aren't the issue's links", () => {

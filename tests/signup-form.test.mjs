@@ -310,6 +310,59 @@ describe("signups from forms on other sites", () => {
 		assert.deepEqual(await m.Contact.find({ accountId: user.accountId }).distinct("email"), ["person@example.org"]);
 	});
 
+	test("with a list of sites, a BotID check that fails refuses the framed form; without one, it lets the form through", async (t) => {
+		t.mock.method(console, "error", () => {});
+		const listed = await customer("embed-botid-down@example.com", { signupForm: { allowedDomains: ["example.com"] } });
+		const open = await customer("embed-botid-down-open@example.com");
+		await withEnv({ VERCEL: "1" }, async () => {
+			setBotIdVerdict("error");
+			const refused = await post(listed.newsletterId, { email: "down@example.org", token: token(listed.newsletterId, "https://example.com") });
+			assert.deepEqual([refused.status, (await refused.json()).error], [403, "Couldn't sign you up. Try again from the form."]);
+			const through = await post(open.newsletterId, { email: "down@example.org", token: token(open.newsletterId, "https://site.example") });
+			assert.equal(through.status, 200, "a BotID problem never costs a form without sites listed a signup");
+			setBotIdVerdict("human");
+		});
+		assert.equal(await m.Contact.countDocuments({ accountId: listed.accountId }), 0);
+	});
+
+	test("a framed form's token signs up one address; a refused post doesn't use it up", async () => {
+		const user = await customer("embed-once@example.com");
+		const id = user.newsletterId;
+		const once = token(id, "https://site.example");
+		const typo = await post(id, { email: "not-an-address", token: once });
+		assert.equal(typo.status, 400);
+		assert.equal((await post(id, { email: "first@example.org", token: once })).status, 200, "the typo didn't use it");
+		const replayed = await post(id, { email: "second@example.org", token: once });
+		assert.deepEqual(
+			[replayed.status, (await replayed.json()).error],
+			[400, "This form was already used. Reload the page to sign up another address."]
+		);
+		const together = await Promise.all(["race-one", "race-two"].map((name) => post(id, { email: `${name}@example.org`, token: token(id, "https://site.example") })));
+		assert.deepEqual(together.map(({ status }) => status), [200, 200], "each token is its own");
+		const raced = token(id, "https://site.example");
+		const statuses = (await Promise.all(["raced-one", "raced-two"].map((name) => post(id, { email: `${name}@example.org`, token: raced })))).map(
+			({ status }) => status
+		);
+		assert.deepEqual(statuses.toSorted(), [200, 400], "two posts of one token: one gets through");
+		assert.equal((await m.Contact.find({ accountId: user.accountId }).distinct("email")).length, 4);
+	});
+
+	test("a visitor loads a newsletter's frame a few dozen times every 10 minutes, so a script can't stock up on tokens", async () => {
+		const user = await customer("embed-mint@example.com");
+		const id = user.newsletterId;
+		const { frameLoads } = SIGNUP_FORM_RATE_LIMITS;
+		const load = (ip) =>
+			m.frame.GET(new Request(`http://localhost:3000/embed/${id}`, { headers: { referer: "https://site.example/", "x-forwarded-for": ip } }), {
+				params: Promise.resolve({ id }),
+			});
+		const ip = visitor();
+		for (let index = 0; index < frameLoads.limit; index++) assert.equal((await load(ip)).status, 200);
+		const limited = await load(ip);
+		assert.equal(limited.status, 429);
+		assert.ok(!(await limited.text()).includes('name="token"'), "no token past the limit");
+		assert.equal((await load(visitor())).status, 200, "other visitors still get the form");
+	});
+
 	test("on Vercel, the frame loads BotID's browser code from MailCheap's own host", async () => {
 		const user = await customer("embed-botid@example.com");
 		const id = user.newsletterId;

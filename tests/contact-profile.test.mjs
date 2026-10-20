@@ -40,6 +40,14 @@ describe("first-name merge tags", () => {
 			fillMergeTags("<p>Hi {{first_name|there}}</p>", { firstName: '<img src=x onerror="alert(1)">', isHtml: true }),
 			"<p>Hi &lt;img src=x onerror=&quot;alert(1)&quot;&gt;</p>"
 		);
+		assert.equal(
+			fillMergeTags('<p>Hi {{first_name|<img src=x onerror="alert(1)">}}</p>', { isHtml: true }),
+			"<p>Hi &lt;img src=x onerror=&quot;alert(1)&quot;&gt;</p>",
+			"markup typed into a fallback shows as written"
+		);
+		assert.equal(fillMergeTags("<p>Hi {{first_name|Tom &amp; Jerry}}</p>", { isHtml: true }), "<p>Hi Tom &amp; Jerry</p>", "the editor's HTML text stays as it was");
+		assert.equal(withMergeFallbacks("<p>{{first_name|<b>you</b>}}</p>", { isHtml: true }), "<p>&lt;b&gt;you&lt;/b&gt;</p>");
+		assert.equal(withMergeFallbacks("Hi {{first_name|<b>you</b>}}"), "Hi <b>you</b>", "plain text keeps it as typed");
 		assert.equal(fillSubject("Hi {{first_name|there}}", "Jane\r\nBcc: x@example.com"), "Hi Jane Bcc: x@example.com", "a subject stays on one line");
 		assert.equal(withMergeFallbacks("Hi {{first_name|friend}} and {{first_name}}"), "Hi friend and ");
 		assert.equal(fillSampleName("Hi {{first_name|there}}"), "Hi Jane");

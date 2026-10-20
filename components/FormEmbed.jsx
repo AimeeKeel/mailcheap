@@ -21,8 +21,9 @@ import { usePaywall } from "@/lib/use-paywall";
 
 // Form for your site: the signup form owners paste on their own site (lib/signup-form.js), previewed in its frame as a
 // reader sees it, with the code to paste and the sites it works on. Saved with the bar like the other settings; the
-// sites are typed one per line and come back from the server as it keeps them.
-export default function FormEmbed({ newsletter, appUrl }) {
+// sites are typed one per line and come back from the server as it keeps them. hasBotCheck: Vercel BotID runs on this
+// server, which is what stops a script from naming a listed site (lib/bot-check.js).
+export default function FormEmbed({ newsletter, appUrl, hasBotCheck = true }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const [saved, setSaved] = useState(() => toDraft(newsletter.signupForm, newsletter));
@@ -139,7 +140,7 @@ export default function FormEmbed({ newsletter, appUrl }) {
 			<Section title="Where it works" stagger={4}>
 				<Field
 					label="Your sites"
-					hint={`One per line, like example.com, which covers its subdomains. Empty: any site. Up to ${SIGNUP_FORM_LIMITS.domains}. Browsers then show the form only there, and only the script works.`}
+					hint={`One per line, like example.com, which covers its subdomains. Empty: any site. Up to ${SIGNUP_FORM_LIMITS.domains}. Browsers then show the form only there, and only the script works.${hasBotCheck ? "" : SITES_WITHOUT_BOT_CHECK}`}
 				>
 					<Textarea
 						value={draft.domains}
@@ -286,3 +287,6 @@ const LAYOUT_OPTIONS = [
 	{ value: "inline", label: "Inline", content: "Inline" },
 	{ value: "card", label: "Card", content: "Card" },
 ];
+// Without BotID, a script can still name a listed site: the frame's policy only binds browsers.
+const SITES_WITHOUT_BOT_CHECK =
+	" On this server, the list keeps the form off other sites' pages, but a script can still name one of yours: the signup limits apply, and confirmed opt-in keeps its addresses out of your list.";

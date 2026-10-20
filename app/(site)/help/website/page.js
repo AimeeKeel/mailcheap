@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
+import { isBotIdEnabled } from "@/lib/bot-check";
 import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
@@ -9,6 +10,7 @@ export const metadata = getHelpPageMetadata("website");
 
 export default function WebsitePage() {
 	const { perIp, perEmail, perNewsletter, perNewsletterPlain } = SIGNUP_FORM_RATE_LIMITS;
+	const hasBotCheck = isBotIdEnabled();
 	const sharedDomain = getSharedDomain();
 	const hasOwnHost = Boolean(getArchiveCnameTarget());
 
@@ -134,14 +136,18 @@ export default function WebsitePage() {
 			</p>
 			<p>
 				So that a script can&apos;t sign up strangers, the form has a field only bots fill in, waits a moment after the page loads
-				{isCloud() && ", checks that a real browser sent the script form"} and takes {perIp.limit} signups per visitor every 10
-				minutes and {perEmail.limit} per address a day, whichever newsletters ask. Past {perNewsletter.limit} signups in 10 minutes,
-				or {perNewsletterPlain.limit} from the HTML form, it refuses new ones until they slow down, and you get an alert. Someone who
-				unsubscribed confirms their address before they&apos;re back, even with confirmed opt-in off.
+				{hasBotCheck && ", checks that a real browser sent the script form"}, signs up one address each time it loads and takes{" "}
+				{perIp.limit} signups per visitor every 10 minutes and {perEmail.limit} per address a day, whichever newsletters ask. Past{" "}
+				{perNewsletter.limit} signups in 10 minutes, or {perNewsletterPlain.limit} from the HTML form, it refuses new ones until they
+				slow down, and you get an alert. Someone who unsubscribed confirms their address before they&apos;re back, even with confirmed
+				opt-in off.
 			</p>
 			<p>
 				List your sites under Where it works and browsers only show the form there. Only the script works then, since a plain form
-				can&apos;t prove which site it&apos;s on. The list keeps the form off other sites; the checks above stop scripts.
+				can&apos;t prove which site it&apos;s on.{" "}
+				{hasBotCheck
+					? "The list keeps the form off other sites; the checks above stop scripts."
+					: "On this server, nothing checks for a real browser, so the list only keeps the form off other sites' pages: a script can still name one of yours. The limits above still apply, and confirmed opt-in keeps a script's addresses out of your list."}
 			</p>
 
 			<h2 id="unsubscribe">Unsubscribing</h2>

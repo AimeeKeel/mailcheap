@@ -1,7 +1,15 @@
 import { isBotIdEnabled } from "@/lib/bot-check";
 import { connectDb } from "@/lib/db";
 import { findSignupNewsletter } from "@/lib/public-newsletters";
-import { getFramePolicy, getHost, getSignupFormPaths, isAllowedHost, toSignupFormSettings } from "@/lib/signup-form";
+import { getClientIp, isRateLimited } from "@/lib/rate-limit";
+import {
+	SIGNUP_FORM_RATE_LIMITS,
+	getFramePolicy,
+	getHost,
+	getSignupFormPaths,
+	isAllowedHost,
+	toSignupFormSettings,
+} from "@/lib/signup-form";
 import { renderFormPage, renderNoticePage } from "@/lib/signup-form-page";
 import { createFormToken } from "@/lib/signup-form-token";
 import { isObjectIdString } from "@/lib/validation";
@@ -10,10 +18,15 @@ const HEADERS = { "content-type": "text/html; charset=utf-8", "cache-control": "
 
 // The signup form in the frame public/embed.js adds to the owner's site. Its token carries the time it loaded and the
 // page holding it, as that page's browser names it in the referrer: sites keep the origin in it by default. A script
-// can name any page, so the post also proves a browser sent it (app/api/embed/[id]/route.js).
+// can name any page, so the post also proves a browser sent it (app/api/embed/[id]/route.js), each token signs up one
+// address, and a visitor gets a few dozen tokens per newsletter every 10 minutes.
 export async function GET(request, { params }) {
 	const { id } = await params;
 	if (!isObjectIdString(id)) return respond(renderNoticePage("This signup form doesn't exist."), 404);
+	const visitor = getClientIp(request.headers);
+	if (await isRateLimited({ ...SIGNUP_FORM_RATE_LIMITS.frameLoads, key: `${id}:${visitor}` })) {
+		return respond(renderNoticePage("Too many visits from your network. Try again in a few minutes."), 429);
+	}
 
 	await connectDb();
 	const newsletter = await findSignupNewsletter({ _id: id });

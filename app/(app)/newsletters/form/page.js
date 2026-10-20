@@ -3,6 +3,7 @@ import FormEmbed from "@/components/FormEmbed";
 import HeaderPage from "@/components/HeaderPage";
 import LayoutNarrow from "@/components/LayoutNarrow";
 import { scoped } from "@/lib/account-scope";
+import { isBotIdEnabled } from "@/lib/bot-check";
 import { getAppUrl } from "@/lib/config";
 import { FORM_SECTION, SETTINGS_PATH } from "@/lib/newsletter-sections";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
@@ -22,7 +23,7 @@ export default async function FormPage() {
 	return (
 		<LayoutNarrow>
 			<HeaderPage title={FORM_SECTION.label} backHref={SETTINGS_PATH} />
-			<FormEmbed key={String(newsletter._id)} newsletter={serialize(newsletter)} appUrl={getAppUrl()} />
+			<FormEmbed key={String(newsletter._id)} newsletter={serialize(newsletter)} appUrl={getAppUrl()} hasBotCheck={isBotIdEnabled()} />
 		</LayoutNarrow>
 	);
 }

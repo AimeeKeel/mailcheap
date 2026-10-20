@@ -34,7 +34,12 @@ test("BotID only runs on Vercel, refuses only what it calls a bot, and lets the 
 		assert.equal(await isBotRequest("signup"), false);
 		setBotIdVerdict("error");
 		assert.equal(await isBotRequest("signup"), false, "a BotID problem never costs a signup");
+		assert.equal(await isBotRequest("signup", { failClosed: true }), true, "unless BotID is the form's only defense");
+		setBotIdVerdict("human");
+		assert.equal(await isBotRequest("signup", { failClosed: true }), false);
 	});
+	setBotIdVerdict("error");
+	assert.equal(await isBotRequest("signup", { failClosed: true }), false, "a self-hosted server never asks, even failing closed");
 });
 
 test("each page's check covers its form: sign-in, and a website's signup form on any of its pages, not its page views", () => {
