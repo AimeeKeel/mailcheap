@@ -9,6 +9,7 @@ import FormSwitchToDomain from "@/components/FormSwitchToDomain";
 import GatePlan from "@/components/GatePlan";
 import HeaderPage from "@/components/HeaderPage";
 import ImageFavicon from "@/components/ImageFavicon";
+import { Button } from "@/components/ui/button";
 import { scoped } from "@/lib/account-scope";
 import { hasActiveSubscription } from "@/lib/account-state";
 import { getArchiveCnameTarget, getSharedDomain } from "@/lib/config";
@@ -58,6 +59,11 @@ export default async function DomainsPage() {
 	const verifiedDomain = domains.find(({ verified }) => verified) ?? null;
 	const hasVerifiedDomain = Boolean(verifiedDomain);
 	const sharedNewsletters = sharedDomain ? newsletters : [];
+	// Until a domain is verified, a shared address row only says how it's doing, so nothing pulls away from adding one.
+	// Then each newsletter still on the shared address gets a card with its sender settings instead.
+	const stillShared =
+		hasPlan && verifiedDomain ? sharedNewsletters.filter(({ fromEmail }) => isOnSharedDomain(fromEmail, sharedDomain)) : [];
+	const sharedRows = sharedNewsletters.filter((newsletter) => !stillShared.includes(newsletter));
 	const current = newsletters.find(({ _id }) => String(_id) === String(selected?._id)) ?? null;
 
 	return (
@@ -78,7 +84,15 @@ export default async function DomainsPage() {
 						stagger={index + 1}
 					/>
 				))}
-				{(hasVerifiedDomain || sharedNewsletters.length > 0) && (
+				{stillShared.map((newsletter, index) => (
+					<CardSharedAddress
+						key={String(newsletter._id)}
+						newsletter={newsletter}
+						domain={verifiedDomain}
+						stagger={domains.length + 1 + index}
+					/>
+				))}
+				{(hasVerifiedDomain || sharedRows.length > 0) && (
 					<div className="-mt-2 flex flex-col">
 						{hasVerifiedDomain && (
 							<RowNote
@@ -87,32 +101,19 @@ export default async function DomainsPage() {
 								label="Postmaster Tools"
 								detail="See how Gmail rates your domain"
 								end={<ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />}
-								stagger={domains.length + 1}
+								stagger={domains.length + stillShared.length + 1}
 							/>
 						)}
-						{sharedNewsletters.map((newsletter, index) => {
-							// A newsletter still on the shared address gets its sender settings with the verified domain picked.
-							const switchDomain = isOnSharedDomain(newsletter.fromEmail, sharedDomain) ? verifiedDomain : null;
-							return (
-								<RowNote
-									key={String(newsletter._id)}
-									icon={<Mail className="size-4 text-muted-foreground" />}
-									label="Shared address"
-									detail={<span className="font-mono text-xs">{getSharedAddress(newsletter.slug, sharedDomain)}</span>}
-									end={
-										<span className="flex shrink-0 items-center gap-3">
-											<TextStatus {...getSharedStatus(newsletter, { sharedDomain, isProviderSetUp, hasPlan })} className="text-xs" />
-											{hasPlan && (
-												<LinkSender href={getSenderPath({ newsletterId: String(newsletter._id), domainId: switchDomain && String(switchDomain._id) })}>
-													{switchDomain ? `Send from ${switchDomain.domain}` : "Sender"}
-												</LinkSender>
-											)}
-										</span>
-									}
-									stagger={domains.length + 2 + index}
-								/>
-							);
-						})}
+						{sharedRows.map((newsletter, index) => (
+							<RowNote
+								key={String(newsletter._id)}
+								icon={<Mail className="size-4 text-muted-foreground" />}
+								label="Shared address"
+								detail={<span className="font-mono text-xs">{getSharedAddress(newsletter.slug, sharedDomain)}</span>}
+								end={<TextStatus {...getSharedStatus(newsletter, { sharedDomain, isProviderSetUp, hasPlan })} className="shrink-0 text-xs" />}
+								stagger={domains.length + stillShared.length + 2 + index}
+							/>
+						))}
 					</div>
 				)}
 			</div>
@@ -125,6 +126,34 @@ function getSharedStatus(newsletter, { sharedDomain, isProviderSetUp, hasPlan })
 	if (!isProviderSetUp) return { label: "Email provider not set up", tone: "none" };
 	if (!hasPlan) return { label: "Starts with a plan", tone: "none" };
 	return isSharedSenderReady(newsletter, { sharedDomain }) ? { label: "Used until you switch", tone: "good" } : { label: "Setting up", tone: "wait" };
+}
+
+function CardSharedAddress({ newsletter, domain, stagger }) {
+	return (
+		<div
+			style={{ "--stagger": stagger }}
+			className="flex flex-col gap-3 rounded-xl bg-card p-4 shadow-border animate-enter sm:flex-row sm:items-center sm:gap-4"
+		>
+			<div className="flex min-w-0 flex-1 items-start gap-3">
+				<span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-foreground/75">
+					<Mail className="size-[18px]" aria-hidden="true" />
+				</span>
+				<div className="min-w-0">
+					<p className="text-sm font-medium text-balance">{newsletter.name} still sends from the shared address</p>
+					<p className="text-sm text-pretty text-muted-foreground">
+						<span className="whitespace-nowrap">
+							<ImageFavicon domain={rootDomain(domain.domain)} size={16} className="mr-1 inline-block size-[1em] align-[-0.12em]" />
+							{domain.domain}
+						</span>{" "}
+						is verified. Send from it instead.
+					</p>
+				</div>
+			</div>
+			<Button asChild variant="outline" size="sm" className="ml-12 self-start sm:ml-0 sm:self-center">
+				<Link href={getSenderPath({ newsletterId: String(newsletter._id), domainId: String(domain._id) })}>Edit sender</Link>
+			</Button>
+		</div>
+	);
 }
 
 function RowNote({ href, icon, label, detail, end, stagger }) {

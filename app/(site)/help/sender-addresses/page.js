@@ -75,9 +75,10 @@ export default function SenderAddressesPage() {
 			</p>
 			<p>
 				You can also switch from the newsletter&apos;s <LinkApp href="/newsletters/sender">sender settings</LinkApp>: pick the
-				domain in the From email field and save. The note on the overview, and the Send from link next to each shared address on
-				the Domains page, open those settings with the domain already picked. Each domain&apos;s card lists the newsletters that
-				send from it, with a link to their sender settings.
+				domain in the From email field and save. Once a domain is verified, the Domains page shows each newsletter that still
+				sends from the shared address, with an Edit sender button: like the note on the overview, it opens those settings with
+				the domain already picked. Each domain&apos;s card lists the newsletters that send from it, with a link to their sender
+				settings.
 			</p>
 			<p>
 				Once a domain is verified, the Domains page also links to Google Postmaster Tools, where you can see how Gmail rates your

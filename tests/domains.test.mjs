@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { getSenderPath } from "../lib/newsletters.js";
 import { activate, addVerifiedDomain, as, callApi, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 import { cnames } from "./stubs/dns-check.mjs";
 import { published } from "./stubs/qstash.mjs";
@@ -91,6 +94,7 @@ before(async () => {
 		domains: await import("../app/(app)/domains/actions.js"),
 		domainsPage: await import("../app/(app)/domains/page.js"),
 		ButtonCopy: (await import("../components/ButtonCopy.jsx")).default,
+		TooltipProvider: (await import("../components/ui/tooltip.jsx")).TooltipProvider,
 		apiKeys: await import("../app/(app)/api-keys/actions.js"),
 		sendBatchRoute: await import("../app/api/jobs/send-batch/route.js"),
 		billing: await import("../lib/billing.js"),
@@ -348,6 +352,33 @@ describe("own domains", () => {
 		assert.deepEqual(await switchTo(user, domain, " Jane "), { ok: true, fromEmail: "jane@switch-mail.com" });
 		const newsletter = await m.Newsletter.findOne({ accountId: user.accountId }).lean();
 		assert.deepEqual([newsletter.fromEmail, newsletter.archiveHost], ["jane@switch-mail.com", "news.switch-mail.com"], "its archive and links move too");
+	});
+
+	test("the Domains page links to the sender settings of a newsletter on the shared address only once a domain is verified", async () => {
+		const user = await customer("shared-card@example.com", "shared-card");
+		const pageHtml = async () => renderToStaticMarkup(createElement(m.TooltipProvider, null, await as(user, () => m.domainsPage.default())));
+		const senderLink = /next=%2Fnewsletters%2Fsender/;
+		const card = /shared-card still sends from the shared address/;
+
+		const empty = await pageHtml();
+		assert.match(empty, /hello@shared-card\.mailcheapmail\.com/, "the shared address and how it's doing");
+		assert.doesNotMatch(empty, senderLink, "nothing pulls away from adding a domain");
+
+		await as(user, () => m.domains.addDomainAction(null, form({ domain: "shared-card.dev" })));
+		const pending = await pageHtml();
+		assert.doesNotMatch(pending, senderLink, "nor while its records are missing");
+		assert.doesNotMatch(pending, card);
+
+		const domain = await addVerifiedDomain(user, "shared-card.com");
+		const verified = await pageHtml();
+		assert.match(verified, card);
+		assert.ok(verified.includes(`href="${getSenderPath({ newsletterId: user.newsletterId, domainId: String(domain._id) })}"`), "with the verified domain picked");
+		assert.doesNotMatch(verified, /hello@shared-card\.mailcheapmail\.com/, "the card takes its row's place");
+
+		await switchTo(user, domain, "hi");
+		const switched = await pageHtml();
+		assert.doesNotMatch(switched, card);
+		assert.match(switched, /Not in use/);
 	});
 
 	test("a domain still being verified, or another account's, can't be switched to", async () => {
