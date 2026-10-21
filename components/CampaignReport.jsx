@@ -235,7 +235,7 @@ export default function CampaignReport({
 }
 
 // What the email did: delivery, opens and clicks against the newsletter's average, bounces and unsubscribes, opens over
-// time, links and inboxes. Complaints are for an admin to act on: the owner, who can't, sees them by inbox.
+// time, inboxes and links. Complaints are for an admin to act on: the owner, who can't, sees them by inbox.
 function EmailResults({ campaign, newsletter, html, stats, reached, comparison, timeline, timeZone, links, providers, showComplaints }) {
 	const cards = [
 		{ label: "Delivered", value: formatRate(stats.delivered, stats.sent), detail: formatNumber(stats.delivered) },
@@ -267,11 +267,11 @@ function EmailResults({ campaign, newsletter, html, stats, reached, comparison, 
 
 			{timeline && reached > 0 && <CardOpens style={{ "--stagger": 3 }} timeline={timeline} timeZone={timeZone} />}
 
-			{links?.links.length > 0 && (
-				<TableCampaignLinks style={{ "--stagger": 4 }} stats={links} html={html} webUrl={getIssueWebUrl({ campaign, newsletter })} />
-			)}
+			{providers.length > 0 && <TableProviders style={{ "--stagger": 4 }} providers={providers} />}
 
-			{providers.length > 0 && <TableProviders style={{ "--stagger": 5 }} providers={providers} />}
+			{links?.links.length > 0 && (
+				<TableCampaignLinks style={{ "--stagger": 5 }} stats={links} html={html} webUrl={getIssueWebUrl({ campaign, newsletter })} />
+			)}
 		</>
 	);
 }

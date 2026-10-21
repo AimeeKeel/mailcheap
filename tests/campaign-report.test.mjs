@@ -34,6 +34,16 @@ test("the report's cards are delivered, opened, clicked, bounced and unsubscribe
 	assert.ok(admin.indexOf(card("Complaints")) < admin.indexOf(card("Unsubscribed")));
 });
 
+test("the report's links come below its results by inbox", () => {
+	const html = renderReport({
+		providers: [{ provider: "gmail", sent: 600, delivered: 595, opened: 300, clicked: 50, bounced: 5, complained: 0 }],
+		links: { links: [{ key: "post", url: "https://example.com/post", clickers: 40, clicks: 50 }], clickers: 40, isComplete: true },
+	});
+	const inbox = html.indexOf(">Inbox</th>");
+	assert.ok(inbox > -1, "the inbox table shows");
+	assert.ok(html.indexOf(">Link</th>") > inbox, "the links table follows it");
+});
+
 test("the report compares opens and clicks with the average in percent, never in points", () => {
 	const html = renderReport();
 	assert.ok(html.includes("+4.2%"));

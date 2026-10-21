@@ -146,10 +146,11 @@ export default function SendingPage() {
 				opens after those {TIMELINE_HOURS / 24} days are counted under the chart.
 			</p>
 			<p>
-				Its links come next, each with its website&apos;s icon, most clicked first: how many contacts clicked each one, every click,
-				and each link&apos;s share of the contacts who clicked a link. A link counts once whatever its tracking parameters, like
-				utm_source, and link scanners and the unsubscribe link don&apos;t count. An issue sent before clicks were counted per link only has the clicks since then. The
-				API and AI assistants get the same numbers, the comparison and the hours included, in the campaign&apos;s report.
+				Its links come last, below the results by inbox provider, each with its website&apos;s icon, most clicked first: how many
+				contacts clicked each one, every click, and each link&apos;s share of the contacts who clicked a link. A link counts once
+				whatever its tracking parameters, like utm_source, and link scanners and the unsubscribe link don&apos;t count. An issue
+				sent before clicks were counted per link only has the clicks since then. The API and AI assistants get the same numbers,
+				the comparison and the hours included, in the campaign&apos;s report.
 			</p>
 			<p>
 				A web-only issue&apos;s page shows its views on the website instead, once per reader a day, and when it went live. Web-only
