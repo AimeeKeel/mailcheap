@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { accountScoped } from "../lib/account-scope.js";
+import { PUBLISH_TARGETS } from "../lib/publish-to.js";
 
 export const CAMPAIGN_STATUSES = ["draft", "scheduled", "sending", "paused", "sent", "canceled"];
 
@@ -39,6 +40,9 @@ const campaignSchema = new mongoose.Schema(
 		markdown: { type: String, default: "" },
 		html: { type: String, default: "" },
 		status: { type: String, enum: CAMPAIGN_STATUSES, default: "draft" },
+		// By email and on the website, by email only, or on the website only (lib/publish-to.js). Web only sends nothing:
+		// it goes straight to sent, with no messages.
+		publishTo: { type: String, enum: PUBLISH_TARGETS, default: "both" },
 		// Why a send paused itself; a code from lib/account-state.js when the account or plan stopped it.
 		pauseReason: { type: String },
 		pauseCode: { type: String },

@@ -28,7 +28,20 @@ export default function SendingPage() {
 			<p>
 				It also warns about a subject over 70 characters, which inboxes cut off, a missing preview text and a missing test email.
 				Warnings don&apos;t stop you.
-				{isCloud() && " Problems with your account, like your plan's limits, show in a banner above the steps."}
+				{isCloud() && " Problems with your account, like your plan's limits, show in a banner above the steps."} A web-only issue
+				sends no email, so it only needs a subject, content and the website on.
+			</p>
+
+			<h2 id="where">Email, web or both</h2>
+			<p>
+				The send step starts with where the issue goes. Email and web, the default, sends it to your contacts and puts it on your
+				newsletter&apos;s <LinkApp href="/newsletters/website">website</LinkApp>. Email only sends it but keeps it off the website: it
+				never shows there, in its sitemap or in search engines, and its emails have no Read online link. Web only puts it on the
+				website without sending any email, so it uses none of your plan&apos;s emails, and its button says Publish now.
+			</p>
+			<p>
+				Web only needs the website on. A web-only issue can be scheduled like any other
+				{isCloud() ? ", and the content check reads it before it goes live" : ""}. Its page counts views instead of opens and clicks.
 			</p>
 
 			<h2 id="who">Who gets it</h2>
@@ -134,6 +147,10 @@ export default function SendingPage() {
 				contacts who clicked a link. A link counts once whatever its tracking parameters, like utm_source, and link scanners and the
 				unsubscribe link don&apos;t count. An issue sent before clicks were counted per link only has the clicks since then. The
 				API and AI assistants get the same numbers, the comparison and the hours included, in the campaign&apos;s report.
+			</p>
+			<p>
+				A web-only issue&apos;s page shows its views on the website instead, once per reader a day, and when it went live. Web-only
+				issues don&apos;t count in the comparison with your last issues.
 			</p>
 		</ArticleHelp>
 	);

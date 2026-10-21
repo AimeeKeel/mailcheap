@@ -57,7 +57,7 @@ export default function TableCampaigns({ campaigns, newsletter, hasActions = fal
 									</div>
 								</TableCell>
 								<TableCell>
-									<BadgeStatus status={campaign.status} />
+									<BadgeStatus status={campaign.status} label={isPublishedOnWebOnly(campaign) ? "Published" : null} />
 								</TableCell>
 								<TableCell className="hidden text-right tabular-nums md:table-cell">
 									{stats.recipients ? formatNumber(stats.recipients) : <TextEmpty />}
@@ -100,4 +100,9 @@ export default function TableCampaigns({ campaigns, newsletter, hasActions = fal
 			</Table>
 		</div>
 	);
+}
+
+// Web-only issues went on the website without an email (lib/publish-to.js).
+function isPublishedOnWebOnly(campaign) {
+	return campaign.publishTo === "web" && campaign.status === "sent";
 }

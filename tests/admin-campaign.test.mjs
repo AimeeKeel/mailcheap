@@ -87,9 +87,30 @@ test("the admin sees the owner's report with the account, newsletter and audienc
 	for (const text of ["Spring issue", "customer@example.com", "Growth · monthly", "Field notes", "jane@field-notes.example.com", "Everyone · 2 recipients", "Not on the website", "What grew this month"]) {
 		assert.ok(markup.includes(text), text);
 	}
+	assert.match(markup, />Goes<\/[^>]+>(<[^>]+>)*Email and web</, "where it went: a campaign from before the choice went both ways");
 	assert.ok(markup.includes(`/admin?account=${customer.accountId}`), "the account links to its row");
 	assert.ok(!markup.includes("reader-one@example.org") && !markup.includes("reader-two@example.org"));
 	assert.ok(!/Send to more|Pause|Resume|Duplicate/.test(markup), "none of the owner's actions");
+});
+
+test("a web-only issue's admin page says where it went, with no audience row", async () => {
+	const { insertedId } = await mongoose.connection.db.collection("campaigns").insertOne({
+		accountId: customer.accountId,
+		newsletterId: (await mongoose.connection.db.collection("campaigns").findOne({ _id: campaignId })).newsletterId,
+		subject: "Web notes",
+		format: "html",
+		html: "<p>Hello</p>",
+		status: "sent",
+		publishTo: "web",
+		source: "dashboard",
+		startedAt: new Date(),
+		sentAt: new Date(),
+		webViews: 12,
+		stats: { recipients: 0, sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, complained: 0, unsubscribed: 0 },
+	});
+	const markup = renderToStaticMarkup(await as(admin, () => open(insertedId)));
+	assert.match(markup, />Goes<\/[^>]+>(<[^>]+>)*Web only</);
+	assert.ok(!markup.includes("Everyone ·"), "nobody got an email");
 });
 
 test("looking at the email counts as no open or click: tracking is stripped and no message changes", async () => {

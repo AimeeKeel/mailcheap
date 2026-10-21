@@ -19,6 +19,7 @@ import { toPreviewHtml } from "@/lib/email-preview";
 import { formatDate, formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { getAccountPlan, isOnFreePlan } from "@/lib/plans";
 import { getPostalAddress } from "@/lib/postal-address";
+import { describePublishTo, isOnWebsite, sendsEmail } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
 import { getWarmup } from "@/lib/send-spread";
 import { serialize } from "@/lib/serialize";
@@ -98,8 +99,8 @@ export default async function AdminCampaignPage({ params }) {
 // Who sent it, from where, to whom and when; the account links to its row on the admin page.
 function ListDetails({ campaign, account, ownerEmail, newsletter, segmentName, alerts, timeZone }) {
 	const sendingNote = getAccountNote(account);
-	const isOnWebsite = newsletter.archiveEnabled && Boolean(campaign.archiveSlug) && campaign.archiveListed !== false;
-	const websiteUrl = isOnWebsite ? getArchiveUrls(newsletter).absolutePost(campaign.archiveSlug) : null;
+	const hasPage = newsletter.archiveEnabled && Boolean(campaign.archiveSlug) && campaign.archiveListed !== false && isOnWebsite(campaign);
+	const websiteUrl = hasPage ? getArchiveUrls(newsletter).absolutePost(campaign.archiveSlug) : null;
 	const dates = [
 		["Created", campaign.createdAt],
 		campaign.status === "scheduled" && ["Scheduled for", campaign.scheduledAt],
@@ -137,7 +138,11 @@ function ListDetails({ campaign, account, ownerEmail, newsletter, segmentName, a
 				</span>
 			),
 		},
-		{ label: "To", value: `${segmentName ?? "Everyone"} · ${formatNumber(campaign.stats?.recipients ?? 0)} recipients` },
+		{ label: "Goes", value: describePublishTo(campaign) },
+		sendsEmail(campaign) && {
+			label: "To",
+			value: `${segmentName ?? "Everyone"} · ${formatNumber(campaign.stats?.recipients ?? 0)} recipients`,
+		},
 		{ label: "Dates", value: dates.map(([label, at]) => `${label} ${formatDateTime(at, timeZone)}`).join(" · ") },
 		{
 			label: "Website",

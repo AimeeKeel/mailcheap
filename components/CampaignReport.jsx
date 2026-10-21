@@ -24,11 +24,12 @@ import { isPlanLimitCode } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
 import { REVIEW_CODES, REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
-import { formatCount, formatNumber, formatPoints, formatRate, formatWeekdayHour } from "@/lib/format";
+import { formatCount, formatDate, formatNumber, formatPoints, formatRate, formatWeekdayHour } from "@/lib/format";
 import { rateTone } from "@/lib/health";
 import { toPreviewHtml } from "@/lib/email-preview";
 import { fillSampleName } from "@/lib/merge-tags";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
+import { describePublishTo, isOnWebsite, readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
 import { TIMELINE_HOURS, findPeak, hoursToHalf, reachedOf } from "@/lib/report-stats";
 import { getIssueWebUrl } from "@/lib/sending-rules";
@@ -58,7 +59,18 @@ export default function CampaignReport({
 	const id = campaign._id.toString();
 	// Held by the content check (lib/content-review.js): only MailCheap's review starts it, so it has no Resume.
 	const reviewCode = campaign.status === "paused" && REVIEW_CODES.has(campaign.pauseCode) ? campaign.pauseCode : null;
-	const isOnArchive = newsletter.archiveEnabled && Boolean(campaign.archiveSlug) && campaign.archiveListed !== false;
+	// A web-only issue sent no email (lib/publish-to.js): its page and views stand in for the email's numbers.
+	const publishTo = readPublishTo(campaign);
+	const isWebOnly = publishTo === "web";
+	const hasPage = newsletter.archiveEnabled && Boolean(campaign.archiveSlug) && isOnWebsite(campaign);
+	const isOnArchive = hasPage && campaign.archiveListed !== false;
+	const statusLabel = reviewCode
+		? reviewCode === REVIEW_PAUSE_CODE
+			? "In review"
+			: "Not sent"
+		: isWebOnly && campaign.status === "sent"
+			? "Published"
+			: null;
 	const reached = reachedOf(stats);
 	const progress = stats.recipients ? Math.min(stats.sent / stats.recipients, 1) : 0;
 	const { html } = renderEmail({
@@ -82,7 +94,12 @@ export default function CampaignReport({
 				title={campaign.subject || "Untitled"}
 				backHref={backHref}
 				icon={<AvatarNewsletter newsletter={newsletter} size={28} />}
-				meta={<BadgeStatus status={campaign.status} label={reviewCode && (reviewCode === REVIEW_PAUSE_CODE ? "In review" : "Not sent")} />}
+				meta={
+					<span className="flex items-center gap-2">
+						<BadgeStatus status={campaign.status} label={statusLabel} />
+						{publishTo !== "both" && <span className="text-xs text-muted-foreground">{describePublishTo(campaign)}</span>}
+					</span>
+				}
 			>
 				{!readOnly && (
 					<>
@@ -117,12 +134,14 @@ export default function CampaignReport({
 								</ButtonCampaignAction>
 							</GatePlan>
 						)}
-						<ButtonPreview
-							html={toPreviewHtml(html)}
-							sender={sender}
-							subject={fillSampleName(campaign.subject)}
-							previewText={fillSampleName(campaign.previewText)}
-						/>
+						{!isWebOnly && (
+							<ButtonPreview
+								html={toPreviewHtml(html)}
+								sender={sender}
+								subject={fillSampleName(campaign.subject)}
+								previewText={fillSampleName(campaign.previewText)}
+							/>
+						)}
 						<MenuReport
 							id={id}
 							pageUrl={isOnArchive ? getArchiveUrls(newsletter).post(campaign.archiveSlug) : null}
@@ -172,56 +191,29 @@ export default function CampaignReport({
 
 				{children}
 
-				<div className="flex flex-col gap-3">
-					<div style={{ "--stagger": 1 }} className="grid grid-cols-3 gap-3 animate-enter">
-						<CardStat label="Delivered" value={formatRate(stats.delivered, stats.sent)} detail={formatNumber(stats.delivered)} />
-						<CardStat
-							label="Opened"
-							value={formatRate(stats.opened, reached)}
-							detail={formatNumber(stats.opened)}
-							change={toChange(comparison, "opened")}
-						/>
-						<CardStat
-							label="Clicked"
-							value={formatRate(stats.clicked, reached)}
-							detail={formatNumber(stats.clicked)}
-							change={toChange(comparison, "clicked")}
-						/>
-					</div>
-					<ListStatsQuiet
-						style={{ "--stagger": 2 }}
-						items={[
-							{
-								label: "Bounced",
-								value: formatQuietRate(stats.bounced, stats.sent, 2),
-								count: stats.bounced,
-								tone: rateTone(stats.bounced, stats.sent, LIMITS.pause.bounceRate),
-							},
-							{
-								label: "Complaints",
-								value: formatQuietRate(stats.complained, stats.sent, 3),
-								count: stats.complained,
-								tone: rateTone(stats.complained, stats.sent, LIMITS.pause.complaintRate),
-							},
-							{ label: "Unsubscribed", value: formatQuietRate(stats.unsubscribed, reached, 2), count: stats.unsubscribed },
-						]}
-					/>
-				</div>
-
-				{timeline && reached > 0 && <CardOpens style={{ "--stagger": 3 }} timeline={timeline} timeZone={timeZone} />}
-
-				{links?.links.length > 0 && (
-					<TableCampaignLinks
-						style={{ "--stagger": 4 }}
-						stats={links}
+				{isWebOnly ? (
+					!reviewCode && (
+						<div style={{ "--stagger": 1 }} className="grid grid-cols-2 gap-3 animate-enter sm:grid-cols-3">
+							<CardStat label="Page views" value={formatNumber(campaign.webViews ?? 0)} detail="Once per reader a day" />
+							<CardStat label="Published" value={formatDate(campaign.sentAt ?? campaign.startedAt)} detail="No email went out" />
+						</div>
+					)
+				) : (
+					<EmailResults
+						campaign={campaign}
+						newsletter={newsletter}
 						html={html}
-						webUrl={getIssueWebUrl({ campaign, newsletter })}
+						stats={stats}
+						reached={reached}
+						comparison={comparison}
+						timeline={timeline}
+						timeZone={timeZone}
+						links={links}
+						providers={providers}
 					/>
 				)}
 
-				{providers.length > 0 && <TableProviders style={{ "--stagger": 5 }} providers={providers} />}
-
-				{!readOnly && newsletter.archiveEnabled && campaign.archiveSlug && (
+				{!readOnly && hasPage && (
 					<div
 						style={{ "--stagger": 6 }}
 						className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-xl bg-card px-4 shadow-border transition-colors duration-150 animate-enter focus-within:bg-muted/40"
@@ -237,6 +229,58 @@ export default function CampaignReport({
 					</div>
 				)}
 			</div>
+		</>
+	);
+}
+
+// What the email did: delivery, opens and clicks against the newsletter's average, problems, opens over time, links and
+// inboxes.
+function EmailResults({ campaign, newsletter, html, stats, reached, comparison, timeline, timeZone, links, providers }) {
+	return (
+		<>
+			<div className="flex flex-col gap-3">
+				<div style={{ "--stagger": 1 }} className="grid grid-cols-3 gap-3 animate-enter">
+					<CardStat label="Delivered" value={formatRate(stats.delivered, stats.sent)} detail={formatNumber(stats.delivered)} />
+					<CardStat
+						label="Opened"
+						value={formatRate(stats.opened, reached)}
+						detail={formatNumber(stats.opened)}
+						change={toChange(comparison, "opened")}
+					/>
+					<CardStat
+						label="Clicked"
+						value={formatRate(stats.clicked, reached)}
+						detail={formatNumber(stats.clicked)}
+						change={toChange(comparison, "clicked")}
+					/>
+				</div>
+				<ListStatsQuiet
+					style={{ "--stagger": 2 }}
+					items={[
+						{
+							label: "Bounced",
+							value: formatQuietRate(stats.bounced, stats.sent, 2),
+							count: stats.bounced,
+							tone: rateTone(stats.bounced, stats.sent, LIMITS.pause.bounceRate),
+						},
+						{
+							label: "Complaints",
+							value: formatQuietRate(stats.complained, stats.sent, 3),
+							count: stats.complained,
+							tone: rateTone(stats.complained, stats.sent, LIMITS.pause.complaintRate),
+						},
+						{ label: "Unsubscribed", value: formatQuietRate(stats.unsubscribed, reached, 2), count: stats.unsubscribed },
+					]}
+				/>
+			</div>
+
+			{timeline && reached > 0 && <CardOpens style={{ "--stagger": 3 }} timeline={timeline} timeZone={timeZone} />}
+
+			{links?.links.length > 0 && (
+				<TableCampaignLinks style={{ "--stagger": 4 }} stats={links} html={html} webUrl={getIssueWebUrl({ campaign, newsletter })} />
+			)}
+
+			{providers.length > 0 && <TableProviders style={{ "--stagger": 5 }} providers={providers} />}
 		</>
 	);
 }

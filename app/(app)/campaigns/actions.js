@@ -46,16 +46,26 @@ export async function setCampaignSegment(id, segmentId) {
 	return { ok: true };
 }
 
+// Where the draft goes: both, email or web (lib/publish-to.js). Saved right away, like its segment.
+export async function setCampaignPublishTo(id, publishTo) {
+	const { failure } = await runDashboardAction("update_campaign", { id: String(id), publishTo: String(publishTo ?? "") });
+	if (failure) return toFormError(failure);
+	revalidatePath(`/campaigns/${id}`);
+	return { ok: true };
+}
+
 export async function sendTestCampaign(id) {
 	const { failure } = await runDashboardAction("send_test_email", { id: String(id) });
 	revalidatePath(`/campaigns/${id}`);
 	return failure ? toFormError(failure) : { ok: true };
 }
 
+// held: paused as it starts, which only the content check does (lib/content-review.js), so nothing went out yet.
 export async function sendCampaign(id, { audienceLimit } = {}) {
-	const { failure } = await runDashboardAction("send_campaign", { id: String(id), audienceLimit: readCount(audienceLimit) });
+	const { output, failure } = await runDashboardAction("send_campaign", { id: String(id), audienceLimit: readCount(audienceLimit) });
 	refresh(id);
-	return failure ? toFormError(failure) : { ok: true };
+	if (failure) return toFormError(failure);
+	return output?.status === "paused" ? { ok: true, held: true } : { ok: true };
 }
 
 export async function scheduleCampaign(id, { scheduledAt, audienceLimit } = {}) {

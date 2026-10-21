@@ -51,6 +51,11 @@ export default function WebsitePage() {
 				send step&apos;s Web page row before it goes out, or later from the campaign&apos;s page. There you can also pin an issue: pinned
 				issues lead the home page, in its Featured row.
 			</p>
+			<p>
+				The send step decides where each issue goes. An email-only issue never gets a page, and a web-only issue goes on the
+				website without an email.{" "}
+				<Link href={getHelpHref("sending", "where")}>Email, web or both</Link>
+			</p>
 
 			<h2 id="signups">How people sign up</h2>
 			<ul>

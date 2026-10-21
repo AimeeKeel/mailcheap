@@ -12,13 +12,14 @@ import {
 	Copy,
 	Eye,
 	FlaskConical,
+	Globe,
 	Loader2,
 	MoreHorizontal,
 	Send,
 	Trash2,
 	UserRound,
 } from "lucide-react";
-import { duplicateCampaign, saveCampaign, sendTestCampaign } from "@/app/(app)/campaigns/actions";
+import { duplicateCampaign, saveCampaign, sendTestCampaign, setCampaignPublishTo } from "@/app/(app)/campaigns/actions";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
 import CardSettings from "@/components/CardSettings";
@@ -43,6 +44,7 @@ import { getCheckFix } from "@/lib/campaign-steps";
 import { markdownToHtml } from "@/lib/markdown";
 import { fillSampleName, firstNameTag } from "@/lib/merge-tags";
 import { getPresendChecks } from "@/lib/presend-checks";
+import { readPublishTo } from "@/lib/publish-to";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
 import { SEGMENT_DELETED } from "@/lib/segments";
 import { toast } from "@/lib/toast";
@@ -92,6 +94,9 @@ export default function FormCampaign({
 	const { isDirty, isSaving, savedAt, error, flush } = useAutosave(values, save);
 	const [isTesting, startTesting] = useTransition();
 	const [isWorking, startWorking] = useTransition();
+	const [publishTo, setPublishTo] = useState(() => readPublishTo(campaign));
+	const [isChangingPublishTo, startChangingPublishTo] = useTransition();
+	const isWebOnly = publishTo === "web";
 	const toastError = useToastError();
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
@@ -127,7 +132,7 @@ export default function FormCampaign({
 		[rendered.html]
 	);
 	const { checks } = getPresendChecks({
-		campaign: { ...campaign, ...values },
+		campaign: { ...campaign, ...values, publishTo },
 		newsletter,
 		rendered,
 		senderProblem,
@@ -139,7 +144,7 @@ export default function FormCampaign({
 	const accountProblems = hasPlan ? reviewChecks.filter(({ isAccount, isOk }) => isAccount && !isOk) : [];
 	const blocking = [
 		...(isUploading ? [{ id: "uploading", message: UPLOADING_MESSAGE }] : []),
-		...(isSegmentDeleted ? [{ id: "segment", message: SEGMENT_DELETED }] : []),
+		...(isSegmentDeleted && !isWebOnly ? [{ id: "segment", message: SEGMENT_DELETED }] : []),
 		...reviewChecks.filter(({ isOk, isWarning }) => !isOk && !isWarning),
 	];
 	const sending = useSendCampaign({
@@ -152,9 +157,25 @@ export default function FormCampaign({
 		sendTimes,
 		blocking,
 		hasPlan,
+		isWebOnly,
 		onBeforeSend: persist,
 	});
 	const isTestDisabled = hasPlan && !isSendingEnabled;
+
+	// Saved right away, like the segment: the send step and the checks follow it.
+	function changePublishTo(next) {
+		const previous = publishTo;
+		if (next === previous) return;
+		setPublishTo(next);
+		startChangingPublishTo(async () => {
+			const result = await setCampaignPublishTo(campaign._id, next);
+			if (result?.error) {
+				setPublishTo(previous);
+				return void toast.error(result.error);
+			}
+			if (previous === "web") sending.prepare();
+		});
+	}
 
 	function sendTest() {
 		if (!hasPlan) return paywall.open("test");
@@ -252,7 +273,13 @@ export default function FormCampaign({
 
 	const sendAction =
 		sending.choice === "now"
-			? { label: "Send now", icon: Send, reason: "send", title: "Before you send", run: () => sending.setIsConfirmOpen(true) }
+			? {
+					label: isWebOnly ? "Publish now" : "Send now",
+					icon: isWebOnly ? Globe : Send,
+					reason: "send",
+					title: isWebOnly ? "Before you publish" : "Before you send",
+					run: () => sending.setIsConfirmOpen(true),
+				}
 			: { label: "Schedule", icon: CalendarClock, reason: "schedule", title: "Before you schedule", run: sending.schedule };
 	const action = {
 		write: { label: "Next: review", icon: ArrowRight, isIconAfter: true, onClick: () => goToStep("review") },
@@ -425,6 +452,10 @@ export default function FormCampaign({
 						pace={pace}
 						newContacts={newContacts}
 						archiveUrlBase={archiveUrlBase}
+						publishTo={publishTo}
+						onPublishToChange={changePublishTo}
+						isChangingPublishTo={isChangingPublishTo}
+						websiteHref={getCheckFix({ id: "website" }, { newsletterId: newsletter._id })?.href}
 					/>
 				</section>
 			</div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CalendarClock, ChevronsUpDown, Loader2, Plus, Send, X } from "lucide-react";
+import Link from "next/link";
+import { CalendarClock, ChevronsUpDown, Globe, Layers, Loader2, Mail, Plus, Send, X } from "lucide-react";
 import { setCampaignSegment } from "@/app/(app)/campaigns/actions";
 import CardSettings from "@/components/CardSettings";
 import DialogSegment from "@/components/DialogSegment";
@@ -35,15 +36,17 @@ import {
 import { FIRST_SEND } from "@/lib/config";
 import { formatCount, formatNumber, formatSendTime } from "@/lib/format";
 import { withMergeFallbacks } from "@/lib/merge-tags";
+import { PUBLISH_OPTIONS } from "@/lib/publish-to";
 import { getPaceHours } from "@/lib/send-spread";
 import { slugify } from "@/lib/slug";
 import { toast } from "@/lib/toast";
 import { useIsClient } from "@/lib/use-is-client";
 import { cn } from "@/lib/utils";
 
-// The send step: who gets the issue, everyone unless one of the newsletter's segments narrows it, then now or at a
-// time, and how fast it goes out. Its button is in the editor's bar, and lib/use-send-campaign.js holds what it does,
-// with its count of contacts. everyoneCount: all the newsletter's active contacts, what a segment's count is out of.
+// The send step: where the issue goes (by email, on the website or both), who gets it, everyone unless one of the
+// newsletter's segments narrows it, then now or at a time, and how fast it goes out. Its button is in the editor's bar,
+// and lib/use-send-campaign.js holds what it does, with its count of contacts. everyoneCount: all the newsletter's
+// active contacts, what a segment's count is out of. A web-only issue has no audience or pace: it goes on the website.
 export default function PanelSend({
 	sending,
 	campaign,
@@ -56,6 +59,10 @@ export default function PanelSend({
 	pace,
 	newContacts,
 	archiveUrlBase,
+	publishTo,
+	onPublishToChange,
+	isChangingPublishTo,
+	websiteHref,
 }) {
 	const isClient = useIsClient();
 	const [segmentId, setSegmentId] = useState(campaign.segmentId ?? null);
@@ -67,12 +74,24 @@ export default function PanelSend({
 	// The browser's time zone, which the server doesn't know.
 	const scheduledTime = scheduledAt && isClient ? formatSendTime(scheduledAt) : null;
 	const isNow = sending.choice === "now";
+	const isEmail = publishTo !== "web";
+	const isWebsiteOn = Boolean(newsletter.archiveEnabled);
 	// As the send and schedule dialogs counted them: a send with its last-chance emails, a schedule its contacts.
 	const paceEmails = isNow ? sending.sendEmails : sending.scheduleRecipients;
-	const isPaced = Boolean(pace?.warmup) || getPaceHours(pace, { emails: paceEmails, newContacts }) > 0;
-	const hasFirstSlice = newContacts > FIRST_SEND.minSlice;
-	const isCleanupEnabled = Boolean(newsletter.cleanup?.enabled);
-	const isOverPlan = isNow && emailsLeft !== null && sending.sendEmails > emailsLeft;
+	const isPaced = isEmail && (Boolean(pace?.warmup) || getPaceHours(pace, { emails: paceEmails, newContacts }) > 0);
+	const hasFirstSlice = isEmail && newContacts > FIRST_SEND.minSlice;
+	const isCleanupEnabled = isEmail && Boolean(newsletter.cleanup?.enabled);
+	const isOverPlan = isEmail && isNow && emailsLeft !== null && sending.sendEmails > emailsLeft;
+	const slugRow = archiveUrlBase && publishTo !== "email" && (
+		<RowCampaign label="Web page">
+			<InputCampaignSlug
+				campaignId={campaign._id}
+				initialSlug={campaign.archiveSlug ?? ""}
+				placeholder={slugify(withMergeFallbacks(subject), 80) || "issue"}
+				urlBase={archiveUrlBase}
+			/>
+		</RowCampaign>
+	);
 	const from = newsletter.fromName ? `${newsletter.fromName} <${newsletter.fromEmail}>` : newsletter.fromEmail;
 	const recipients = sending.scheduleRecipients;
 	const isDeleted = Boolean(segmentId && !segment && isSegmentDeleted && segmentId === campaign.segmentId);
@@ -105,82 +124,111 @@ export default function PanelSend({
 
 	return (
 		<div className="flex flex-col gap-6">
-			<CardSettings title="Who gets it">
-				<RowCampaign label="From">
-					<span className="truncate text-sm">{from}</span>
-				</RowCampaign>
-				<RowCampaign label="To">
-					<span className="flex min-w-0 items-center gap-3">
-						<MenuAudience
-							segments={segments}
-							segmentId={segmentId}
-							label={isDeleted ? "Deleted segment" : segmentId ? segment?.name : "Everyone"}
-							isDeleted={isDeleted}
-							onSegmentChange={changeSegment}
-							onNewSegment={createSegment}
-							onCloseAutoFocus={keepDialogFocus}
-						/>
-						{!isDeleted && (
-							<span
-								className={cn(
-									"ml-auto shrink-0 text-sm text-muted-foreground tabular-nums transition-opacity duration-150",
-									isChangingSegment && "opacity-40"
-								)}
-							>
-								{recipients < everyoneCount
-									? `${formatNumber(recipients)} of ${formatCount(everyoneCount, "contact")}`
-									: formatCount(recipients, "contact")}
-							</span>
-						)}
-					</span>
-				</RowCampaign>
-				{/* A cap set through the API or kept from an earlier send: the dashboard sets none, so removing it holds from
-				    the next send or schedule. */}
-				{sending.limit && (
-					<RowCampaign label="Limit">
-						<span className="flex min-w-0 items-center gap-2 text-sm">
-							<span className="truncate tabular-nums">The {formatNumber(Number.parseInt(sending.limit, 10))} most engaged</span>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label="Remove the limit"
-								onClick={() => sending.setLimit("")}
-								className="ml-auto text-muted-foreground"
-							>
-								<X />
-							</Button>
-						</span>
-					</RowCampaign>
-				)}
-				{archiveUrlBase && (
-					<RowCampaign label="Web page">
-						<InputCampaignSlug
-							campaignId={campaign._id}
-							initialSlug={campaign.archiveSlug ?? ""}
-							placeholder={slugify(withMergeFallbacks(subject), 80) || "issue"}
-							urlBase={archiveUrlBase}
-						/>
-					</RowCampaign>
-				)}
-				{isCleanupEnabled &&
-					(isNow ? (
-						<div className="p-3">
-							<ListCleanupPreview summary={sending.summary} isCounting={sending.isCounting} error={sending.preview?.error} />
-						</div>
-					) : (
-						<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
-							The list cleanup runs when it goes out, so cold contacts get the last-chance email instead.
+			<CardSettings title="Where it goes">
+				<div className="flex flex-col gap-3 p-3">
+					<div role="radiogroup" aria-label="Where it goes" className="grid gap-2 sm:grid-cols-3">
+						{PUBLISH_OPTIONS.map(({ value, label, description }) => (
+							<CardChoice
+								key={value}
+								icon={PUBLISH_ICONS[value]}
+								title={label}
+								description={description}
+								isSelected={publishTo === value}
+								isDisabled={(value === "web" && !isWebsiteOn && publishTo !== "web") || isChangingPublishTo}
+								onSelect={() => onPublishToChange(value)}
+							/>
+						))}
+					</div>
+					{!isWebsiteOn && (
+						<p className="px-1 text-sm text-pretty text-muted-foreground">
+							Your website is off, so issues only go out by email.{" "}
+							{websiteHref && (
+								<Link href={websiteHref} className="font-medium text-foreground underline underline-offset-4">
+									Turn it on
+								</Link>
+							)}
 						</p>
-					))}
+					)}
+				</div>
 			</CardSettings>
 
-			<CardSettings title="When" stagger={1}>
+			{!isEmail && slugRow && (
+				<CardSettings title="On your website" stagger={1}>
+					{slugRow}
+				</CardSettings>
+			)}
+
+			{isEmail && (
+				<CardSettings title="Who gets it" stagger={1}>
+					<RowCampaign label="From">
+						<span className="truncate text-sm">{from}</span>
+					</RowCampaign>
+					<RowCampaign label="To">
+						<span className="flex min-w-0 items-center gap-3">
+							<MenuAudience
+								segments={segments}
+								segmentId={segmentId}
+								label={isDeleted ? "Deleted segment" : segmentId ? segment?.name : "Everyone"}
+								isDeleted={isDeleted}
+								onSegmentChange={changeSegment}
+								onNewSegment={createSegment}
+								onCloseAutoFocus={keepDialogFocus}
+							/>
+							{!isDeleted && (
+								<span
+									className={cn(
+										"ml-auto shrink-0 text-sm text-muted-foreground tabular-nums transition-opacity duration-150",
+										isChangingSegment && "opacity-40"
+									)}
+								>
+									{recipients < everyoneCount
+										? `${formatNumber(recipients)} of ${formatCount(everyoneCount, "contact")}`
+										: formatCount(recipients, "contact")}
+								</span>
+							)}
+						</span>
+					</RowCampaign>
+					{/* A cap set through the API or kept from an earlier send: the dashboard sets none, so removing it holds from
+					    the next send or schedule. */}
+					{sending.limit && (
+						<RowCampaign label="Limit">
+							<span className="flex min-w-0 items-center gap-2 text-sm">
+								<span className="truncate tabular-nums">The {formatNumber(Number.parseInt(sending.limit, 10))} most engaged</span>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Remove the limit"
+									onClick={() => sending.setLimit("")}
+									className="ml-auto text-muted-foreground"
+								>
+									<X />
+								</Button>
+							</span>
+						</RowCampaign>
+					)}
+					{slugRow}
+					{isCleanupEnabled &&
+						(isNow ? (
+							<div className="p-3">
+								<ListCleanupPreview summary={sending.summary} isCounting={sending.isCounting} error={sending.preview?.error} />
+							</div>
+						) : (
+							<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
+								The list cleanup runs when it goes out, so cold contacts get the last-chance email instead.
+							</p>
+						))}
+				</CardSettings>
+			)}
+
+			<CardSettings title="When" stagger={2}>
 				<div className="flex flex-col gap-4 p-3">
 					<div role="radiogroup" aria-label="When" className="grid gap-2 sm:grid-cols-2">
 						<CardChoice
-							icon={Send}
-							title="Send now"
-							description={scheduledTime ? `Instead of ${scheduledTime}` : "Goes out right away"}
+							icon={isEmail ? Send : Globe}
+							title={isEmail ? "Send now" : "Publish now"}
+							description={
+								scheduledTime ? `Instead of ${scheduledTime}` : isEmail ? "Goes out right away" : "Goes on your website right away"
+							}
 							isSelected={isNow}
 							onSelect={() => sending.setChoice("now")}
 						/>
@@ -196,7 +244,7 @@ export default function PanelSend({
 						<div className="flex flex-col gap-4 px-1 pt-1 animate-enter">
 							<PickerSendTime value={sending.sendAt} onChange={sending.setSendAt} />
 							<div className="flex min-h-10 items-center justify-between gap-3 rounded-lg bg-muted/60 py-1 pr-1 pl-3">
-								<TextSendTime value={sending.sendAt} isLastIssueTime={sending.isLastIssueTime} />
+								<TextSendTime value={sending.sendAt} isLastIssueTime={sending.isLastIssueTime} verb={isEmail ? "Goes out" : "Goes live"} />
 								{scheduledAt && (
 									<Button variant="ghost" size="sm" onClick={sending.unschedule} disabled={sending.isPending}>
 										Unschedule
@@ -226,18 +274,30 @@ export default function PanelSend({
 			<Dialog open={sending.isConfirmOpen} onOpenChange={sending.setIsConfirmOpen}>
 				<DialogContent className="sm:max-w-sm">
 					<DialogHeader>
-						<DialogTitle className="tabular-nums">Send to {formatCount(sending.sendRecipients, "contact")}?</DialogTitle>
-						<DialogDescription>
-							{scheduledTime ? `It goes out now instead of ${scheduledTime}.` : "Most engaged contacts receive it first."}
-							{sending.sendRecipients < sending.issueAudience && " Send it to more later from its page."}
-						</DialogDescription>
+						{isEmail ? (
+							<>
+								<DialogTitle className="tabular-nums">Send to {formatCount(sending.sendRecipients, "contact")}?</DialogTitle>
+								<DialogDescription>
+									{scheduledTime ? `It goes out now instead of ${scheduledTime}.` : "Most engaged contacts receive it first."}
+									{sending.sendRecipients < sending.issueAudience && " Send it to more later from its page."}
+									{publishTo === "email" && " It won't be on your website."}
+								</DialogDescription>
+							</>
+						) : (
+							<>
+								<DialogTitle>Publish on your website?</DialogTitle>
+								<DialogDescription>
+									{scheduledTime ? `It goes live now instead of ${scheduledTime}.` : "It goes live right away."} No email goes out.
+								</DialogDescription>
+							</>
+						)}
 					</DialogHeader>
 					<DialogFooter>
 						<DialogClose asChild>
 							<Button variant="outline">Cancel</Button>
 						</DialogClose>
 						<Button onClick={sending.send} disabled={sending.isPending} className="min-w-20">
-							{sending.isPending ? <Loader2 className="animate-spin" /> : "Send"}
+							{sending.isPending ? <Loader2 className="animate-spin" /> : isEmail ? "Send" : "Publish"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -305,16 +365,18 @@ function MenuAudience({ segments, segmentId, label, isDeleted, onSegmentChange, 
 	);
 }
 
-function CardChoice({ icon: Icon, title, description, isSelected, onSelect }) {
+function CardChoice({ icon: Icon, title, description, isSelected, isDisabled = false, onSelect }) {
 	return (
 		<button
 			type="button"
 			role="radio"
 			aria-checked={isSelected}
+			disabled={isDisabled}
 			onClick={onSelect}
 			className={cn(
-				"flex items-start gap-3 rounded-lg p-3 text-left outline-none transition-[background-color,box-shadow,scale] duration-150 ease-out focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.99]",
-				isSelected ? "bg-muted/60 shadow-[inset_0_0_0_1.5px_var(--foreground)]" : "shadow-border hover:bg-muted/60"
+				"flex items-start gap-3 rounded-lg p-3 text-left outline-none transition-[background-color,box-shadow,scale,opacity] duration-150 ease-out focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.99] disabled:pointer-events-none",
+				isSelected ? "bg-muted/60 shadow-[inset_0_0_0_1.5px_var(--foreground)]" : "shadow-border hover:bg-muted/60",
+				isDisabled && !isSelected && "opacity-50"
 			)}
 		>
 			<span
@@ -337,14 +399,14 @@ function CardChoice({ icon: Icon, title, description, isSelected, onSelect }) {
 	);
 }
 
-function TextSendTime({ value, isLastIssueTime }) {
+function TextSendTime({ value, isLastIssueTime, verb }) {
 	const zone = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
 		.formatToParts(value)
 		.find(({ type }) => type === "timeZoneName")?.value;
 
 	return (
 		<p className="text-sm text-pretty tabular-nums">
-			<span className="text-muted-foreground">Goes out </span>
+			<span className="text-muted-foreground">{verb} </span>
 			<span className="font-medium">{formatSendTime(value)}</span> <span className="text-muted-foreground">{zone}</span>
 			{isLastIssueTime && <span className="text-muted-foreground"> · Same time as your last issue</span>}
 		</p>
@@ -352,3 +414,4 @@ function TextSendTime({ value, isLastIssueTime }) {
 }
 
 const EVERYONE = "everyone";
+const PUBLISH_ICONS = { both: Layers, email: Mail, web: Globe };
