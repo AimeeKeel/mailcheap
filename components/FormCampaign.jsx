@@ -1,16 +1,6 @@
 "use client";
 
-import {
-	useCallback,
-	useDeferredValue,
-	useEffect,
-	useEffectEvent,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
-	useTransition,
-} from "react";
+import { useCallback, useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import {
@@ -39,6 +29,7 @@ import EditorRich from "@/components/EditorRich";
 import ListChecks from "@/components/ListChecks";
 import NavSteps from "@/components/NavSteps";
 import PanelSend from "@/components/PanelSend";
+import RowCampaign from "@/components/RowCampaign";
 import StatusSaved from "@/components/StatusSaved";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,8 +59,6 @@ const UPLOADING_MESSAGE = "Wait for images to finish uploading";
 const SUBJECT_MAX = 200;
 // Below lg, as the step bar's classes.
 const COMPACT_SCREEN = "(width < 64rem)";
-// Preview and Next share a height in every step (the mobile save bar is 3rem, so 2.25rem inside it).
-const STEP_BUTTON = "h-9 lg:h-8";
 
 export default function FormCampaign({
 	campaign,
@@ -92,7 +81,6 @@ export default function FormCampaign({
 }) {
 	const isHtml = campaign.format === "html";
 	const [step, setStep] = useState("write");
-	const [isCalm, setIsCalm] = useState(false);
 	const [isDiscardOpen, setIsDiscardOpen] = useState(false);
 	const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 	const format = isHtml ? "html" : "rich";
@@ -123,8 +111,6 @@ export default function FormCampaign({
 	const previewTextRef = useRef(null);
 	const previewOpenerRef = useRef(null);
 	const scrollsRef = useRef({});
-	useFitHeight(subjectRef, values.subject);
-	useFitHeight(previewTextRef, values.previewText);
 
 	async function persist() {
 		if (await flush()) return true;
@@ -217,44 +203,21 @@ export default function FormCampaign({
 		if (next === step) return;
 		scrollsRef.current[step] = window.scrollY;
 		if (next === "send") sending.prepare();
-		flushSync(() => {
-			setStep(next);
-			setIsCalm(false);
-		});
+		flushSync(() => setStep(next));
 		window.scrollTo({ top: scrollsRef.current[next] ?? 0 });
-	}
-
-	function getContent() {
-		return rootRef.current?.querySelector('[aria-label="Content"]');
 	}
 
 	function editField(field) {
 		goToStep("write");
-		const target = field === "subject" ? subjectRef.current : field === "previewText" ? previewTextRef.current : getContent();
+		const target =
+			field === "subject"
+				? subjectRef.current
+				: field === "previewText"
+					? previewTextRef.current
+					: rootRef.current?.querySelector('[aria-label="Content"]');
 		target?.focus({ preventScroll: true });
 		target?.scrollIntoView({ block: "center" });
 	}
-
-	function endCalm() {
-		setIsCalm(false);
-	}
-
-	// Typing in the draft dims the top bar; moving the pointer, or the keyboard reaching the bar, brings it back.
-	function startCalm(event) {
-		if (isCalm || event.metaKey || event.ctrlKey || event.altKey) return;
-		if (event.key.length === 1 || event.key === "Backspace" || event.key === "Enter") setIsCalm(true);
-	}
-
-	useEffect(() => {
-		if (!isCalm) return;
-		let start = null;
-		function handlePointerMove(event) {
-			start ??= { x: event.clientX, y: event.clientY };
-			if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) endCalm();
-		}
-		window.addEventListener("pointermove", handlePointerMove);
-		return () => window.removeEventListener("pointermove", handlePointerMove);
-	}, [isCalm]);
 
 	// opener: what gets the focus back once the preview closes.
 	function openPreview(opener) {
@@ -291,23 +254,6 @@ export default function FormCampaign({
 
 	function update(key) {
 		return (event) => setValues((current) => ({ ...current, [key]: event.target.value }));
-	}
-
-	// The subject and the preview text wrap like a title, but stay one line: a pasted line break becomes a space.
-	function updateLine(key) {
-		return (event) => setValues((current) => ({ ...current, [key]: event.target.value.replace(/\s*[\r\n]+\s*/g, " ") }));
-	}
-
-	function onSubjectEnter(event) {
-		if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
-		event.preventDefault();
-		previewTextRef.current?.focus();
-	}
-
-	function onPreviewEnter(event) {
-		if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
-		event.preventDefault();
-		getContent()?.focus();
 	}
 
 	// {{first_name|there}} where the cursor is in the subject, or at its end (lib/merge-tags.js). The button keeps the
@@ -351,17 +297,20 @@ export default function FormCampaign({
 		},
 	}[step];
 
-	// Saved shows for a moment after each save, first in every step so a step change doesn't replay it. Preview sits next
-	// to the step's button in every step, as tall as it.
+	// Saved shows for a moment after each save, first in every step so a step change doesn't replay it.
 	function renderStatus() {
+		if (error) return <ButtonRetrySave error={error} onRetry={flush} />;
+		const saved = <StatusSaved savedAt={savedAt} />;
+		if (step !== "write") return saved;
 		return (
 			<>
-				{error ? <ButtonRetrySave error={error} onRetry={flush} /> : <StatusSaved savedAt={savedAt} />}
+				{saved}
 				<Button
-					variant="secondary"
+					variant="ghost"
+					size="sm"
 					onClick={(event) => openPreview(event.currentTarget)}
 					aria-label="Preview"
-					className={cn(STEP_BUTTON, "max-sm:w-9 max-sm:px-0")}
+					className="text-muted-foreground max-sm:px-2"
 				>
 					<Eye data-icon="inline-start" />
 					<span className="max-sm:sr-only">Preview</span>
@@ -384,89 +333,80 @@ export default function FormCampaign({
 	);
 
 	return (
-		<div
-			ref={rootRef}
-			data-campaign-steps
-			data-calm={isCalm ? "" : undefined}
-			className="group/editor pb-(--step-bar-space) lg:pb-0"
-		>
+		<div ref={rootRef} data-campaign-steps className="pb-(--step-bar-space) lg:pb-0">
 			{/* Phones and tablets: the title and the menu first, then the steps, which stick under the top bar. */}
 			<div className="mb-4 flex items-center gap-2 animate-enter lg:hidden">
 				{title}
 				{menu}
 			</div>
-			<header
-				onPointerEnter={endCalm}
-				className="sticky top-[calc(var(--plan-bar-height)+3.5rem)] z-20 -mx-4 mb-6 border-b border-border/50 bg-background/70 px-4 py-2 backdrop-blur-md transition-opacity duration-200 ease-out focus-within:opacity-100 motion-reduce:opacity-100 motion-reduce:transition-none md:top-(--plan-bar-height) md:-mx-12 md:px-12 lg:-mt-10 lg:mb-0 lg:grid lg:h-14 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-10 lg:border-b-0 lg:bg-transparent lg:py-0 lg:backdrop-blur-none [@media(hover:hover)_and_(pointer:fine)]:group-data-[calm]/editor:opacity-40"
-			>
+			<header className="sticky top-[calc(var(--plan-bar-height)+3.5rem)] z-20 -mx-4 mb-6 border-b border-border/60 bg-background/80 px-4 py-2 backdrop-blur-md md:top-(--plan-bar-height) md:-mx-10 md:px-10 lg:-mt-10 lg:mb-8 lg:grid lg:h-16 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-6 lg:border-b-0 lg:py-0">
 				<div className="hidden min-w-0 lg:flex">{title}</div>
 				<NavSteps step={step} onStep={goToStep} />
-				<div className="hidden min-w-0 items-center justify-end gap-1.5 lg:flex">
+				<div className="hidden min-w-0 items-center justify-end gap-2 lg:flex">
 					<BarAction action={action} status={renderStatus()} onEdit={editField} />
 					{menu}
 				</div>
 			</header>
 
-			<div className={cn("mx-auto w-full", step === "write" ? "max-w-3xl" : "max-w-2xl lg:mt-8")}>
+			<div className="mx-auto w-full max-w-2xl">
 				{step !== "write" && accountProblems.length > 0 && <NoticeAccountProblems problems={accountProblems} />}
 
-				{/* The draft reads like a document: the subject as its title, the preview text under it, then the content,
-				    all on one left edge (EditorRich keeps its drag grip in that margin). */}
-				<section aria-label="Write" hidden={step !== "write"} onKeyDownCapture={startCalm} className="animate-enter">
-					<div className="px-5 pt-4 lg:pt-12 [@media(pointer:fine)]:pl-12">
-						<div className="relative">
-							<textarea
-								ref={subjectRef}
-								rows={1}
-								value={values.subject}
-								onChange={updateLine("subject")}
-								onKeyDown={onSubjectEnter}
-								placeholder="Subject"
-								aria-label="Subject"
-								maxLength={SUBJECT_MAX}
-								className="block w-full resize-none overflow-hidden bg-transparent pr-10 text-2xl leading-snug font-semibold tracking-tight outline-none [field-sizing:content] placeholder:text-muted-foreground/50 md:text-[1.75rem]"
-							/>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon-sm"
-								onMouseDown={(event) => event.preventDefault()}
-								onClick={insertFirstName}
-								aria-label="Insert first name"
-								title="Insert first name"
-								className="absolute top-0.5 right-0 text-muted-foreground/70 hover:text-foreground md:top-1"
-							>
-								<UserRound />
-							</Button>
+				<section aria-label="Write" hidden={step !== "write"}>
+					<div className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
+						<div className="divide-y divide-border/60 border-b border-border/60">
+							<RowCampaign label="Subject">
+								<div className="flex min-w-0 items-center gap-1">
+									<input
+										ref={subjectRef}
+										value={values.subject}
+										onChange={update("subject")}
+										placeholder="Subject"
+										aria-label="Subject"
+										maxLength={SUBJECT_MAX}
+										className="h-11 w-full min-w-0 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground"
+									/>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon-sm"
+										onMouseDown={(event) => event.preventDefault()}
+										onClick={insertFirstName}
+										aria-label="Insert first name"
+										title="Insert first name"
+										className="-mr-2 shrink-0 text-muted-foreground"
+									>
+										<UserRound />
+									</Button>
+								</div>
+							</RowCampaign>
+							<RowCampaign label="Preview text">
+								<input
+									ref={previewTextRef}
+									value={values.previewText}
+									onChange={update("previewText")}
+									placeholder="Shown after the subject in inboxes"
+									aria-label="Preview text"
+									maxLength={300}
+									className="h-11 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+								/>
+							</RowCampaign>
 						</div>
-						<textarea
-							ref={previewTextRef}
-							rows={1}
-							value={values.previewText}
-							onChange={updateLine("previewText")}
-							onKeyDown={onPreviewEnter}
-							placeholder="Preview text, shown after the subject in inboxes"
-							aria-label="Preview text"
-							maxLength={300}
-							className="mt-2 block w-full resize-none overflow-hidden bg-transparent text-base leading-relaxed text-foreground/70 outline-none [field-sizing:content] placeholder:text-muted-foreground/50"
-						/>
+						{isHtml ? (
+							<div className="relative">
+								<span className="pointer-events-none absolute top-3 right-4 text-xs text-muted-foreground">HTML</span>
+								<textarea
+									value={values.body}
+									onChange={update("body")}
+									placeholder="<html>"
+									spellCheck={false}
+									aria-label="Content"
+									className="block min-h-[560px] w-full resize-none bg-transparent px-4 py-4 font-mono text-[13px] leading-6 outline-none [field-sizing:content] placeholder:text-muted-foreground"
+								/>
+							</div>
+						) : (
+							<EditorRich content={initialBody} onChange={updateBody} />
+						)}
 					</div>
-					<div aria-hidden="true" className="mx-5 mt-6 h-px bg-border/50 [@media(pointer:fine)]:ml-12" />
-					{isHtml ? (
-						<div className="relative mx-5 mt-6 [@media(pointer:fine)]:ml-12">
-							<span className="pointer-events-none absolute top-3 right-4 text-xs text-muted-foreground">HTML</span>
-							<textarea
-								value={values.body}
-								onChange={update("body")}
-								placeholder="<html>"
-								spellCheck={false}
-								aria-label="Content"
-								className="block min-h-[560px] w-full resize-none bg-transparent py-4 font-mono text-[13px] leading-6 outline-none [field-sizing:content] placeholder:text-muted-foreground"
-							/>
-						</div>
-					) : (
-						<EditorRich content={initialBody} onChange={updateBody} />
-					)}
 				</section>
 
 				<section aria-label="Review" hidden={step !== "review"} className="flex flex-col gap-6">
@@ -584,16 +524,13 @@ function TitleCampaign({ title, newsletter, status }) {
 			<Link
 				href="/campaigns"
 				aria-label="Back"
-				className="-ml-2 grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground/80 transition-colors duration-150 hover:bg-muted hover:text-foreground"
+				className="-ml-2 grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
 			>
 				<ChevronLeft className="size-5" />
 			</Link>
-			<AvatarNewsletter newsletter={newsletter} size={20} />
-			<h1 className="truncate text-base font-medium tracking-tight text-foreground/80 lg:text-sm">{title || "Untitled"}</h1>
-			<BadgeStatus
-				status={status}
-				className="ml-1 h-auto gap-1 rounded-none bg-transparent p-0 text-[11px] font-normal text-muted-foreground/70 shadow-none"
-			/>
+			<AvatarNewsletter newsletter={newsletter} size={24} />
+			<h1 className="truncate text-lg font-semibold tracking-tight lg:text-base">{title || "Untitled"}</h1>
+			<BadgeStatus status={status} />
 		</div>
 	);
 }
@@ -618,14 +555,7 @@ function MenuMore({ isWorking, isTesting, isTestDisabled, onTest, onPreview, onD
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button
-					ref={triggerRef}
-					variant="ghost"
-					size="icon"
-					aria-label="More"
-					disabled={isWorking}
-					className="text-muted-foreground lg:size-8"
-				>
+				<Button ref={triggerRef} variant="ghost" size="icon" aria-label="More" disabled={isWorking}>
 					<MoreHorizontal />
 				</Button>
 			</DropdownMenuTrigger>
@@ -674,8 +604,8 @@ function BarAction({ action, status, onEdit, side = "bottom", className }) {
 	}
 
 	return (
-		<div className={cn("flex min-w-0 items-center gap-2", className)}>
-			<div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 lg:justify-end">{status}</div>
+		<div className={cn("flex min-w-0 items-center gap-3", className)}>
+			<div className="flex min-w-0 flex-1 items-center justify-start gap-1 lg:justify-end">{status}</div>
 			<Popover open={isOpen && problems.length > 0} onOpenChange={setIsOpen}>
 				<PopoverAnchor asChild>
 					<Button
@@ -683,7 +613,7 @@ function BarAction({ action, status, onEdit, side = "bottom", className }) {
 						onClick={() => (problems.length > 0 ? setIsOpen(true) : action.onClick())}
 						disabled={action.isPending}
 						aria-haspopup={problems.length > 0 ? "dialog" : undefined}
-						className={cn(STEP_BUTTON, "min-w-28")}
+						className="min-w-32"
 					>
 						{action.isPending ? (
 							<Loader2 className="animate-spin" />
@@ -761,16 +691,6 @@ function ButtonRow({ icon: Icon, title, description, onClick, isDisabled = false
 			)}
 		</button>
 	);
-}
-
-// Browsers without field-sizing still grow the subject and the preview text with their lines.
-function useFitHeight(ref, value) {
-	useLayoutEffect(() => {
-		const el = ref.current;
-		if (!el || (typeof CSS !== "undefined" && CSS.supports("field-sizing", "content"))) return;
-		el.style.height = "0px";
-		el.style.height = `${el.scrollHeight}px`;
-	}, [ref, value]);
 }
 
 // Stays until a save goes through, unlike Saved.

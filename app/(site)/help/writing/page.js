@@ -13,13 +13,12 @@ export default function WritingPage() {
 			<h2 id="steps">Write, review, send</h2>
 			<p>
 				Start a draft from the <LinkApp href="/campaigns">Campaigns page</LinkApp>. A campaign goes through three steps, shown at the
-				top: Write, Review and Send. On Write the subject and the preview text sit at the top of the page, then the issue. Review is a
-				checklist of what to fix before it can go out. Send is where you pick who gets it and when. Everything saves as you type, and a
-				check shows each time it&apos;s saved.
+				top: Write, where you type the
+				subject, the preview text and the issue; Review, a checklist of what to fix before it can go out; and Send, where you pick who
+				gets it and when. Everything saves as you type, and a check shows each time it&apos;s saved.
 			</p>
 			<p>
-				The preview text is what inboxes show after the subject. Without one, they show your issue&apos;s first words. On a computer,
-				the bar at the top fades while you type; move the pointer, or tab to it, to bring it back.
+				The preview text is what inboxes show after the subject. Without one, they show your issue&apos;s first words.
 			</p>
 
 			<h2 id="editor">The editor</h2>
@@ -83,8 +82,9 @@ export default function WritingPage() {
 
 			<h2 id="preview">Preview and test emails</h2>
 			<p>
-				Preview, next to Next or Send in every step and in the <strong>⋯</strong> menu, shows the email in a mail app&apos;s window on
-				a desktop, or in Gmail on a phone: the inbox first, then the email once you tap it. Press <kbd>Esc</kbd> to close it.
+				Preview, in the write step and in the <strong>⋯</strong> menu at any step, shows the email in a mail app&apos;s window on a
+				desktop, or in Gmail on a phone: the inbox first, with the issue&apos;s row pulsing until you tap it, then the email.
+				On your own phone, Mobile shows the email itself, edge to edge. Press <kbd>Esc</kbd> to close it.
 			</p>
 			<p>
 				Send a test email, in the same menu, sends the email as saved to your account&apos;s address, with [Test] before the subject.

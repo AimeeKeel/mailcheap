@@ -170,7 +170,7 @@ function FrameDesktop({ sender, subject, html }) {
 
 // A phone in Gmail: the inbox first, with the issue on top as it lands, then the email once it's tapped, the way an
 // app pushes a screen. The screen out of view is inert, and the focus follows the one in view. Until the issue has been
-// opened once, its row pulses so it reads as something to tap.
+// opened once, its row pulses and says Open, so it reads as something to tap.
 function FramePhone({ sender, subject, previewText, html, hasOpened, onOpen }) {
 	const [isEmailOpen, setIsEmailOpen] = useState(false);
 	const rowRef = useRef(null);
@@ -259,9 +259,15 @@ function ScreenInbox({ sender, name, subject, snippet, rowRef, onOpen, isHidden,
 						type="button"
 						onClick={onOpen}
 						aria-label={`Open the email from ${name}: ${subject}`}
-						className="flex w-full items-start gap-3 bg-[#e8f0fe] px-4 py-3 text-left outline-none transition-colors duration-150 hover:bg-[#dde8fc] focus-visible:bg-[#d3e3fd] active:bg-[#d3e3fd]"
+						className="relative flex w-full items-start gap-3 bg-[#e8f0fe] px-4 py-3 text-left outline-none transition-colors duration-150 hover:bg-[#dde8fc] focus-visible:bg-[#d3e3fd] active:bg-[#d3e3fd]"
 					>
-						<AvatarNewsletter newsletter={sender} size={40} className="rounded-full bg-white text-zinc-500" />
+						{isHintShown && (
+							<span
+								aria-hidden="true"
+								className="pointer-events-none absolute inset-0 bg-[#1a73e8]/18 motion-safe:animate-pulse motion-safe:[animation-duration:1.6s]"
+							/>
+						)}
+						<AvatarNewsletter newsletter={sender} size={40} className="relative rounded-full bg-white text-zinc-500" />
 						<RowInbox from={name} subject={subject} snippet={snippet} time="9:41 AM" isUnread isHintShown={isHintShown} />
 					</button>
 				</li>
@@ -299,11 +305,11 @@ function ScreenInbox({ sender, name, subject, snippet, rowRef, onOpen, isHidden,
 
 function RowInbox({ from, subject, snippet, time, isUnread = false, isHintShown = false }) {
 	return (
-		<span className="min-w-0 flex-1">
+		<span className="relative min-w-0 flex-1">
 			<span className="flex items-baseline gap-2">
 				<span className={cn("min-w-0 flex-1 truncate text-[15px]", isUnread ? "font-bold" : "text-zinc-700")}>{from}</span>
 				<span className={cn("flex shrink-0 items-center gap-1.5 text-xs", isUnread ? "font-bold" : "text-zinc-500")}>
-					{isHintShown && <DotTap />}
+					{isHintShown && <span className="font-semibold text-[#1a73e8]">Open</span>}
 					{time}
 				</span>
 			</span>
@@ -312,15 +318,6 @@ function RowInbox({ from, subject, snippet, time, isUnread = false, isHintShown 
 				<span className="min-w-0 flex-1 truncate text-sm text-zinc-500">{snippet}</span>
 				<Star aria-hidden="true" className="size-4 shrink-0 text-zinc-400" />
 			</span>
-		</span>
-	);
-}
-
-function DotTap() {
-	return (
-		<span aria-hidden="true" className="relative flex size-2">
-			<span className="absolute inset-0 rounded-full bg-[#1a73e8] opacity-50 motion-safe:animate-ping motion-safe:[animation-duration:1.8s]" />
-			<span className="relative size-2 rounded-full bg-[#1a73e8]" />
 		</span>
 	);
 }
