@@ -84,7 +84,8 @@ export default function WritingPage() {
 			<h2 id="preview">Preview and test emails</h2>
 			<p>
 				Preview, in the write step and in the <strong>⋯</strong> menu at any step, shows the email in a mail app&apos;s window on a
-				desktop, or in Gmail on a phone: the inbox first, with the issue&apos;s row pulsing until you tap it, then the email.
+				desktop, or in Gmail on a phone: the inbox first, with a fingertip tapping the issue&apos;s row until you open it, then the
+				email.
 				On your own phone, Mobile shows the email itself, edge to edge. Press <kbd>Esc</kbd> to close it.
 			</p>
 			<p>

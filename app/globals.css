@@ -344,6 +344,75 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   }
 }
 
+/* A tap the way screen recordings show one (HintTap in DialogPreviewEmail), every 3s: the fingertip lands, presses in
+   150ms and lifts, and a ripple spreads from where it pressed. Without motion, the fingertip only fades in and out. */
+@keyframes tap-finger {
+  0% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(0.85);
+  }
+  32%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes tap-ripple {
+  0%,
+  14% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  42%,
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+@keyframes tap-fade {
+  0%,
+  45%,
+  100% {
+    opacity: 0;
+  }
+  12%,
+  25% {
+    opacity: 1;
+  }
+}
+
+@utility animate-tap-finger {
+  animation: tap-finger 3s cubic-bezier(0.23, 1, 0.32, 1) 600ms infinite both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: tap-fade;
+    animation-timing-function: ease;
+  }
+}
+
+@utility animate-tap-ripple {
+  animation: tap-ripple 3s cubic-bezier(0.23, 1, 0.32, 1) 600ms infinite both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* The public header's wordmark (LogoWordmark canFly): its plane flies around a loop and back to its spot, leaving a
    dashed line that fades, while LogoFlight's box has data-flying (lib/wordmark-flight.js says when). */
 .wordmark-flight {

@@ -24,13 +24,20 @@ test("the email preview's phone shows that Wi-Fi", () => {
 	assert.doesNotMatch(read("components/DialogPreviewEmail.jsx"), /\{[^}]*\bWifi\b[^}]*\} from "lucide-react"/);
 });
 
-test("the previewed issue's row pulses until it has been opened, and says it opens the email", () => {
+test("a fingertip taps the previewed issue's row until it has been opened, with no label or color of its own", () => {
 	const preview = read("components/DialogPreviewEmail.jsx");
 	assert.match(preview, /hasOpenedEmail/);
-	assert.match(preview, /isHintShown/);
-	assert.match(preview, /animate-pulse/);
-	assert.match(preview, />Open</);
-	assert.match(preview, /Open the email from/);
+	assert.match(preview, /\{isHintShown && <HintTap \/>\}/);
+	assert.match(preview, /animate-tap-finger/);
+	assert.match(preview, /animate-tap-ripple/);
+	assert.doesNotMatch(preview, /animate-pulse|>Open</);
+	assert.match(preview, /Open the email from/, "screen readers still hear what the row does");
+
+	const css = read("app/globals.css");
+	for (const name of ["tap-finger", "tap-ripple", "tap-fade"]) assert.match(css, new RegExp(`@keyframes ${name} \\{`));
+	const finger = css.slice(css.indexOf("@utility animate-tap-finger"), css.indexOf("@utility animate-tap-ripple"));
+	assert.match(finger, /prefers-reduced-motion: reduce[\s\S]*tap-fade/, "without motion, the fingertip only fades");
+	assert.doesNotMatch(css.slice(css.indexOf("@keyframes tap-finger"), css.indexOf("@utility animate-tap-finger")), /scale\(0\)/);
 });
 
 test("on a phone the mobile preview is the email edge to edge", () => {

@@ -170,7 +170,7 @@ function FrameDesktop({ sender, subject, html }) {
 
 // A phone in Gmail: the inbox first, with the issue on top as it lands, then the email once it's tapped, the way an
 // app pushes a screen. The screen out of view is inert, and the focus follows the one in view. Until the issue has been
-// opened once, its row pulses and says Open, so it reads as something to tap.
+// opened once, a fingertip taps its row now and then, so it reads as something to tap.
 function FramePhone({ sender, subject, previewText, html, hasOpened, onOpen }) {
 	const [isEmailOpen, setIsEmailOpen] = useState(false);
 	const rowRef = useRef(null);
@@ -261,14 +261,9 @@ function ScreenInbox({ sender, name, subject, snippet, rowRef, onOpen, isHidden,
 						aria-label={`Open the email from ${name}: ${subject}`}
 						className="relative flex w-full items-start gap-3 bg-[#e8f0fe] px-4 py-3 text-left outline-none transition-colors duration-150 hover:bg-[#dde8fc] focus-visible:bg-[#d3e3fd] active:bg-[#d3e3fd]"
 					>
-						{isHintShown && (
-							<span
-								aria-hidden="true"
-								className="pointer-events-none absolute inset-0 bg-[#1a73e8]/18 motion-safe:animate-pulse motion-safe:[animation-duration:1.6s]"
-							/>
-						)}
-						<AvatarNewsletter newsletter={sender} size={40} className="relative rounded-full bg-white text-zinc-500" />
-						<RowInbox from={name} subject={subject} snippet={snippet} time="9:41 AM" isUnread isHintShown={isHintShown} />
+						<AvatarNewsletter newsletter={sender} size={40} className="rounded-full bg-white text-zinc-500" />
+						<RowInbox from={name} subject={subject} snippet={snippet} time="9:41 AM" isUnread />
+						{isHintShown && <HintTap />}
 					</button>
 				</li>
 				{INBOX.map((email) => (
@@ -303,21 +298,29 @@ function ScreenInbox({ sender, name, subject, snippet, rowRef, onOpen, isHidden,
 	);
 }
 
-function RowInbox({ from, subject, snippet, time, isUnread = false, isHintShown = false }) {
+function RowInbox({ from, subject, snippet, time, isUnread = false }) {
 	return (
-		<span className="relative min-w-0 flex-1">
+		<span className="min-w-0 flex-1">
 			<span className="flex items-baseline gap-2">
 				<span className={cn("min-w-0 flex-1 truncate text-[15px]", isUnread ? "font-bold" : "text-zinc-700")}>{from}</span>
-				<span className={cn("flex shrink-0 items-center gap-1.5 text-xs", isUnread ? "font-bold" : "text-zinc-500")}>
-					{isHintShown && <span className="font-semibold text-[#1a73e8]">Open</span>}
-					{time}
-				</span>
+				<span className={cn("shrink-0 text-xs", isUnread ? "font-bold" : "text-zinc-500")}>{time}</span>
 			</span>
 			<span className={cn("block truncate text-sm", isUnread ? "font-bold" : "text-zinc-700")}>{subject}</span>
 			<span className="flex items-center gap-3">
 				<span className="min-w-0 flex-1 truncate text-sm text-zinc-500">{snippet}</span>
 				<Star aria-hidden="true" className="size-4 shrink-0 text-zinc-400" />
 			</span>
+		</span>
+	);
+}
+
+// A finger tapping the issue's subject, the way screen recordings show taps: a fingertip that presses in, and a ripple
+// where it pressed (animate-tap-finger and animate-tap-ripple in app/globals.css).
+function HintTap() {
+	return (
+		<span aria-hidden="true" className="pointer-events-none absolute top-1/2 left-[45%] size-11 -translate-x-1/2 -translate-y-1/2">
+			<span className="absolute inset-0 rounded-full bg-zinc-900/15 animate-tap-ripple" />
+			<span className="absolute inset-0 rounded-full bg-zinc-900/20 shadow-[0_1px_6px_rgb(0_0_0/0.2),inset_0_0_0_2px_rgb(255_255_255/0.75)] animate-tap-finger" />
 		</span>
 	);
 }
