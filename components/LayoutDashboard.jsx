@@ -13,6 +13,7 @@ import { SiteAnalytics, SupportChat, WhatsNew } from "@/components/SiteExtension
 import { getSendingStatus, hasActiveSubscription, isBlocked } from "@/lib/account-state";
 import { isCloud } from "@/lib/config";
 import { isGetStartedOpen } from "@/lib/get-started";
+import { gravatarHash } from "@/lib/gravatar";
 import { getRecommendedPlanId } from "@/lib/onboarding";
 import { PLANS } from "@/lib/plans";
 import { getPricing } from "@/lib/pricing";
@@ -24,7 +25,16 @@ export default async function LayoutDashboard({ user, account, isAdmin, children
 	// Only an account without a plan sees plans here, in the paywall and the banner, so only then is Stripe read.
 	const plans = hasPlan ? PLANS : await findPlansOnSale();
 	const isSidebarCollapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === SIDEBAR_COLLAPSED;
-	const menu = <MenuUser name={user.name} email={user.email} image={user.image} status={getSendingStatus(account)} hasBilling={isCloud()} />;
+	const menu = (
+		<MenuUser
+			name={user.name}
+			email={user.email}
+			image={user.image}
+			gravatarHash={gravatarHash(user.email)}
+			status={getSendingStatus(account)}
+			hasBilling={isCloud()}
+		/>
+	);
 
 	return (
 		<ProviderPaywall hasPlan={hasPlan} pricing={getPricing(getRecommendedPlanId(account, plans), plans)}>

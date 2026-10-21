@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -37,6 +36,7 @@ import { UNDELIVERABLE_LABELS } from "@/lib/contact-status";
 import { CONTACTS_PAGE_SIZE, findContactsPage, listContactTags } from "@/lib/contacts";
 import { getAddContactCurl } from "@/lib/docs/reference";
 import { formatDate, formatNumber } from "@/lib/format";
+import { gravatarHash } from "@/lib/gravatar";
 import { listImports } from "@/lib/import-jobs";
 import { toNewsletterOption } from "@/lib/newsletters";
 import { countSegmentCards, listLiveSegments } from "@/lib/segment-queries";
@@ -283,10 +283,6 @@ function PageLink({ href, isDisabled, label, children }) {
 			</Link>
 		</Button>
 	);
-}
-
-function gravatarHash(email) {
-	return crypto.createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 }
 
 function engagement(contact, statKey, importedKey) {

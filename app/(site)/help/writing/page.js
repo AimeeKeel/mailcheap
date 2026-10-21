@@ -91,10 +91,12 @@ export default function WritingPage() {
 			</p>
 			<p>
 				Sample reader, at the top left, shows the email as a reader called Jane gets it. Click it to pick one of your active
-				contacts instead, the newest first, or find one by typing the start of their email address or first name. The subject, the
-				preview text and the email then read as that person gets them, with their first name, or the fallback if they have none.
-				They stay picked while the campaign is open. Tags and fields aren&apos;t filled in: only{" "}
-				<code>{"{{first_name}}"}</code> is. First names come from the <LinkApp href="/contacts">Contacts page</LinkApp>.
+				contacts instead, the newest first, each with their picture as on the <LinkApp href="/contacts">Contacts page</LinkApp>, or
+				find one by typing the start of their email address or first name. The subject, the preview text and the email then read as
+				that person gets them, with their first name, or the fallback if they have none. They stay picked while the campaign is
+				open. Tags and fields aren&apos;t filled in: only <code>{"{{first_name}}"}</code> is. How to add names and fields to
+				contacts, at the bottom of the list, opens{" "}
+				<Link href={getHelpHref("contacts", "fields")}>Adding fields, step by step</Link>.
 			</p>
 			<p>
 				Send a test email, in the same menu, sends the email as saved to your account&apos;s address, with [Test] before the subject.

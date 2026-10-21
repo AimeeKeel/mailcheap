@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 // The bottom of the sidebar and of the mobile menu: who's signed in and whether the account sends, with what
 // concerns the whole account rather than one newsletter. status: getSendingStatus (lib/account-state.js).
-export default function MenuUser({ name, email, image, status, hasBilling }) {
+export default function MenuUser({ name, email, image, gravatarHash, status, hasBilling }) {
 	const [isSigningOut, startSigningOut] = useTransition();
 	const displayName = name?.trim() || email;
 
@@ -38,7 +38,7 @@ export default function MenuUser({ name, email, image, status, hasBilling }) {
 					type="button"
 					className="flex w-full items-center gap-2.5 overflow-hidden rounded-lg p-1.5 text-left outline-none transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-muted"
 				>
-					<AvatarUser name={name} email={email} image={image} size={32} />
+					<AvatarUser name={name} email={email} image={image} gravatarHash={gravatarHash} size={32} />
 					<span className="flex min-w-0 flex-1 flex-col gap-0.5 sidebar-label">
 						<span className="truncate text-sm leading-5 font-medium">{displayName}</span>
 						<span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">

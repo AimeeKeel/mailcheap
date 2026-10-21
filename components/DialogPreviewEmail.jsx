@@ -39,7 +39,8 @@ export default function DialogPreviewEmail({ isOpen, onOpenChange, onCloseAutoFo
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
 			<DialogPortal>
-				<DialogOverlay className="bg-black/70" />
+				{/* Dark and blurred enough that the dashboard's text never reads through the controls on top. */}
+				<DialogOverlay className="bg-black/80 supports-backdrop-filter:backdrop-blur-md" />
 				<DialogPrimitive.Content
 					aria-describedby={undefined}
 					onCloseAutoFocus={onCloseAutoFocus}

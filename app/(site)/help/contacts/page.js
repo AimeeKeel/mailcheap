@@ -16,7 +16,8 @@ export default function ContactsPage() {
 			<h2 id="statuses">Statuses</h2>
 			<p>
 				The <LinkApp href="/contacts">Contacts page</LinkApp> lists the open newsletter&apos;s contacts, newest signups first. Filter
-				them by status or by tag, or search by email address.
+				them by status or by tag, or search by email address. Each one shows their Gravatar photo, or else the logo of their
+				email&apos;s domain, or their initial.
 			</p>
 			<table>
 				<thead>
@@ -73,15 +74,62 @@ export default function ContactsPage() {
 					characters, without commas. Tag lists everyone the page shows with its filters, or takes a tag off them.
 				</li>
 				<li>
-					<strong>Fields</strong>: your own, like a company or a birthday, as text, a number or a date, {MAX_CONTACT_FIELDS} at most.
-					Add them from Fields, at the top of the <LinkApp href="/contacts">Contacts page</LinkApp>. They&apos;re shared by your
-					newsletters. Deleting a field hides its
-					values, and adding it again brings them back.
+					<strong>Fields</strong>: your own, like a last name, a birthday or a plan, as text, a number or a date,{" "}
+					{MAX_CONTACT_FIELDS} at most, shared by your newsletters. <a href="#fields">Adding fields, step by step</a>
 				</li>
 			</ul>
 			<p>
-				A signup form, an import and the <Link href={getHelpHref("api-and-ai")}>API</Link> can fill them in too. When someone signs
-				up again, their first name and fields only fill in what&apos;s missing, and new tags are added to theirs.
+				When someone signs up again, their first name and fields only fill in what&apos;s missing, and new tags are added to theirs.
+			</p>
+
+			<h2 id="fields">Adding fields, step by step</h2>
+			<p>
+				Fields keep what you know about each reader besides their address: a last name, a birthday, a favorite color, the plan
+				they&apos;re on. Every contact already has a first name and tags, so those need no field.
+			</p>
+			<ol>
+				<li>
+					<strong>Make your fields.</strong> Once your list has contacts, click Fields at the top of the{" "}
+					<LinkApp href="/contacts">Contacts page</LinkApp>. Type a name, like Birthday, pick its type (text, a number or a date)
+					and click the plus. Its key, like <code>birthday</code>, is what imports, segments and the API call it. An import can make
+					fields for you too, as below.
+				</li>
+				<li>
+					<strong>Fill them in</strong>, whichever way suits you:
+					<ul>
+						<li>
+							<strong>By hand</strong>: open a contact&apos;s menu, at the end of their row, click Edit details, and type their first
+							name and a value for each field.
+						</li>
+						<li>
+							<strong>From a CSV file</strong>: import it from the <LinkApp href="/contacts">Contacts page</LinkApp>. Each column
+							shows where it goes: First name, one of your fields, or a new field the import makes from the column.{" "}
+							<Link href={getHelpHref("importing-contacts", "check")}>Check before you import</Link>
+						</li>
+						<li>
+							<strong>From your signup form</strong>: turn on First name in{" "}
+							<LinkApp href="/newsletters/form">Form for your site</LinkApp>, and new readers can type theirs as they sign up. The
+							form asks for nothing else.
+						</li>
+						<li>
+							<strong>From your code or an AI assistant</strong>: <Link href="/docs/api#add-contact">add_contact</Link>,{" "}
+							<Link href="/docs/api#update-contact">update_contact</Link> and{" "}
+							<Link href="/docs/api#import-contacts">import_contacts</Link> take a first name and fields by key, like{" "}
+							<code>{'"fields": { "birthday": "1990-04-12" }'}</code>, with dates as YYYY-MM-DD, and{" "}
+							<Link href="/docs/api#create-contact-field">create_contact_field</Link> makes new fields.{" "}
+							<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
+						</li>
+					</ul>
+				</li>
+				<li>
+					<strong>Use them.</strong> <code>{"{{first_name}}"}</code> greets each reader by name in your emails, and{" "}
+					<a href="#segments">segments</a> pick contacts by their fields, like everyone on a plan.{" "}
+					<Link href={getHelpHref("writing", "first-name")}>Greeting readers by name</Link>
+				</li>
+			</ol>
+			<p>
+				A value has to fit its field: a number field takes a number, and a date field a day. Clear a value to remove it. Deleting a
+				field hides its values on every contact, and adding it again brings them back.
 			</p>
 
 			<h2 id="segments">Segments</h2>

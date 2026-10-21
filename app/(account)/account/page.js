@@ -17,6 +17,7 @@ import { hasGoogleSignIn } from "@/lib/accounts";
 import { requireAccount } from "@/lib/auth";
 import { APP_NAME, getEmailFrom, isCloud } from "@/lib/config";
 import { formatDate } from "@/lib/format";
+import { gravatarHash } from "@/lib/gravatar";
 import { getAccountPlan } from "@/lib/plans";
 import { MAX_NAME_LENGTH } from "@/lib/profile";
 import { SUMMARY_HOUR, getSummaryFrequency, isSummaryEligible } from "@/lib/summary";
@@ -30,7 +31,10 @@ export default async function AccountPage() {
 
 	return (
 		<LayoutNarrow>
-			<HeaderPage title="Account" icon={<AvatarUser name={user.name} email={user.email} image={user.image} size={32} />} />
+			<HeaderPage
+				title="Account"
+				icon={<AvatarUser name={user.name} email={user.email} image={user.image} gravatarHash={gravatarHash(user.email)} size={32} />}
+			/>
 			<div className="flex flex-col gap-4">
 				<FormProfile name={user.name ?? ""} image={user.image ?? ""} maxNameLength={MAX_NAME_LENGTH} />
 				<CardSettings title="Email" stagger={1}>

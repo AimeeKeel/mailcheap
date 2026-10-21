@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { runDashboardAction, toFormError } from "@/lib/actions/dashboard";
+import { gravatarHash } from "@/lib/gravatar";
 
 const MAX_SUBJECT_LENGTH = 200;
 const MAX_PREVIEW_TEXT_LENGTH = 300;
@@ -55,7 +56,7 @@ export async function setCampaignPublishTo(id, publishTo) {
 }
 
 // The preview's reader picker: the newsletter's active contacts whose address or first name starts with what's typed, the
-// newest before anything is.
+// newest before anything is, each with the hash its picture comes from (AvatarContact).
 export async function findPreviewContacts(newsletterId, query) {
 	const { output, failure } = await runDashboardAction("search_contacts", {
 		newsletter: String(newsletterId ?? ""),
@@ -64,7 +65,7 @@ export async function findPreviewContacts(newsletterId, query) {
 		limit: 8,
 	});
 	if (failure) return toFormError(failure);
-	return { contacts: output.contacts.map(({ id, email, firstName }) => ({ id, email, firstName })) };
+	return { contacts: output.contacts.map(({ id, email, firstName }) => ({ id, email, firstName, gravatarHash: gravatarHash(email) })) };
 }
 
 export async function sendTestCampaign(id) {

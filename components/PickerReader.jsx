@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Check, ChevronDown, Loader2, Search, UserRound } from "lucide-react";
+import { ArrowUpRight, BookOpen, Check, ChevronDown, Loader2, Search, UserRound } from "lucide-react";
 import { findPreviewContacts } from "@/app/(app)/campaigns/actions";
+import AvatarContact from "@/components/AvatarContact";
+import LinkHelp from "@/components/LinkHelp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SAMPLE_FIRST_NAME } from "@/lib/merge-tags";
 import { cn } from "@/lib/utils";
@@ -13,7 +15,8 @@ const FINE_POINTER = "(pointer: fine)";
 
 // Who the email preview shows the email to: the sample reader, or one of the newsletter's active contacts, the newest
 // first or found by the start of their address or first name. contact: null for the sample reader. The search field keeps
-// the focus while the list is announced as its options.
+// the focus while the list is announced as its options. The list is dark in both themes, like the preview's controls
+// around it, and opaque, so the dimmed dashboard never shows through it.
 export default function PickerReader({ newsletterId, contact, onChange }) {
 	const listId = useId();
 	const inputRef = useRef(null);
@@ -87,7 +90,7 @@ export default function PickerReader({ newsletterId, contact, onChange }) {
 					type="button"
 					className="flex h-10 max-w-full min-w-0 items-center gap-2 rounded-full bg-white/10 pr-3 pl-1 text-sm font-medium text-white outline-none transition-[background-color,scale] duration-150 ease-out hover:bg-white/15 focus-visible:ring-3 focus-visible:ring-white/40 active:scale-[0.97] data-[state=open]:bg-white/15"
 				>
-					<AvatarReader contact={contact} className="size-8 bg-white/15 text-white" />
+					<AvatarReader contact={contact} className="bg-white/15 text-white" />
 					<span className="truncate">
 						<span className="sr-only">Preview as </span>
 						{contact ? contact.firstName || contact.email : "Sample reader"}
@@ -102,9 +105,9 @@ export default function PickerReader({ newsletterId, contact, onChange }) {
 					event.preventDefault();
 					if (window.matchMedia(FINE_POINTER).matches) inputRef.current?.focus();
 				}}
-				className="flex w-[min(20rem,calc(100vw-1.5rem))] flex-col overflow-hidden p-0"
+				className="dark flex w-[min(20rem,calc(100vw-1.5rem))] flex-col overflow-hidden bg-zinc-900 p-0 shadow-2xl shadow-black/50 ring-white/15 scheme-dark"
 			>
-				<div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/60 px-3">
+				<div className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
 					<Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
 					<input
 						ref={inputRef}
@@ -167,6 +170,11 @@ export default function PickerReader({ newsletterId, contact, onChange }) {
 						</p>
 					)}
 				</div>
+				<LinkHelp article="contacts" section="fields" className="flex shrink-0 items-center gap-2 border-t px-3 py-2.5 text-xs font-normal whitespace-normal text-muted-foreground no-underline outline-none hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground">
+					<BookOpen aria-hidden="true" className="size-3.5 shrink-0" />
+					<span className="flex-1">How to add names and fields to contacts</span>
+					<ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0" />
+				</LinkHelp>
 			</PopoverContent>
 		</Popover>
 	);
@@ -184,7 +192,7 @@ function OptionReader({ id, contact = null, name, detail, isActive, isPicked, on
 			onClick={onPick}
 			className={cn("flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5", isActive && "bg-muted")}
 		>
-			<AvatarReader contact={contact} className="size-8 bg-muted text-muted-foreground" />
+			<AvatarReader contact={contact} className="bg-muted text-muted-foreground" />
 			<span className="min-w-0 flex-1">
 				<span className="block truncate text-sm font-medium">{name}</span>
 				<span className="block truncate text-xs text-muted-foreground">{detail}</span>
@@ -194,11 +202,12 @@ function OptionReader({ id, contact = null, name, detail, isActive, isPicked, on
 	);
 }
 
-// A contact's initial, or a person for the sample reader.
+// A contact's picture, as the Contacts page shows it, or a person for the sample reader.
 function AvatarReader({ contact, className }) {
+	if (contact) return <AvatarContact email={contact.email} gravatarHash={contact.gravatarHash} size={32} />;
 	return (
-		<span aria-hidden="true" className={cn("grid shrink-0 place-items-center rounded-full text-xs font-semibold uppercase", className)}>
-			{contact ? (contact.firstName || contact.email).charAt(0) : <UserRound className="size-4" />}
+		<span aria-hidden="true" className={cn("grid size-8 shrink-0 place-items-center rounded-full", className)}>
+			<UserRound className="size-4" />
 		</span>
 	);
 }

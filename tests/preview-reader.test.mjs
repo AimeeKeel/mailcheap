@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { toPreviewFrame, toPreviewHtml } from "../lib/email-preview.js";
+import { gravatarHash } from "../lib/gravatar.js";
 import { SAMPLE_READER, fillForReader } from "../lib/merge-tags.js";
 import { renderEmail } from "../lib/render-email.js";
 import { TEST_CONTACT_ID, buildRecipientEmail } from "../lib/sending-rules.js";
@@ -148,7 +149,11 @@ describe("picking a contact to preview as", () => {
 			"html@example.com",
 		]);
 		const [joanna] = (await find("joanna")).contacts;
-		assert.deepEqual(joanna, { id: joanna.id, email: "joanna@example.com", firstName: "Joanna" }, "only what the preview needs");
+		assert.deepEqual(
+			joanna,
+			{ id: joanna.id, email: "joanna@example.com", firstName: "Joanna", gravatarHash: gravatarHash("joanna@example.com") },
+			"only what the preview needs, and the hash its picture comes from"
+		);
 		assert.deepEqual((await find("nameless")).contacts[0].firstName, null);
 	});
 

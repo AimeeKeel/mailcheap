@@ -17,7 +17,8 @@ export default function AccountPage() {
 				You sign in {isGoogleEnabled() ? "with Google, or " : ""}with a code MailCheap emails to your address. The address can&apos;t
 				be changed. Your name and photo are on the <LinkApp href="/account">Account page</LinkApp>, opened from the menu at the bottom
 				of the sidebar, along with
-				{isCloud() ? " your plan and" : ""} the deletion of your account.
+				{isCloud() ? " your plan and" : ""} the deletion of your account. Without a photo, the dashboard shows your Gravatar, or else
+				the logo of your email&apos;s domain, as it does for your contacts.
 			</p>
 			<p>
 				Apps you connected with your sign-in, like ChatGPT or Claude, are on the <LinkApp href="/api-keys">API keys page</LinkApp>,
