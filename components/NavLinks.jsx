@@ -6,10 +6,10 @@ import { Globe, KeyRound, LayoutGrid, Send, Settings, Shield, Users } from "luci
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-// The open newsletter's pages, then the account's, which every newsletter shares. isCollapsed: the sidebar shows only
+// The open newsletter's pages, then the account's, which every newsletter shares. isFolded: the sidebar shows only
 // their icons (NavSidebar), and each names its page in a tooltip. The tooltips are always there, empty while it's open,
 // so folding it keeps the links and their transitions.
-export default function NavLinks({ isAdmin, isCollapsed = false, onNavigate }) {
+export default function NavLinks({ isAdmin, isFolded = false, onNavigate }) {
 	const pathname = usePathname();
 	const groups = [NEWSLETTER_ITEMS, [...ACCOUNT_ITEMS, ...(isAdmin ? [ADMIN_ITEM] : [])]];
 
@@ -34,11 +34,11 @@ export default function NavLinks({ isAdmin, isCollapsed = false, onNavigate }) {
 													: "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
 											)}
 										>
-											<Icon className="size-4 shrink-0 transition-[translate] duration-250 ease-drawer motion-reduce:transition-none sidebar-collapsed:translate-x-1" />
+											<Icon className="size-4 shrink-0 transition-[translate] duration-250 ease-drawer motion-reduce:transition-none sidebar-folded:translate-x-1" />
 											<span className="sidebar-label">{label}</span>
 										</Link>
 									</TooltipTrigger>
-									{isCollapsed && (
+									{isFolded && (
 										<TooltipContent side="right" sideOffset={8}>
 											{label}
 										</TooltipContent>

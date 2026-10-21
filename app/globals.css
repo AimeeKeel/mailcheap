@@ -252,9 +252,10 @@ html:has([data-support-chat]) {
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* The dashboard's sidebar (NavSidebar): 15rem wide, or folded down to its icons, 4.25rem inside its border. Folded, its
-   logo and avatars stay where they were and its links' icons move 4px, so all of them line up in its middle. What's
-   fixed beside it starts past it. The campaign editor folds it until it's opened there ([data-sidebar-expanded]): the
+/* The dashboard's sidebar (NavSidebar) takes 15rem of the page, or 4.25rem inside its border once collapsed. Collapsed,
+   it's folded down to its icons, unfolding over the page while a mouse is on it ([data-sidebar-peek]). Folded, its logo
+   and avatars stay where they were and its links' icons move 4px, so all of them line up in its middle. What's fixed
+   beside it starts past it. The campaign editor collapses it until it's opened there ([data-sidebar-expanded]): the
    editor is on the page before any script runs, so the first paint has it folded too. */
 html {
   --sidebar-width: 15rem;
@@ -265,14 +266,14 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   --sidebar-width: calc(4.25rem + 1px);
 }
 
-@custom-variant sidebar-collapsed (&:where([data-sidebar-collapsed] *, :root:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) [data-sidebar] *));
+@custom-variant sidebar-folded (&:where([data-sidebar-folded] *, :root:has([data-campaign-steps]):not(:has([data-sidebar-expanded], [data-sidebar-peek])) [data-sidebar] *));
 
-/* What only the open sidebar shows, its names and labels: gone before it's half folded, back once it's mostly open.
-   Only opacity, so it also runs without motion. */
+/* What only the unfolded sidebar shows, its names and labels: gone before it's half folded, back once it's mostly
+   open. Only opacity, so it also runs without motion. */
 @utility sidebar-label {
   transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1) 100ms;
 
-  @variant sidebar-collapsed {
+  @variant sidebar-folded {
     opacity: 0;
     transition-duration: 100ms;
     transition-delay: 0ms;

@@ -89,12 +89,13 @@ export default function GettingStartedPage() {
 			<h2 id="sidebar">The sidebar</h2>
 			<p>
 				The sidebar lists your newsletter&apos;s pages, then your account&apos;s, like the <LinkApp href="/domains">Domains page</LinkApp>.
-				The button next to MailCheap at its top folds it down to its icons, for more room on the page: point at an icon for its
-				name, and click the MailCheap logo to open the sidebar again. Your browser remembers your choice.
+				The button next to MailCheap at its top folds it down to its icons, for more room on the page. Folded, it opens over the
+				page while your mouse is on it and folds back when you move away. To keep it open, click that button again, or the
+				MailCheap logo on a touch screen. Your browser remembers your choice.
 			</p>
 			<p>
-				While you edit a campaign, the sidebar folds down on its own to leave the issue more room, and the logo still opens it.
-				The next page shows it open again, unless you folded it yourself.
+				While you edit a campaign, the sidebar also folds down on its own to leave the issue more room. The next page shows it
+				open again, unless you folded it yourself.
 			</p>
 		</ArticleHelp>
 	);

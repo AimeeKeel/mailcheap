@@ -55,19 +55,20 @@ describe("the dashboard's sidebar", () => {
 
 	test("open, shows the logo with the collapse button next to it, and the expand button can't be reached", () => {
 		const html = renderSidebar(false);
-		assert.doesNotMatch(html, /data-sidebar-collapsed/);
+		assert.doesNotMatch(html, /data-sidebar-(collapsed|folded)/);
 		assert.ok(findTag(html, "Collapse sidebar"));
 		assert.match(findTag(html, "Expand sidebar"), / inert=""/);
 		assert.equal(findInertPart(html).includes("Collapse sidebar"), false, "the logo and the collapse button work");
 		assert.match(html, /<a[^>]*href="\/"[^>]*>.*?MailCheap<\/span><\/a>/);
 	});
 
-	test("folded, the logo opens it again, and every link keeps its name", () => {
+	test("collapsed, starts folded: the logo opens it, the button that keeps it open waits for it to unfold, and every link keeps its name", () => {
 		const html = renderSidebar(true);
-		assert.match(html, /<aside data-sidebar-collapsed=""/);
+		assert.match(html, /<aside data-sidebar-collapsed="" data-sidebar-folded=""/);
 		assert.doesNotMatch(findTag(html, "Expand sidebar"), / inert=""/);
+		assert.equal(findTag(html, "Collapse sidebar"), null);
 		const inert = findInertPart(html);
-		assert.ok(inert.includes('href="/"') && inert.includes('aria-label="Collapse sidebar"'), "the logo's link and the collapse button wait");
+		assert.ok(inert.includes('href="/"') && inert.includes('aria-label="Keep sidebar open"'), "the logo's link and that button wait");
 		for (const label of LINKS) assert.match(html, new RegExp(`<span class="sidebar-label">${label}</span>`), label);
 	});
 
@@ -100,10 +101,10 @@ describe("the dashboard's sidebar", () => {
 		assert.match(css, /html:has\(\[data-campaign-steps\]\):not\(:has\(\[data-sidebar-expanded\]\)\) \{\s*--sidebar-width: calc\(4\.25rem \+ 1px\);/);
 		assert.match(
 			css,
-			/@custom-variant sidebar-collapsed \(&:where\(\[data-sidebar-collapsed\] \*, :root:has\(\[data-campaign-steps\]\):not\(:has\(\[data-sidebar-expanded\]\)\) \[data-sidebar\] \*\)\);/,
-			"only what's in the sidebar: the phone's top bar and menu share its components"
+			/@custom-variant sidebar-folded \(&:where\(\[data-sidebar-folded\] \*, :root:has\(\[data-campaign-steps\]\):not\(:has\(\[data-sidebar-expanded\], \[data-sidebar-peek\]\)\) \[data-sidebar\] \*\)\);/,
+			"only what's in the sidebar, the phone's top bar and menu sharing its components, and not while it unfolds under the mouse"
 		);
-		assert.match(css, /@utility sidebar-label \{[^}]*@variant sidebar-collapsed \{/);
+		assert.match(css, /@utility sidebar-label \{[^}]*@variant sidebar-folded \{/);
 		assert.match(renderSidebar(false), /<aside data-sidebar=""/);
 
 		const editor = await readFile(new URL("../components/FormCampaign.jsx", import.meta.url), "utf8");
