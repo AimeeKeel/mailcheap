@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { Check, CircleAlert, ExternalLink, FlaskConical, Loader2, X } from "lucide-react";
 import { checkSlug, saveNewsletter, sendWelcomeTest } from "@/app/(app)/newsletters/actions";
 import BarSave from "@/components/BarSave";
@@ -28,7 +29,7 @@ import {
 	getWebsiteAddress,
 } from "@/lib/newsletter-form";
 import { getSlugFormatProblem } from "@/lib/newsletter-settings";
-import { MAX_AUTHOR_BIO_LENGTH, MAX_DESCRIPTION_LENGTH } from "@/lib/newsletters";
+import { ADD_DOMAIN_PATH, DOMAINS_PATH, MAX_AUTHOR_BIO_LENGTH, MAX_DESCRIPTION_LENGTH } from "@/lib/newsletters";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail } from "@/lib/render-email";
 import { getSharedAddress } from "@/lib/sender-rules";
 import { slugify } from "@/lib/slug";
@@ -46,7 +47,8 @@ const IMAGE_PREVIEW_PATTERN = /^(https:\/\/\S+\.\S{2,}\/\S+|\/\S+\.\w{3,4})$/;
 // MailCheap Cloud, whose plans count the confirmation and welcome emails among their monthly emails.
 // defaultPostalAddress: what its emails print until it has its own (lib/postal-address.js); the editor's checks link
 // to the field with #postal-address. hasArchiveHost: the server hosts websites on customers' own subdomains.
-// hasSentIssue: an issue went out, so the website can be live (lib/archive-data.js).
+// hasSentIssue: an issue went out, so the website can be live (lib/archive-data.js). preselectDomain: one of the
+// account's domains a link asked for in the from field; the page opens with it picked and unsaved.
 export default function FormNewsletter({
 	section,
 	newsletter,
@@ -61,10 +63,16 @@ export default function FormNewsletter({
 	cleanupTotals,
 	welcomePause,
 	isCloud = false,
+	preselectDomain = null,
 }) {
-	const [draft, setDraft] = useState(() => getNewsletterDraft({ newsletter, domains, sharedDomain, defaultPostalAddress }));
+	const [draft, setDraft] = useState(() => {
+		const saved = getNewsletterDraft({ newsletter, domains, sharedDomain, defaultPostalAddress });
+		return preselectDomain ? { ...saved, fromDomain: preselectDomain } : saved;
+	});
 	const draftKey = getDraftKey(draft, { newsletter, sharedDomain });
-	const [savedKey, setSavedKey] = useState(draftKey);
+	const [savedKey, setSavedKey] = useState(() =>
+		getDraftKey(getNewsletterDraft({ newsletter, domains, sharedDomain, defaultPostalAddress }), { newsletter, sharedDomain })
+	);
 	const [savedAt, setSavedAt] = useState(null);
 	// The image inputs keep their own URL: a discard starts them over.
 	const [discardCount, setDiscardCount] = useState(0);
@@ -215,7 +223,13 @@ function SectionSender({ draft, set, update, domains, sharedDomain, fromEmail, d
 	const sharedAddress = sharedDomain ? getSharedAddress(slug || "slug", sharedDomain) : null;
 	const isShared = Boolean(sharedDomain) && fromDomain === sharedDomain;
 	const isDomainUnverified = !isShared && domains.some(({ domain, verified }) => domain === fromDomain && !verified);
-	const fromHint = getFromHint({ isShared, isDomainUnverified, fromDomain, hasDomains: domains.length > 0 });
+	const fromHint = getFromHint({
+		isShared,
+		isDomainUnverified,
+		fromDomain,
+		domains,
+		onPickDomain: (domain) => set("fromDomain", domain),
+	});
 
 	useEffect(() => {
 		if (window.location.hash === `#${POSTAL_ADDRESS_ID}`) postalAddressRef.current?.focus();
@@ -762,12 +776,62 @@ function CleanupTotals({ totals }) {
 	);
 }
 
-function getFromHint({ isShared, isDomainUnverified, fromDomain, hasDomains }) {
-	if (isShared) return "The shared address follows the slug and needs no setup. Replies go to the reply-to, or to your account email.";
-	if (isDomainUnverified) return `${fromDomain} isn't verified yet. Emails wait until its DNS records are in.`;
-	if (!fromDomain && !hasDomains) return "Add a domain on the Domains page to send from it";
-	return null;
+// Each case ends on its way forward: a verified domain is picked right here, the rest is done on the Domains page.
+function getFromHint({ isShared, isDomainUnverified, fromDomain, domains, onPickDomain }) {
+	if (isShared) {
+		const verified = domains.find((item) => item.verified);
+		const pending = domains.find((item) => !item.verified);
+		return (
+			<>
+				The shared address follows the slug and needs no setup. Replies go to the reply-to, or to your account email.{" "}
+				{verified ? (
+					<button type="button" onClick={() => onPickDomain(verified.domain)} className={INLINE_LINK}>
+						Send from {verified.domain}
+					</button>
+				) : pending ? (
+					<Link href={DOMAINS_PATH} className={INLINE_LINK}>
+						Finish verifying {pending.domain}
+					</Link>
+				) : (
+					<>
+						Your own domain helps delivery and your brand.{" "}
+						<Link href={ADD_DOMAIN_PATH} className={INLINE_LINK}>
+							Add a domain
+						</Link>
+					</>
+				)}
+			</>
+		);
+	}
+	if (isDomainUnverified) {
+		return (
+			<>
+				{fromDomain} isn&apos;t verified yet. Emails wait until its DNS records are in.{" "}
+				<Link href={DOMAINS_PATH} className={INLINE_LINK}>
+					Finish on Domains
+				</Link>
+			</>
+		);
+	}
+	if (!fromDomain && domains.length === 0) {
+		return (
+			<>
+				<Link href={ADD_DOMAIN_PATH} className={INLINE_LINK}>
+					Add a domain
+				</Link>{" "}
+				to send from it
+			</>
+		);
+	}
+	return (
+		<Link href={DOMAINS_PATH} className={INLINE_LINK}>
+			Manage your domains
+		</Link>
+	);
 }
+
+const INLINE_LINK =
+	"font-medium text-foreground underline decoration-foreground/30 underline-offset-2 transition-colors duration-150 hover:decoration-foreground";
 
 // The whole row is the field's label, unless it holds more than the field (buttons, a list): then only its name is,
 // for htmlFor, and as="div" has no field to name.

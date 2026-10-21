@@ -26,6 +26,11 @@ export default function SenderAddressesPage() {
 						or to the reply-to address you set in the <LinkApp href="/newsletters/sender">newsletter&apos;s settings</LinkApp>. You can
 						keep it as long as you like: the <LinkApp href="/domains">Domains page</LinkApp> shows it as used until you switch.
 					</p>
+					<p>
+						While a newsletter sends from it, the <LinkApp href="/">overview</LinkApp> and the send step of a campaign show a short
+						note with your next step toward your own domain: add one, finish verifying it, or send from it once it&apos;s verified.
+						Close the note and it stays closed for that newsletter until the next step comes. It never stops a send.
+					</p>
 				</>
 			)}
 
@@ -67,6 +72,12 @@ export default function SenderAddressesPage() {
 				newsletter from an address at it. Your next
 				emails go out from that address{hasWebsiteStep && ", and your website and links move to your subdomain once its record is found"}
 				.
+			</p>
+			<p>
+				You can also switch from the newsletter&apos;s <LinkApp href="/newsletters/sender">sender settings</LinkApp>: pick the
+				domain in the From email field and save. The note on the overview, and the Send from link next to each shared address on
+				the Domains page, open those settings with the domain already picked. Each domain&apos;s card lists the newsletters that
+				send from it, with a link to their sender settings.
 			</p>
 			<p>
 				Once a domain is verified, the Domains page also links to Google Postmaster Tools, where you can see how Gmail rates your

@@ -143,7 +143,7 @@ const context = { sharedDomain: "mailcheap.ai", appUrl: "https://mailcheap.ai", 
 test("the overview says where each section stands", () => {
 	assert.deepEqual(getSettingsSummary({ newsletter, ...context }), {
 		general: { text: "Field notes · field-notes", tone: "none" },
-		sender: { text: "hello@field-notes.mailcheap.ai", tone: "none" },
+		sender: { text: "Shared address · hello@field-notes.mailcheap.ai", tone: "none" },
 		signups: { text: "Double opt-in on", tone: "on" },
 		welcome: { text: "Replaced by the confirmation email", tone: "none" },
 		cleanup: { text: "On · after 8 ignored issues", tone: "on" },

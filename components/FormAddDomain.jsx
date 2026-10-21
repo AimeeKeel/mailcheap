@@ -1,18 +1,21 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { addDomainAction } from "@/app/(app)/domains/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ADD_DOMAIN_ID } from "@/lib/newsletters";
 import { normalizeDomainInput, normalizeHostInput } from "@/lib/sender-rules";
 import { toast } from "@/lib/toast";
 
 const PLACEHOLDER_DOMAIN = "yourdomain.com";
 
-// hasArchiveHost: the server hosts archives on customers' subdomains, so one is picked here.
+// hasArchiveHost: the server hosts archives on customers' subdomains, so one is picked here. Links to ADD_DOMAIN_PATH
+// open with the domain field focused.
 export default function FormAddDomain({ fromLocalPart, hasArchiveHost }) {
 	const id = useId();
+	const domainRef = useRef(null);
 	const [domainInput, setDomainInput] = useState("");
 	const [archiveInput, setArchiveInput] = useState("");
 	const [, action, isPending] = useActionState(async (previous, formData) => {
@@ -28,6 +31,10 @@ export default function FormAddDomain({ fromLocalPart, hasArchiveHost }) {
 	const domain = normalizeDomainInput(domainInput);
 	const archiveLabel = toArchiveLabel(archiveInput, domain);
 
+	useEffect(() => {
+		if (window.location.hash === `#${ADD_DOMAIN_ID}`) domainRef.current?.focus();
+	}, []);
+
 	// Only an address or a link is rewritten: a plain domain keeps the browser's own paste, and its undo.
 	function pasteDomain(event) {
 		const text = event.clipboardData.getData("text");
@@ -38,7 +45,7 @@ export default function FormAddDomain({ fromLocalPart, hasArchiveHost }) {
 	}
 
 	return (
-		<form action={action} className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
+		<form id={ADD_DOMAIN_ID} action={action} className="scroll-mt-24 overflow-hidden rounded-xl bg-card shadow-border animate-enter">
 			<div className="flex flex-col gap-4 p-4 sm:p-5">
 				<div>
 					<h2 className="font-semibold tracking-tight">Add your domain</h2>
@@ -52,6 +59,7 @@ export default function FormAddDomain({ fromLocalPart, hasArchiveHost }) {
 					</label>
 					<div className="flex flex-col gap-2 sm:flex-row">
 						<Input
+							ref={domainRef}
 							id={`${id}-domain`}
 							name="domain"
 							value={domainInput}

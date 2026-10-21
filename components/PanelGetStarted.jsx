@@ -8,6 +8,7 @@ import ShellGetStarted from "@/components/ShellGetStarted";
 import { Button } from "@/components/ui/button";
 import { WARMUP, isCloud } from "@/lib/config";
 import { getGetStartedSteps } from "@/lib/get-started";
+import { ADD_DOMAIN_PATH } from "@/lib/newsletters";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
 import { cn } from "@/lib/utils";
 
@@ -214,7 +215,7 @@ const STEPS = {
 	domain: {
 		title: "Send from your domain",
 		description: "Add its DNS records, then send from your address.",
-		href: "/domains",
+		href: ADD_DOMAIN_PATH,
 		action: "Add a domain",
 	},
 	send: {

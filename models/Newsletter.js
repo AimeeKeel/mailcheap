@@ -69,6 +69,10 @@ const newsletterSchema = new mongoose.Schema(
 			placeholder: { type: String, trim: true },
 			allowedDomains: { type: [String], default: undefined },
 		},
+		// Dashboard helpers its owner closed: ownDomain, the step the own-domain helper suggested (lib/sender-rules.js).
+		dismissedNudges: {
+			ownDomain: { type: String },
+		},
 		// Its look on its website and in its emails (lib/themes.js): a preset, and only what was changed on top of it.
 		theme: {
 			preset: { type: String, trim: true },

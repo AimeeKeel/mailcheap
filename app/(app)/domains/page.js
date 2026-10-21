@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { ArrowUpRight, Check, Mail } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Check, ChevronRight, Mail } from "lucide-react";
 import ButtonCheckDomain from "@/components/ButtonCheckDomain";
 import ButtonCopy from "@/components/ButtonCopy";
 import DialogRemoveDomain from "@/components/DialogRemoveDomain";
@@ -14,6 +15,7 @@ import { getArchiveCnameTarget, getSharedDomain } from "@/lib/config";
 import { getDomainSetup, getDomainSummary } from "@/lib/domain-records";
 import { refreshDomains } from "@/lib/domains";
 import { getEmailProvider } from "@/lib/email-provider";
+import { getSenderPath } from "@/lib/newsletters";
 import { rootDomain } from "@/lib/root-domain";
 import {
 	getEmailDomain,
@@ -53,7 +55,8 @@ export default async function DomainsPage() {
 	const domains = refreshed.map((domain) => withActiveProvider(domain));
 	const cnameTarget = getArchiveCnameTarget();
 	const isProviderSetUp = getEmailProvider().isConfigured();
-	const hasVerifiedDomain = domains.some(({ verified }) => verified);
+	const verifiedDomain = domains.find(({ verified }) => verified) ?? null;
+	const hasVerifiedDomain = Boolean(verifiedDomain);
 	const sharedNewsletters = sharedDomain ? newsletters : [];
 	const current = newsletters.find(({ _id }) => String(_id) === String(selected?._id)) ?? null;
 
@@ -87,16 +90,29 @@ export default async function DomainsPage() {
 								stagger={domains.length + 1}
 							/>
 						)}
-						{sharedNewsletters.map((newsletter, index) => (
-							<RowNote
-								key={String(newsletter._id)}
-								icon={<Mail className="size-4 text-muted-foreground" />}
-								label="Shared address"
-								detail={<span className="font-mono text-xs">{getSharedAddress(newsletter.slug, sharedDomain)}</span>}
-								end={<TextStatus {...getSharedStatus(newsletter, { sharedDomain, isProviderSetUp, hasPlan })} className="shrink-0 text-xs" />}
-								stagger={domains.length + 2 + index}
-							/>
-						))}
+						{sharedNewsletters.map((newsletter, index) => {
+							// A newsletter still on the shared address gets its sender settings with the verified domain picked.
+							const switchDomain = isOnSharedDomain(newsletter.fromEmail, sharedDomain) ? verifiedDomain : null;
+							return (
+								<RowNote
+									key={String(newsletter._id)}
+									icon={<Mail className="size-4 text-muted-foreground" />}
+									label="Shared address"
+									detail={<span className="font-mono text-xs">{getSharedAddress(newsletter.slug, sharedDomain)}</span>}
+									end={
+										<span className="flex shrink-0 items-center gap-3">
+											<TextStatus {...getSharedStatus(newsletter, { sharedDomain, isProviderSetUp, hasPlan })} className="text-xs" />
+											{hasPlan && (
+												<LinkSender href={getSenderPath({ newsletterId: String(newsletter._id), domainId: switchDomain && String(switchDomain._id) })}>
+													{switchDomain ? `Send from ${switchDomain.domain}` : "Sender"}
+												</LinkSender>
+											)}
+										</span>
+									}
+									stagger={domains.length + 2 + index}
+								/>
+							);
+						})}
 					</div>
 				)}
 			</div>
@@ -196,6 +212,9 @@ function RowsSender({ domain, newsletters, current, sharedDomain }) {
 						<span className="font-mono text-[13px] wrap-anywhere text-foreground">{newsletter.fromEmail}</span>
 						{!domain.verified && " once it's verified"}
 					</span>
+					<LinkSender href={getSenderPath({ newsletterId: String(newsletter._id) })} className="ml-auto">
+						Sender
+					</LinkSender>
 				</p>
 			))}
 			{!isCurrentSending &&
@@ -249,6 +268,25 @@ function TableRecords({ records }) {
 				</tbody>
 			</table>
 		</div>
+	);
+}
+
+// A newsletter's sender settings, which open that newsletter first.
+function LinkSender({ href, className, children }) {
+	return (
+		<Link
+			href={href}
+			className={cn(
+				"group/sender relative flex shrink-0 items-center gap-0.5 rounded-md text-xs font-medium text-foreground outline-none transition-colors duration-150 after:absolute after:-inset-x-2 after:-inset-y-3 hover:text-foreground/80 focus-visible:ring-3 focus-visible:ring-ring/50",
+				className
+			)}
+		>
+			{children}
+			<ChevronRight
+				aria-hidden="true"
+				className="size-3.5 text-muted-foreground transition-transform duration-150 ease-out group-hover/sender:translate-x-0.5"
+			/>
+		</Link>
 	);
 }
 

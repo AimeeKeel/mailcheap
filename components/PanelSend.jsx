@@ -9,6 +9,7 @@ import DialogSegment from "@/components/DialogSegment";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import ListCleanupPreview from "@/components/ListCleanupPreview";
 import NoticeFirstSend from "@/components/NoticeFirstSend";
+import NoticeOwnDomain from "@/components/NoticeOwnDomain";
 import NoticeWarmup from "@/components/NoticeWarmup";
 import PickerSendTime from "@/components/PickerSendTime";
 import RowCampaign from "@/components/RowCampaign";
@@ -63,6 +64,7 @@ export default function PanelSend({
 	onPublishToChange,
 	isChangingPublishTo,
 	websiteHref,
+	domainNudge = null,
 }) {
 	const isClient = useIsClient();
 	const [segmentId, setSegmentId] = useState(campaign.segmentId ?? null);
@@ -161,7 +163,14 @@ export default function PanelSend({
 			{isEmail && (
 				<CardSettings title="Who gets it" stagger={1}>
 					<RowCampaign label="From">
-						<span className="truncate text-sm">{from}</span>
+						{domainNudge ? (
+							<span className="flex min-w-0 flex-col gap-1 py-2.5">
+								<span className="truncate text-sm">{from}</span>
+								<NoticeOwnDomain nudge={domainNudge} newsletter={newsletter} />
+							</span>
+						) : (
+							<span className="truncate text-sm">{from}</span>
+						)}
 					</RowCampaign>
 					<RowCampaign label="To">
 						<span className="flex min-w-0 items-center gap-3">

@@ -7,7 +7,7 @@ import { serialize } from "@/lib/serialize";
 // A section's page of the open newsletter's settings (lib/newsletter-sections.js), back to the overview. page: what
 // lib/settings-page.js loaded for it. The form starts over for each newsletter: its fields keep what they were given
 // when it first rendered.
-export default function LayoutSettingsSection({ section, page }) {
+export default function LayoutSettingsSection({ section, page, preselectDomain = null }) {
 	const { newsletter } = page;
 
 	return (
@@ -28,6 +28,7 @@ export default function LayoutSettingsSection({ section, page }) {
 				cleanupTotals={page.cleanupTotals}
 				welcomePause={page.welcomePause}
 				isCloud={page.isCloud}
+				preselectDomain={preselectDomain}
 			/>
 		</LayoutNarrow>
 	);

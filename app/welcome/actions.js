@@ -2,11 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { scoped } from "@/lib/account-scope";
 import { runDashboardAction, toFormError } from "@/lib/actions/dashboard";
 import { requireAccount } from "@/lib/auth";
 import { LIST_SIZES, LIST_SOURCES, OTHER_LIST_SOURCE, findFreeSlug, needsOnboarding } from "@/lib/onboarding";
+import { OWN_DOMAIN_STEPS } from "@/lib/sender-rules";
 import { siteExtensions } from "@/lib/site-extensions";
+import { isObjectIdString } from "@/lib/validation";
 import Account from "@/models/Account";
+import Newsletter from "@/models/Newsletter";
 
 function readText(formData, key) {
 	return String(formData.get(key) ?? "").trim();
@@ -57,5 +61,16 @@ export async function dismissGetStarted() {
 		{ $set: { "onboarding.checklistDismissedAt": new Date() } }
 	);
 	revalidatePath("/", "layout");
+	return { ok: true };
+}
+
+// The own-domain helper of one of the account's newsletters, closed for the step it suggested (lib/sender-rules.js).
+// Kept on the newsletter so it stays closed on every device until the step changes. The helper hides itself as it
+// closes, so no page renders again.
+export async function dismissOwnDomainNudge(newsletterId, step) {
+	const id = String(newsletterId ?? "");
+	if (!isObjectIdString(id) || !OWN_DOMAIN_STEPS.includes(step)) return { error: "Couldn't close it" };
+	const { account } = await requireAccount();
+	await Newsletter.updateOne(scoped(account, { _id: id }), { $set: { "dismissedNudges.ownDomain": step } });
 	return { ok: true };
 }

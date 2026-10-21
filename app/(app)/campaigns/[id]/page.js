@@ -9,14 +9,15 @@ import { getArchiveUrls } from "@/lib/archive-hosts";
 import { findCampaignLinks } from "@/lib/campaign-links";
 import { getCampaignActivity, getCampaignComparison } from "@/lib/campaign-report";
 import { countNewContacts, countRemainingContacts, getSendVolumes, sendTimesPipeline } from "@/lib/campaign-queries";
-import { isSendingEnabled } from "@/lib/config";
+import { getSharedDomain, isSendingEnabled } from "@/lib/config";
 import { getPostalAddress } from "@/lib/postal-address";
 import { countAudience, countSegmentCards, findCampaignSegmentFilter, listLiveSegments } from "@/lib/segment-queries";
 import { compileSegment, describeSegment } from "@/lib/segments";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
 import { getPace } from "@/lib/send-spread";
 import { serialize } from "@/lib/serialize";
-import { loadSender } from "@/lib/sender";
+import { findAccountDomains, loadSender } from "@/lib/sender";
+import { getOwnDomainNudge, isOnSharedDomain, isOwnDomainNudgeShown } from "@/lib/sender-rules";
 import { siteExtensions } from "@/lib/site-extensions";
 import { TIME_ZONE_COOKIE, resolveTimeZone } from "@/lib/time-zone";
 import { countEmailsInFlight, getUsage } from "@/lib/usage";
@@ -77,13 +78,18 @@ export default async function CampaignPage({ params }) {
 	const segments = await listLiveSegments(account, newsletter._id);
 	const segment = campaign.segmentId ? segments.find(({ _id }) => _id.equals(campaign.segmentId)) : null;
 	const isSegmentDeleted = Boolean(campaign.segmentId && !segment);
-	const [audience, everyone, sender, sendTimes, volumes] = await Promise.all([
+	const [audience, everyone, sender, sendTimes, volumes, domains] = await Promise.all([
 		isSegmentDeleted ? { contacts: 0, neverMailed: 0 } : countAudience(account, newsletter._id, segment && compileSegment(segment)),
 		campaign.segmentId ? countSegmentCards(account, newsletter._id, []) : null,
 		loadSender(account, newsletter),
 		getSendTimes(campaign),
 		getSendVolumes(account),
+		findAccountDomains(account._id),
 	]);
+	const sharedDomain = getSharedDomain();
+	const domainNudge = getOwnDomainNudge({ fromEmail: newsletter.fromEmail, domains, sharedDomain });
+	// Without a plan there's no shared address yet, and adding a domain waits for one.
+	const isDomainNudgeShown = hasActiveSubscription(account) && isOwnDomainNudgeShown(domainNudge, newsletter);
 
 	return (
 		<FormCampaign
@@ -98,6 +104,8 @@ export default async function CampaignPage({ params }) {
 			}))}
 			isSegmentDeleted={isSegmentDeleted}
 			senderProblem={sender.problem ?? null}
+			isSharedSender={isOnSharedDomain(newsletter.fromEmail, sharedDomain)}
+			domainNudge={isDomainNudgeShown ? domainNudge : null}
 			isSendingEnabled={isSendingEnabled()}
 			testEmail={user.email}
 			sendTimes={sendTimes}

@@ -11,6 +11,7 @@ import CookieTimezone from "@/components/CookieTimezone";
 import HeaderPage from "@/components/HeaderPage";
 import ListLegend from "@/components/ListLegend";
 import ListStats from "@/components/ListStats";
+import NoticeOwnDomain from "@/components/NoticeOwnDomain";
 import SkeletonCampaigns from "@/components/SkeletonCampaigns";
 import { SkeletonSends, SkeletonStats, SkeletonSubscribers } from "@/components/SkeletonOverview";
 import StateEmpty from "@/components/StateEmpty";
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { hasActiveSubscription } from "@/lib/account-state";
 import { requireAccount } from "@/lib/auth";
 import { getSendVolumes, listNewsletterCampaigns } from "@/lib/campaign-queries";
+import { getSharedDomain } from "@/lib/config";
 import { formatNumber, formatSigned } from "@/lib/format";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { getEmailStats, getHourlySends, getSubscriberHistory } from "@/lib/overview-data";
@@ -26,6 +28,8 @@ import { PERIOD_DAYS } from "@/lib/overview-series";
 import { getAccountPlan } from "@/lib/plans";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
 import { getPace, getWarmup } from "@/lib/send-spread";
+import { findAccountDomains } from "@/lib/sender";
+import { getOwnDomainNudge, isOwnDomainNudgeShown } from "@/lib/sender-rules";
 import { TIME_ZONE_COOKIE, resolveTimeZone, timeZoneLabel } from "@/lib/time-zone";
 import { getUsage, hasWelcomeEmailsOn } from "@/lib/usage";
 import { cn } from "@/lib/utils";
@@ -48,6 +52,11 @@ export default async function OverviewPage({ searchParams }) {
 	const hasPlan = hasActiveSubscription(account);
 	const pace = hasPlan && getWarmup(account) ? getPace(account, await getSendVolumes(account)) : null;
 	const isWelcomePaused = usage.welcomeEmailsPaused && (await hasWelcomeEmailsOn(accountId));
+	// With a plan only: until then there's no shared address, and adding a domain waits for one.
+	const domainNudge =
+		selected && hasPlan
+			? getOwnDomainNudge({ fromEmail: selected.fromEmail, domains: await findAccountDomains(accountId), sharedDomain: getSharedDomain() })
+			: null;
 
 	return (
 		<>
@@ -62,6 +71,14 @@ export default async function OverviewPage({ searchParams }) {
 					<section style={{ "--stagger": 1 }} className="animate-enter">
 						<CardWarmup pace={pace} />
 					</section>
+				)}
+				{isOwnDomainNudgeShown(domainNudge, selected) && (
+					<NoticeOwnDomain
+						variant="card"
+						nudge={domainNudge}
+						newsletter={{ _id: selectedId, name: selected.name }}
+						stagger={1}
+					/>
 				)}
 				{selected ? (
 					<>

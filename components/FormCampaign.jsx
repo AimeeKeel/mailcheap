@@ -68,6 +68,8 @@ export default function FormCampaign({
 	segments,
 	isSegmentDeleted,
 	senderProblem,
+	isSharedSender = false,
+	domainNudge = null,
 	isSendingEnabled,
 	testEmail,
 	sendTimes,
@@ -136,6 +138,7 @@ export default function FormCampaign({
 		newsletter,
 		rendered,
 		senderProblem,
+		isSharedSender,
 		isSendingEnabled,
 		planProblem,
 	});
@@ -456,6 +459,7 @@ export default function FormCampaign({
 						onPublishToChange={changePublishTo}
 						isChangingPublishTo={isChangingPublishTo}
 						websiteHref={getCheckFix({ id: "website" }, { newsletterId: newsletter._id })?.href}
+						domainNudge={domainNudge}
 					/>
 				</section>
 			</div>
