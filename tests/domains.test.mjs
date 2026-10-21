@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getSenderPath } from "../lib/newsletters.js";
 import { activate, addVerifiedDomain, as, callApi, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
-import { cnames } from "./stubs/dns-check.mjs";
+import { cnames, txts } from "./stubs/dns-check.mjs";
 import { published } from "./stubs/qstash.mjs";
 import { calls, sent, state } from "./stubs/ses.mjs";
 import { dnsRecords } from "./stubs/dns-broker.mjs";
@@ -343,6 +343,25 @@ describe("own domains", () => {
 			host: "bounce.mail",
 			value: "10 feedback-smtp.us-east-1.amazonses.com",
 		});
+	});
+
+	test("the Domains page folds a domain's records under one line once every one of them is found", async () => {
+		const user = await customer("folded-records@example.com", "folded-records");
+		txts.set("_dmarc.folded-records.com", [["v=DMARC1; p=none;"]]);
+		await addVerifiedDomain(user, "folded-records.com");
+		await addVerifiedDomain(user, "open-records.com");
+		const cards = findAll(renderPage(await as(user, () => m.domainsPage.default())), ({ type }) => type === "section");
+		const card = (domain) => cards.find((section) => textOf(section).startsWith(domain));
+
+		const [folded] = findAll(card("folded-records.com"), ({ type }) => type === "details");
+		assert.ok(folded, "every record found");
+		assert.equal(folded.props.open, undefined, "closed until it's opened");
+		assert.match(textOf(findAll(folded, ({ type }) => type === "summary")), /^DNS records/);
+		assert.equal(findAll(folded, ({ type }) => type === "table").length, 4, "each record is still there, with its Copy buttons");
+
+		const open = card("open-records.com");
+		assert.equal(findAll(open, ({ type }) => type === "details").length, 0, "without DMARC, its records stay out");
+		assert.equal(findAll(open, ({ type }) => type === "table").length, 4);
 	});
 
 	test("the Domains page switches the newsletter to a verified domain, with the same checks as its settings", async () => {

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Check, ChevronRight, Mail } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, ChevronRight, Mail } from "lucide-react";
 import ButtonCheckDomain from "@/components/ButtonCheckDomain";
 import ButtonCopy from "@/components/ButtonCopy";
 import DialogRemoveDomain from "@/components/DialogRemoveDomain";
@@ -182,24 +182,10 @@ function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, s
 	const setup = getDomainSetup(domain, { cnameTarget });
 	const fullNameExample = setup.flatMap(({ records }) => records).find(({ host, name }) => host !== name)?.name;
 	const id = String(domain._id);
-	return (
-		<section style={{ "--stagger": stagger }} className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
-			<div className="flex flex-wrap items-center justify-between gap-3 p-4">
-				<div className="flex min-w-0 items-center gap-3">
-					<div className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted">
-						<ImageFavicon domain={rootDomain(domain.domain)} size={20} />
-					</div>
-					<div className="min-w-0">
-						<p className="truncate font-medium">{domain.domain}</p>
-						<TextStatus {...summary} className="text-xs" />
-					</div>
-				</div>
-				<div className="flex items-center gap-1">
-					<ButtonCheckDomain id={id} hasArchiveHost={Boolean(cnameTarget)} />
-					<DialogRemoveDomain id={id} domain={domain.domain} hasArchiveHost={Boolean(cnameTarget)} />
-				</div>
-			</div>
-			{current && <RowsSender domain={domain} newsletters={newsletters} current={current} sharedDomain={sharedDomain} />}
+	// Once every record is found, they fold under one line, so sending from the domain is what the card is about.
+	const isSetUp = domain.verified && setup.every(({ status }) => status.tone === "good");
+	const records = (
+		<>
 			<ol className="divide-y divide-border/60 border-t border-border/60">
 				{setup.map((step) => (
 					<li key={step.key} className="flex flex-col gap-3 px-4 py-4">
@@ -218,6 +204,43 @@ function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, s
 				<p className="border-t border-border/60 px-4 py-3 text-xs text-pretty text-muted-foreground">
 					If your DNS provider asks for the full name, use <span className="font-mono wrap-anywhere">{fullNameExample}</span>
 				</p>
+			)}
+		</>
+	);
+	return (
+		<section style={{ "--stagger": stagger }} className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
+			<div className="flex flex-wrap items-center justify-between gap-3 p-4">
+				<div className="flex min-w-0 items-center gap-3">
+					<div className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted">
+						<ImageFavicon domain={rootDomain(domain.domain)} size={20} />
+					</div>
+					<div className="min-w-0">
+						<p className="truncate font-medium">{domain.domain}</p>
+						<TextStatus {...summary} className="text-xs" />
+					</div>
+				</div>
+				<div className="flex items-center gap-1">
+					<ButtonCheckDomain id={id} hasArchiveHost={Boolean(cnameTarget)} />
+					<DialogRemoveDomain id={id} domain={domain.domain} hasArchiveHost={Boolean(cnameTarget)} />
+				</div>
+			</div>
+			{current && <RowsSender domain={domain} newsletters={newsletters} current={current} sharedDomain={sharedDomain} />}
+			{isSetUp ? (
+				<details className="group/records disclosure">
+					<summary className="flex cursor-pointer list-none items-center justify-between gap-3 border-t border-border/60 px-4 py-3 text-sm text-muted-foreground outline-none transition-colors duration-150 select-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
+						DNS records
+						<span className="flex items-center gap-3">
+							<TextStatus label="All found" tone="good" className="text-xs" />
+							<ChevronDown
+								aria-hidden="true"
+								className="size-4 transition-[rotate] duration-250 ease-drawer group-open/records:rotate-180 motion-reduce:transition-none"
+							/>
+						</span>
+					</summary>
+					{records}
+				</details>
+			) : (
+				records
 			)}
 		</section>
 	);

@@ -344,6 +344,35 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   }
 }
 
+/* A <details> that opens and folds by its height where the browser animates to an auto height (interpolate-size), and
+   at once elsewhere. Without motion, it only fades. */
+@utility disclosure {
+  interpolate-size: allow-keywords;
+
+  &::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow-y: clip;
+    transition:
+      block-size 250ms var(--ease-drawer),
+      opacity 200ms ease,
+      content-visibility 250ms allow-discrete;
+  }
+
+  &[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::details-content {
+      transition:
+        opacity 200ms ease,
+        content-visibility 200ms allow-discrete;
+    }
+  }
+}
+
 /* A tap the way screen recordings show one (HintTap in DialogPreviewEmail), every 3s: the fingertip lands, presses in
    150ms and lifts, and a ripple spreads from where it pressed. Without motion, the fingertip only fades in and out. */
 @keyframes tap-finger {

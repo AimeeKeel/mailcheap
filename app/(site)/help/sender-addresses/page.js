@@ -63,7 +63,9 @@ export default function SenderAddressesPage() {
 			</ol>
 			<p>
 				Copy each host and value with its button. If your DNS provider asks for the full name instead of the host, the page shows it.
-				DNS changes can take up to a few hours: click Check to look again, and each record shows when it&apos;s found.
+				DNS changes can take up to a few hours: click Check to look again, and each record shows when it&apos;s found. Once
+				they&apos;re all found, the records fold under DNS records, so sending from the domain comes first: click it to see
+				them again.
 			</p>
 
 			<h2 id="switch">Switching to your domain</h2>
