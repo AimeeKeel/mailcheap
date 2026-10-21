@@ -43,8 +43,9 @@ const contactSchema = new mongoose.Schema(
 		undeliverableAt: { type: Date },
 		undeliverableReason: { type: String, enum: ["no-mail-server", "spam-domain"] },
 		undeliverableFrom: { type: String },
-		// The last status changes made by hand or through the API and MCP (lib/contact-status.js): who made each, from
-		// where, and whether it came with the person's consent.
+		// Every change of its status, whatever made it (lib/status-changes.js), oldest first. Changes by hand or through the
+		// API and MCP keep who made them and whether they came with the person's consent; a signup again keeps its source,
+		// and the list hygiene its reason.
 		statusChanges: {
 			type: [
 				{
@@ -57,6 +58,8 @@ const contactSchema = new mongoose.Schema(
 					apiKeyId: { type: mongoose.Schema.Types.ObjectId },
 					connectionId: { type: String },
 					consent: { type: Boolean },
+					source: { type: String },
+					reason: { type: String },
 				},
 			],
 			default: undefined,

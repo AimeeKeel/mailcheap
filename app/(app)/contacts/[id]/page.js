@@ -302,8 +302,9 @@ function RowLink({ href, children }) {
 	);
 }
 
-// One step of the timeline: its icon on the line, what happened, when, and anything under it.
-function ItemTimeline({ icon: Icon, tone = "muted", title, at, timeZone, children }) {
+// One step of the timeline: its icon on the line, what happened, when, and anything under it. before: for a step whose
+// date wasn't recorded, the date of the step that revealed it.
+function ItemTimeline({ icon: Icon, tone = "muted", title, at, before = null, timeZone, children }) {
 	return (
 		<li className="group relative flex gap-3 pb-5 last:pb-0">
 			<span aria-hidden="true" className="absolute top-8 bottom-0 left-3.5 w-px -translate-x-1/2 bg-border group-last:hidden" />
@@ -313,13 +314,19 @@ function ItemTimeline({ icon: Icon, tone = "muted", title, at, timeZone, childre
 			<div className="flex min-w-0 flex-1 flex-col gap-1.5 pt-1">
 				<div className="flex items-baseline justify-between gap-3">
 					<p className="min-w-0 text-sm text-pretty">{title}</p>
-					<time
-						dateTime={new Date(at).toISOString()}
-						title={formatDateTime(at, timeZone)}
-						className="shrink-0 text-xs text-muted-foreground tabular-nums"
-					>
-						{formatDay(at, timeZone)}
-					</time>
+					{before ? (
+						<span title="Its date wasn't recorded" className="shrink-0 text-xs text-muted-foreground tabular-nums">
+							Before {formatDay(before, timeZone)}
+						</span>
+					) : (
+						<time
+							dateTime={new Date(at).toISOString()}
+							title={formatDateTime(at, timeZone)}
+							className="shrink-0 text-xs text-muted-foreground tabular-nums"
+						>
+							{formatDay(at, timeZone)}
+						</time>
+					)}
 				</div>
 				{children}
 			</div>
@@ -383,11 +390,11 @@ function ItemEmail({ email, contact, contactFields, timeZone }) {
 	);
 }
 
-// Joining, confirming, a status change or the list hygiene stopping them (lib/contact-history.js).
+// Joining, or a change of status, whatever made it (lib/contact-history.js).
 function ItemEvent({ event, source, timeZone }) {
 	const { icon, tone, title, note } = describeEvent(event, source);
 	return (
-		<ItemTimeline icon={icon} tone={tone} title={title} at={event.at} timeZone={timeZone}>
+		<ItemTimeline icon={icon} tone={tone} title={title} at={event.at} before={event.before} timeZone={timeZone}>
 			{note && <p className="text-xs text-muted-foreground">{note}</p>}
 		</ItemTimeline>
 	);
@@ -440,14 +447,17 @@ function describeEvent(event, contact) {
 	if (event.type === "confirmed") return { icon: MailCheck, tone: "green", title: "Confirmed their subscription" };
 	if (event.type === "unsubscribed") return { icon: UserX, tone: "red", title: "Unsubscribed" };
 	if (event.type === "stopped") return { icon: Ban, tone: "red", title: STOP_TITLES[event.reason] ?? STOP_TITLES.default };
-	const change = STATUS_CHANGES[event.to] ?? STATUS_CHANGES.active;
-	const title = event.from === "unsubscribed" && event.to === "active" ? "Resubscribed" : change.title;
-	return {
-		icon: change.icon,
-		tone: change.tone,
-		title: [title, ACTORS[event.via]].filter(Boolean).join(" "),
-		note: event.consent ? "They asked for it" : null,
-	};
+	return describeStatusChange(event);
+}
+
+// A change of status, by what made it (lib/status-changes.js). One without a cause went unrecorded.
+function describeStatusChange({ from, to, via, source, reason, consent }) {
+	const look = CHANGE_LOOKS[to] ?? CHANGE_LOOKS.active;
+	if (!via) return { ...look, title: UNRECORDED_TITLES[to] ?? look.title };
+	const cause = CAUSES[via]?.({ to, source, reason });
+	if (cause) return { ...look, ...cause };
+	const title = from === "unsubscribed" && to === "active" ? "Resubscribed" : look.title;
+	return { ...look, title: [title, ACTORS[via]].filter(Boolean).join(" "), note: consent ? "They asked for it" : null };
 }
 
 function describeJoin(contact) {
@@ -575,10 +585,14 @@ const SOURCE_LABELS = {
 	api: "API",
 };
 
-const STATUS_CHANGES = {
+// Each status's icon, and its title for a change someone made.
+const CHANGE_LOOKS = {
 	active: { title: "Marked active", icon: UserCheck, tone: "green" },
+	pending: { title: "Waiting to confirm", icon: UserPlus, tone: "green" },
 	dormant: { title: "Marked dormant", icon: Moon, tone: "amber" },
 	unsubscribed: { title: "Unsubscribed", icon: UserX, tone: "red" },
+	bounced: { title: "Bounced", icon: Ban, tone: "red" },
+	complained: { title: "Marked an email as spam", icon: ShieldAlert, tone: "red" },
 };
 
 const ACTORS = { dashboard: "by you", api: "through the API", mcp: "by an AI assistant" };
@@ -587,4 +601,47 @@ const STOP_TITLES = {
 	"no-mail-server": "Stopped: their domain can't receive email",
 	"spam-domain": "Stopped: their domain is a known spam domain",
 	default: "Stopped: their address can't receive email",
+};
+
+const BACK_TITLES = {
+	"no-mail-server": "Back: their domain can receive email again",
+	"spam-domain": "Back: their domain is off the spam list",
+	admin: "Back: their address can receive email after all",
+	default: "Back: their domain is fine again",
+};
+
+const SIGNUP_PLACES = { website: " on your website", embed: " with the form on your site" };
+
+// The changes nobody made by hand, by what made them.
+const CAUSES = {
+	signup: ({ to, source }) => ({
+		icon: UserPlus,
+		tone: "green",
+		title: `Signed up again${SIGNUP_PLACES[source] ?? (source ? " through the API" : "")}`,
+		note: to === "pending" ? "Waiting for them to confirm" : null,
+	}),
+	confirmation: () => ({ icon: MailCheck, title: "Confirmed their subscription" }),
+	keep: () => ({ title: "Asked to keep getting your emails", note: "In the last-chance email" }),
+	cleanup: () => ({ title: "Went dormant", note: "No answer to the last-chance email" }),
+	link: () => ({ title: "Unsubscribed", note: "With the link in your email" }),
+	"mail-app": () => ({ title: "Unsubscribed", note: "With their mail app's unsubscribe button" }),
+	provider: () => ({ title: "Unsubscribed", note: "Through their email provider" }),
+	bounce: () => ({ icon: MailX, title: "Stopped: their address bounced" }),
+	complaint: () => ({ title: "Stopped: they marked an email as spam" }),
+	undeliverable: () => ({ title: STOP_TITLES.default }),
+	hygiene: ({ to, reason }) => ({
+		title: to === "bounced" ? (STOP_TITLES[reason] ?? STOP_TITLES.default) : (BACK_TITLES[reason] ?? BACK_TITLES.default),
+	}),
+	admin: () => ({ title: BACK_TITLES.admin }),
+	import: () => ({ note: "From an import" }),
+};
+
+// A change only a later one revealed, when nothing recorded what made it.
+const UNRECORDED_TITLES = {
+	active: "Back to active",
+	pending: "Signed up again",
+	dormant: "Went dormant",
+	unsubscribed: "Unsubscribed",
+	bounced: "Bounced",
+	complained: "Marked an email as spam",
 };

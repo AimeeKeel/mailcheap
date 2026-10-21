@@ -72,6 +72,13 @@ export default function ContactsPage() {
 				button deletes them. Click an issue to open its report, a tag to list everyone who has it, and a segment to list its contacts.
 			</p>
 			<p>
+				Their activity keeps every change of their status, each with what made it: the unsubscribe link in your email or their mail
+				app&apos;s button, a bounce or a spam complaint, the list cleanup or their answer to its last-chance email, signing up again,
+				confirming, an import, or you. So someone who unsubscribed and came back shows both, in order. Before October 21, 2026, only
+				the changes made by hand or through the API were kept: when one of those reveals an earlier change, that change shows dated
+				before it.
+			</p>
+			<p>
 				Their country comes from where they signed up or confirmed, or for someone who joined another way, like an import, where
 				they first clicked a link in your emails. MailCheap reads it from their connection, then keeps the country only, never the
 				address. Opens never give one, since inboxes load images through their own servers.

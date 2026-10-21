@@ -40,19 +40,59 @@ describe("a contact's history", () => {
 		assert.deepEqual(stopped[0], { type: "stopped", at: later(10), reason: "no-mail-server" });
 	});
 
-	test("a change made by hand or an import isn't told twice by the dates it moved", () => {
+	test("a recorded change isn't told twice by the dates it moved", () => {
 		const madeActive = getContactHistory({
 			createdAt: added,
 			confirmedAt: later(5),
 			statusChanges: [{ from: "pending", to: "active", at: later(5), via: "dashboard", consent: true }],
 		});
 		assert.deepEqual(madeActive.map(({ type }) => type), ["status", "added"]);
-		assert.deepEqual(madeActive[0], { type: "status", at: later(5), from: "pending", to: "active", via: "dashboard", consent: true });
-		const unsubscribed = { unsubscribedAt: later(600), statusChanges: [{ from: "active", to: "unsubscribed", at: later(600), via: "api" }] };
+		assert.deepEqual(madeActive[0], { type: "status", at: later(5), from: "pending", to: "active", via: "dashboard", consent: true, source: null, reason: null });
+		const unsubscribed = { unsubscribedAt: later(600), statusChanges: [{ from: "active", to: "unsubscribed", at: later(600), via: "link" }] };
 		assert.deepEqual(types(unsubscribed), ["status", "added"]);
-		const resubscribed = { subscribedAt: later(9000), statusChanges: [{ from: "unsubscribed", to: "active", at: later(9000), via: "mcp", consent: true }] };
-		assert.deepEqual(types(resubscribed), ["status", "added"]);
 		assert.deepEqual(types({ subscribedAt: new Date("2024-01-01"), unsubscribedAt: later(0) }), ["added"], "imported as unsubscribed");
+	});
+
+	test("every recorded change shows in order, and one only a later change reveals shows dated before it", () => {
+		const roundTrip = getContactHistory({
+			createdAt: added,
+			subscribedAt: later(9000),
+			statusChanges: [
+				{ from: "active", to: "unsubscribed", at: later(600), via: "link" },
+				{ from: "unsubscribed", to: "active", at: later(9000), via: "dashboard", consent: true },
+			],
+		});
+		assert.deepEqual(roundTrip.map(({ to, via }) => [to, via]), [["active", "dashboard"], ["unsubscribed", "link"], [undefined, undefined]]);
+		assert.ok(roundTrip.every(({ before }) => !before), "nothing missing");
+
+		const revealed = getContactHistory({
+			createdAt: added,
+			source: "dashboard",
+			subscribedAt: later(9000),
+			statusChanges: [{ from: "unsubscribed", to: "active", at: later(9000), via: "dashboard", consent: true }],
+		});
+		assert.deepEqual(revealed.map(({ type, to }) => [type, to ?? null]), [["status", "active"], ["status", "unsubscribed"], ["added", null]]);
+		assert.deepEqual([revealed[1].via, revealed[1].before], [null, later(9000)], "an unsubscribe nobody recorded, before the resubscribe");
+		assert.ok(revealed[1].at < later(9000) && revealed[1].at > added);
+
+		const kept = getContactHistory({
+			createdAt: added,
+			statusChanges: [{ from: "dormant", to: "active", at: later(60), via: "keep" }],
+		});
+		assert.deepEqual(kept.map(({ to }) => to), ["active", "dormant", undefined], "went dormant before answering the last-chance email");
+
+		const imported = getContactHistory({
+			createdAt: added,
+			source: "import",
+			statusChanges: [{ from: "unsubscribed", to: "active", at: later(60), via: "dashboard", consent: true }],
+		});
+		assert.equal(imported.length, 2, "an import can bring a contact in unsubscribed");
+		const legacy = getContactHistory({
+			createdAt: added,
+			unsubscribedAt: later(600),
+			statusChanges: [{ from: "unsubscribed", to: "bounced", at: later(700), via: "bounce" }],
+		});
+		assert.deepEqual(legacy.map(({ type }) => type), ["status", "unsubscribed", "added"], "a kept date explains it");
 	});
 });
 
@@ -71,14 +111,22 @@ describe("the contact page and its data", () => {
 			clickRoute: await import("../app/c/[token]/route.js"),
 			embed: await import("../app/api/embed/[id]/route.js"),
 			contactPage: await import("../app/(app)/contacts/[id]/page.js"),
+			campaigns: await import("../app/(app)/campaigns/actions.js"),
+			keep: await import("../app/keep/actions.js"),
+			unsubscribeRoute: await import("../app/api/unsubscribe/route.js"),
 			confirmation: await import("../lib/confirmation.js"),
+			events: await import("../lib/email-events.js"),
 			formTokens: await import("../lib/signup-form-token.js"),
+			globalSuppressions: await import("../lib/global-suppressions.js"),
+			lastChance: await import("../lib/last-chance.js"),
 			linkStats: await import("../lib/link-stats.js"),
+			unsubscribeTokens: await import("../lib/unsubscribe.js"),
 			TooltipProvider: (await import("../components/ui/tooltip.jsx")).TooltipProvider,
 			Campaign: (await import("../models/Campaign.js")).default,
 			CampaignLink: (await import("../models/CampaignLink.js")).default,
 			Contact: (await import("../models/Contact.js")).default,
 			Message: (await import("../models/Message.js")).default,
+			Newsletter: (await import("../models/Newsletter.js")).default,
 			Segment: (await import("../models/Segment.js")).default,
 		};
 	});
@@ -293,5 +341,124 @@ describe("the contact page and its data", () => {
 		const all = await renderPage(user, String(contact._id), { emails: "60" });
 		assert.ok(all.includes("Issue 0<") && all.includes("Signed up on your website"));
 		assert.ok(!all.includes("?emails=90"));
+	});
+
+	// The unsubscribe link's page posts its form; a mail app's button posts One-Click (RFC 8058).
+	function unsubscribeFrom(user, contact, { isPage }) {
+		const token = m.unsubscribeTokens.createUnsubscribeToken({ contactId: contact._id, newsletterId: user.newsletterId });
+		const body = new FormData();
+		body.set(isPage ? "source" : "List-Unsubscribe", isPage ? "page" : "One-Click");
+		return m.unsubscribeRoute.POST(new Request(`http://localhost:3000/api/unsubscribe?token=${token}`, { method: "POST", body }));
+	}
+
+	function emailTo(user, contact) {
+		return m.Message.create({
+			accountId: user.accountId,
+			newsletterId: user.newsletterId,
+			contactId: contact._id,
+			kind: "campaign",
+			email: contact.email,
+			status: "delivered",
+			sentAt: new Date(Date.now() - HOUR),
+		});
+	}
+
+	function providerEvent(user, message, fields) {
+		return m.events.handleEmailEvent({ accountId: String(user.accountId), messageId: String(message._id), email: message.email, emails: [message.email], ...fields });
+	}
+
+	test("a contact who leaves and comes back, every way, keeps each step in order, and its page shows them all", async () => {
+		const user = await customer("history-steps@example.com");
+		const signUp = () => visit("FR", () => m.archive.subscribe(null, form({ newsletter: user.slug, email: "steps@example.org" })));
+		await signUp();
+		const contact = await findContact(user, "steps@example.org");
+		const id = String(contact._id);
+
+		await unsubscribeFrom(user, contact, { isPage: true });
+		await signUp();
+		await unsubscribeFrom(user, contact, { isPage: false });
+		assert.deepEqual(await as(user, () => m.contacts.setContactStatus(id, "active", true)), { ok: true });
+		assert.deepEqual(await as(user, () => m.contacts.setContactStatus(id, "dormant")), { ok: true });
+		const keepToken = m.lastChance.createKeepToken({ contactId: contact._id, newsletterId: user.newsletterId });
+		assert.deepEqual(await visit("FR", () => m.keep.keepSending(keepToken)), { ok: true });
+		await providerEvent(user, await emailTo(user, contact), { type: "unsubscribe" });
+
+		const { statusChanges } = await findContact(user, "steps@example.org");
+		assert.deepEqual(
+			statusChanges.map(({ from, to, via }) => [from, to, via]),
+			[
+				["active", "unsubscribed", "link"],
+				["unsubscribed", "active", "signup"],
+				["active", "unsubscribed", "mail-app"],
+				["unsubscribed", "active", "dashboard"],
+				["active", "dormant", "dashboard"],
+				["dormant", "active", "keep"],
+				["active", "unsubscribed", "provider"],
+			]
+		);
+		assert.equal(statusChanges[1].source, "website");
+		assert.equal(statusChanges[3].consent, true);
+
+		const html = await renderPage(user, id);
+		for (const text of [
+			"With the link in your email",
+			"Signed up again on your website",
+			"unsubscribe button",
+			"Resubscribed by you",
+			"Marked dormant by you",
+			"Asked to keep getting your emails",
+			"Through their email provider",
+		]) {
+			assert.ok(html.includes(text), text);
+		}
+		assert.ok(!html.includes("Before "), "nothing is missing");
+
+		const api = await callApi("GET", `/api/v1/contacts/${id}`, { key: user.key });
+		assert.deepEqual(api.body.statusChanges.map(({ via }) => via), ["link", "signup", "mail-app", "dashboard", "dashboard", "keep", "provider"]);
+		assert.equal(api.body.statusChanges[3].consent, true);
+	});
+
+	test("bounces, complaints, imports, the list cleanup and the never-email list keep their changes too", async () => {
+		const user = await customer("history-causes@example.com", { fromEmail: "hello@history-causes.mailcheapmail.com" });
+		const make = (email, fields = {}) =>
+			m.Contact.create({ accountId: user.accountId, newsletterId: user.newsletterId, email, status: "active", source: "website", ...fields });
+		const [bounced, complained, imported, skipped] = await Promise.all(
+			["bounced@example.org", "complained@example.org", "imported@example.org", "skipped@example.org"].map((email) => make(email))
+		);
+		await providerEvent(user, await emailTo(user, bounced), { type: "bounce", bounce: "hard", reason: "550 5.1.1 user unknown" });
+		await providerEvent(user, await emailTo(user, complained), { type: "complaint" });
+		const result = await as(user, () =>
+			m.contacts.importContacts({ newsletterId: user.newsletterId, consent: true, rows: [{ email: "imported@example.org", status: "unsubscribed" }] })
+		);
+		assert.ok(result.importId, JSON.stringify(result));
+		await m.globalSuppressions.markUndeliverable(user.accountId, skipped._id);
+		await m.globalSuppressions.suppressGlobally({ emails: ["skipped@example.org"], reason: "bounce" });
+		assert.deepEqual(await m.globalSuppressions.removeGlobalSuppression("skipped@example.org"), { restored: 1 });
+
+		const changes = async (contact) =>
+			(await m.Contact.findOne({ accountId: user.accountId, _id: contact._id }).lean()).statusChanges.map(({ from, to, via }) => [from, to, via]);
+		assert.deepEqual(await changes(bounced), [["active", "bounced", "bounce"]]);
+		assert.deepEqual(await changes(complained), [["active", "complained", "complaint"]]);
+		assert.deepEqual(await changes(imported), [["active", "unsubscribed", "import"]]);
+		assert.deepEqual(await changes(skipped), [
+			["active", "bounced", "undeliverable"],
+			["bounced", "active", "admin"],
+		]);
+
+		await m.Newsletter.updateOne({ accountId: user.accountId, _id: user.newsletterId }, { $set: { cleanup: { enabled: true } } });
+		const quiet = await make("quiet@example.org", {
+			subscribedAt: new Date(Date.now() - 100 * 24 * HOUR),
+			lastChanceAt: new Date(Date.now() - 20 * 24 * HOUR),
+			ignoredIssues: 6,
+		});
+		const url = await as(user, () => catchRedirect(m.campaigns.createCampaign(user.newsletterId)));
+		const campaignId = url.split("/").at(-1);
+		await as(user, () => m.campaigns.saveCampaign(campaignId, { subject: "Issue", previewText: "This week", body: "<p>Hello</p>" }));
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(campaignId, {})), { ok: true });
+		assert.deepEqual(await changes(quiet), [["active", "dormant", "cleanup"]], "no answer to the last-chance email");
+
+		const html = await renderPage(user, String(bounced._id));
+		assert.ok(html.includes("Stopped: their address bounced"));
+		assert.ok((await renderPage(user, String(quiet._id))).includes("No answer to the last-chance email"));
 	});
 });
