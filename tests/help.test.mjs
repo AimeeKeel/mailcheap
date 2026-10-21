@@ -51,10 +51,11 @@ test("every link into the help center opens one of its articles, at a section th
 	const links = [];
 	for (const file of files) {
 		const source = await readSource(file);
-		for (const [, slug, section] of source.matchAll(/<LinkHelp article="([^"]+)"(?: section="([^"]+)")?/g)) links.push({ file, slug, section });
+		for (const [, slug, section] of source.matchAll(/<LinkHelp\s+article="([^"]+)"(?:\s+section="([^"]+)")?/g)) links.push({ file, slug, section });
 		for (const [, slug, section] of source.matchAll(/getHelpHref\("([^"]+)"(?:, "([^"]+)")?\)/g)) links.push({ file, slug, section });
 	}
 	assert.ok(links.some(({ file }) => file === "components/NoticePace.jsx"), "the pace notice links to its articles");
+	assert.ok(links.some(({ file, slug, section }) => file === "components/LinkHelpFields.jsx" && slug === "contacts" && section === "fields"));
 	for (const { file, slug, section } of links) {
 		assert.ok(
 			HELP_ARTICLES.some((article) => article.slug === slug),
@@ -62,6 +63,11 @@ test("every link into the help center opens one of its articles, at a section th
 		);
 		if (section) assert.ok((await readSource(`${HELP_DIR}/${slug}/page.js`)).includes(`id="${section}"`), `${file} links to /help/${slug}#${section}`);
 	}
+});
+
+test("every list of the contact fields, and the dialog that makes them, links to how to add them", async () => {
+	const lists = ["components/MenuSlash.jsx", "components/FormCampaign.jsx", "components/PickerReader.jsx", "components/DialogContactFields.jsx"];
+	for (const file of lists) assert.match(await readSource(file), /<LinkHelpFields\b/, file);
 });
 
 test("every link from the help center and the docs into the dashboard opens a page the app has", async () => {

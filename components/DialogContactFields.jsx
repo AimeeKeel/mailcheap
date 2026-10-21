@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { createContactField, deleteContactField } from "@/app/(app)/contacts/actions";
+import LinkHelpFields from "@/components/LinkHelpFields";
 import { useContactOptions } from "@/components/ProviderContactOptions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +23,7 @@ export default function DialogContactFields({ isOpen, onOpenChange, onCloseAutoF
 				<DialogHeader>
 					<DialogTitle>Contact fields</DialogTitle>
 					<DialogDescription>Every contact has a first name and tags. Add your own, like a company or a birthday.</DialogDescription>
+					<LinkHelpFields className="self-start text-sm" />
 				</DialogHeader>
 
 				{fields.length > 0 && (

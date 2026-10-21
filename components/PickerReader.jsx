@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { ArrowUpRight, BookOpen, Check, ChevronDown, Loader2, Search, UserRound } from "lucide-react";
+import { Check, ChevronDown, Loader2, Search, UserRound } from "lucide-react";
 import { findPreviewContacts } from "@/app/(app)/campaigns/actions";
 import AvatarContact from "@/components/AvatarContact";
-import LinkHelp from "@/components/LinkHelp";
+import LinkHelpFields from "@/components/LinkHelpFields";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SAMPLE_FIRST_NAME } from "@/lib/merge-tags";
 import { cn } from "@/lib/utils";
@@ -170,11 +170,7 @@ export default function PickerReader({ newsletterId, contact, onChange }) {
 						</p>
 					)}
 				</div>
-				<LinkHelp article="contacts" section="fields" className="flex shrink-0 items-center gap-2 border-t px-3 py-2.5 text-xs font-normal whitespace-normal text-muted-foreground no-underline outline-none hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground">
-					<BookOpen aria-hidden="true" className="size-3.5 shrink-0" />
-					<span className="flex-1">How to add names and fields to contacts</span>
-					<ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0" />
-				</LinkHelp>
+				<LinkHelpFields className="shrink-0 border-t px-3 py-2.5 focus-visible:bg-muted focus-visible:text-foreground" />
 			</PopoverContent>
 		</Popover>
 	);

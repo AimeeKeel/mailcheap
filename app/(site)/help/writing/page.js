@@ -29,7 +29,10 @@ export default function WritingPage() {
 				</li>
 				<li>
 					<strong>Slash commands</strong>: type <kbd>/</kbd> on an empty line for text, three heading sizes, bulleted and numbered
-					lists, a picture, a quote, a divider or a box, which sets a block apart on a gray background.
+					lists, a picture, a quote, a divider or a box, which sets a block apart on a gray background. Contact fields, at the bottom
+					of the menu, opens the <Link href={getHelpHref("writing", "first-name")}>first name and your own fields</Link>. From the
+					keyboard, <kbd>→</kbd> opens it and <kbd>←</kbd> comes back. Keep typing after the slash to find any of them, like{" "}
+					<kbd>/quote</kbd> or a field&apos;s name.
 				</li>
 				<li>
 					<strong>Links</strong>: select text, press <kbd>⌘ K</kbd> (<kbd>Ctrl K</kbd> on Windows) and paste the address. An email
@@ -68,17 +71,20 @@ export default function WritingPage() {
 
 			<h2 id="first-name">Names and fields in your emails</h2>
 			<p>
-				<code>{"{{first_name}}"}</code> shows each reader&apos;s first name. Type <kbd>/</kbd> and pick First name, or click the person
-				icon at the end of the subject. Both add <code>{"{{first_name|there}}"}</code>: the word after the bar is what readers without a
-				first name see, so &ldquo;Hi {"{{first_name|there}}"}&rdquo; reads &ldquo;Hi Jane&rdquo; or &ldquo;Hi there&rdquo;. Change it,
-				or remove it with the bar to show nothing.
+				<code>{"{{first_name}}"}</code> shows each reader&apos;s first name. Type <kbd>/</kbd>, pick Contact fields at the bottom of
+				the menu, then First name, or click the person icon at the end of the subject. Both add <code>{"{{first_name|there}}"}</code>: the word
+				after the bar is what readers without a first name see, so &ldquo;Hi {"{{first_name|there}}"}&rdquo; reads &ldquo;Hi
+				Jane&rdquo; or &ldquo;Hi there&rdquo;. Change it, or remove it with the bar to show nothing.
 			</p>
 			<p>
 				Your own <Link href={getHelpHref("contacts", "fields")}>contact fields</Link> work the same way, by their key:{" "}
-				<code>{"{{birthday}}"}</code>, <code>{"{{plan|free}}"}</code>. Type <kbd>/</kbd> and pick the field, or click the person icon
-				in the subject, which lists your fields once you have some. Text shows as it is, a number with its thousands separated
-				(1,250), and a date written out (April 12, 1991). A reader without a value sees the fallback, or nothing. Tags never show
-				in emails: they&apos;re for picking who gets an issue, with <Link href={getHelpHref("contacts", "segments")}>segments</Link>.
+				<code>{"{{birthday}}"}</code>, <code>{"{{plan|free}}"}</code>. Contact fields lists them after the first name, and typing a
+				field&apos;s name after the slash, like <kbd>/birthday</kbd>, finds it right away. The person icon in the subject lists them
+				too, once you have some. Both lists end on How to add names and fields to contacts, which opens{" "}
+				<Link href={getHelpHref("contacts", "fields")}>Adding fields, step by step</Link>. Text shows as it is, a number with its
+				thousands separated (1,250), and a date written out (April 12, 1991). A reader without a value sees the fallback, or
+				nothing. Tags never show in emails: they&apos;re for picking who gets an issue, with{" "}
+				<Link href={getHelpHref("contacts", "segments")}>segments</Link>.
 			</p>
 			<p>
 				Names and fields work in the subject, the preview text and the content, and in your welcome and confirmation emails. Your

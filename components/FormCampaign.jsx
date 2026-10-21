@@ -26,6 +26,7 @@ import DialogDiscardCampaign from "@/components/DialogDiscardCampaign";
 import DialogPreviewEmail from "@/components/DialogPreviewEmail";
 import EditorRich from "@/components/EditorRich";
 import IconField from "@/components/IconField";
+import LinkHelpFields from "@/components/LinkHelpFields";
 import ListChecks from "@/components/ListChecks";
 import NavSteps from "@/components/NavSteps";
 import NoticeSendProblems, { ListSendProblems } from "@/components/NoticeSendProblems";
@@ -522,8 +523,8 @@ function TitleCampaign({ title, newsletter, status }) {
 	);
 }
 
-// The subject's merge tags: the first name in one click, or with the account's own fields, a menu of them all. Once one
-// is picked, the subject keeps the focus onInsert gives it, instead of the menu's button.
+// The subject's merge tags: the first name in one click, or with the account's own fields, a menu of them all that ends
+// on how to add them. Once one is picked, the subject keeps the focus onInsert gives it, instead of the menu's button.
 function ButtonInsertTag({ contactFields, onInsert }) {
 	const isInsertingRef = useRef(false);
 	const className = "-mr-2 shrink-0 text-muted-foreground";
@@ -584,6 +585,10 @@ function ButtonInsertTag({ contactFields, onInsert }) {
 						<span className="min-w-0 truncate">{field.label}</span>
 					</DropdownMenuItem>
 				))}
+				<DropdownMenuSeparator />
+				<DropdownMenuItem asChild className="gap-2 text-xs text-muted-foreground">
+					<LinkHelpFields />
+				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

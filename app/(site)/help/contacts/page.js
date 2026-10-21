@@ -162,10 +162,10 @@ export default function ContactsPage() {
 					</ul>
 				</li>
 				<li>
-					<strong>Use them in your emails.</strong> In an issue, type <kbd>/</kbd> and pick a field, or click the person icon at the
-					end of the subject, to add its tag, like <code>{"{{birthday}}"}</code>. Each reader gets their own value, and a fallback
-					after a bar, like <code>{"{{plan|free}}"}</code>, shows for readers without one. Pick a contact in the preview to see the
-					email with their values. <Link href={getHelpHref("writing", "first-name")}>Names and fields in your emails</Link>
+					<strong>Use them in your emails.</strong> In an issue, type <kbd>/</kbd> and pick a field under Contact fields, or click the
+					person icon at the end of the subject, to add its tag, like <code>{"{{birthday}}"}</code>. Each reader gets their own
+					value, and a fallback after a bar, like <code>{"{{plan|free}}"}</code>, shows for readers without one. Pick a contact in
+					the preview to see the email with their values. <Link href={getHelpHref("writing", "first-name")}>Names and fields in your emails</Link>
 				</li>
 				<li>
 					<strong>Pick readers by them.</strong> <a href="#segments">Segments</a> pick contacts by their fields, like everyone on the
