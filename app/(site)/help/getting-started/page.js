@@ -92,6 +92,10 @@ export default function GettingStartedPage() {
 				The button next to MailCheap at its top folds it down to its icons, for more room on the page: point at an icon for its
 				name, and click the MailCheap logo to open the sidebar again. Your browser remembers your choice.
 			</p>
+			<p>
+				While you edit a campaign, the sidebar folds down on its own to leave the issue more room, and the logo still opens it.
+				The next page shows it open again, unless you folded it yourself.
+			</p>
 		</ArticleHelp>
 	);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import LogoWordmark from "@/components/LogoWordmark";
@@ -9,25 +9,35 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SIDEBAR_COLLAPSED, SIDEBAR_COOKIE, SIDEBAR_EXPANDED } from "@/lib/sidebar";
 import { readCookie } from "@/lib/storage";
+import { isSidebarCollapsed, readSidebarVisit, subscribeToSidebarVisits } from "@/lib/use-collapsed-sidebar";
 
 // The sidebar from md up: the logo, the newsletter menu (switcher), the navigation and the account menu (footer). The
-// button next to the logo folds it down to its icons (app/globals.css), and folded, the logo opens it again.
-// isCollapsed: the cookie the layout was rendered from.
+// button next to the logo folds it down to its icons (app/globals.css), and folded, the logo opens it again. The
+// campaign editor folds it too while it's open, unless it's opened there (lib/use-collapsed-sidebar.js); the next page
+// shows it as it was left. isCollapsed: the cookie the layout was rendered from.
 export default function NavSidebar({ isCollapsed: isSavedCollapsed, isAdmin, switcher, footer }) {
-	const isCollapsed = useSyncExternalStore(subscribe, readIsCollapsed, () => isSavedCollapsed);
+	const isLeftCollapsed = useSyncExternalStore(subscribe, readIsCollapsed, () => isSavedCollapsed);
+	const visit = useSyncExternalStore(subscribeToSidebarVisits, readSidebarVisit, () => 0);
+	const [expandedVisit, setExpandedVisit] = useState(0);
+	const isCollapsed = isSidebarCollapsed({ isLeftCollapsed, visit, expandedVisit });
 	const collapseRef = useRef(null);
 	const expandRef = useRef(null);
 
 	// From the keyboard, focus goes on to the button that takes the other one's place.
 	function toggle(event) {
 		const hasFocusRing = event.currentTarget.matches(":focus-visible");
-		flushSync(() => saveIsCollapsed(!isCollapsed));
+		flushSync(() => {
+			if (isCollapsed) setExpandedVisit(visit);
+			saveIsCollapsed(!isCollapsed);
+		});
 		if (hasFocusRing) (isCollapsed ? collapseRef : expandRef).current.focus();
 	}
 
 	return (
 		<aside
 			data-sidebar-collapsed={isCollapsed ? "" : undefined}
+			data-sidebar-expanded={visit !== 0 && !isCollapsed ? "" : undefined}
+			data-sidebar=""
 			className="sticky top-(--plan-bar-height) hidden h-[calc(100dvh-var(--plan-bar-height))] w-(--sidebar-width) shrink-0 flex-col border-r border-border/60 pb-4 transition-[width] duration-250 ease-drawer motion-reduce:transition-none md:flex"
 		>
 			{/* A window too short for the sidebar scrolls its navigation, and the account menu stays at the bottom. */}

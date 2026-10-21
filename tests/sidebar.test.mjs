@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { describe, test } from "node:test";
 import { createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -6,6 +7,7 @@ import LayoutDashboard from "../components/LayoutDashboard.jsx";
 import NavSidebar from "../components/NavSidebar.jsx";
 import { TooltipProvider } from "../components/ui/tooltip.jsx";
 import { SIDEBAR_COLLAPSED, SIDEBAR_COOKIE, SIDEBAR_EXPANDED } from "../lib/sidebar.js";
+import { isSidebarCollapsed, openSidebarVisit, readSidebarVisit, subscribeToSidebarVisits } from "../lib/use-collapsed-sidebar.js";
 import { runWithRequest } from "./stubs/next-headers.mjs";
 
 // The dashboard's sidebar folds down to its icons from the button next to the logo, and opens again from the logo. The
@@ -67,5 +69,47 @@ describe("the dashboard's sidebar", () => {
 		const inert = findInertPart(html);
 		assert.ok(inert.includes('href="/"') && inert.includes('aria-label="Collapse sidebar"'), "the logo's link and the collapse button wait");
 		for (const label of LINKS) assert.match(html, new RegExp(`<span class="sidebar-label">${label}</span>`), label);
+	});
+
+	test("the campaign editor folds it while it's open, until it's opened there, and the next page shows it as it was left", () => {
+		const collapsed = (isLeftCollapsed, visit, expandedVisit) => isSidebarCollapsed({ isLeftCollapsed, visit, expandedVisit });
+		assert.equal(collapsed(false, 0, 0), false, "outside the editor, as it was left");
+		assert.equal(collapsed(true, 0, 3), true);
+		assert.equal(collapsed(false, 3, 0), true, "the editor folds it");
+		assert.equal(collapsed(false, 3, 2), true, "opened during an earlier visit, it folds again");
+		assert.equal(collapsed(false, 3, 3), false, "opened during this one, it stays open");
+		assert.equal(collapsed(true, 3, 3), true, "folded by hand there, it stays folded on the next page too");
+
+		const seen = [];
+		const unsubscribe = subscribeToSidebarVisits(() => seen.push(readSidebarVisit()));
+		const endFirst = openSidebarVisit();
+		const first = readSidebarVisit();
+		endFirst();
+		const endSecond = openSidebarVisit();
+		const second = readSidebarVisit();
+		endFirst();
+		assert.equal(readSidebarVisit(), second, "a visit that ended doesn't end the next one");
+		endSecond();
+		unsubscribe();
+		assert.ok(first > 0 && second > first);
+		assert.deepEqual(seen, [first, 0, second, 0]);
+	});
+
+	test("the editor has it folded from the first paint, before any script runs, and takes the whole width", async () => {
+		const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+		assert.match(css, /html:has\(\[data-campaign-steps\]\):not\(:has\(\[data-sidebar-expanded\]\)\) \{\s*--sidebar-width: calc\(4\.25rem \+ 1px\);/);
+		assert.match(
+			css,
+			/@custom-variant sidebar-collapsed \(&:where\(\[data-sidebar-collapsed\] \*, :root:has\(\[data-campaign-steps\]\):not\(:has\(\[data-sidebar-expanded\]\)\) \[data-sidebar\] \*\)\);/,
+			"only what's in the sidebar: the phone's top bar and menu share its components"
+		);
+		assert.match(css, /@utility sidebar-label \{[^}]*@variant sidebar-collapsed \{/);
+		assert.match(renderSidebar(false), /<aside data-sidebar=""/);
+
+		const editor = await readFile(new URL("../components/FormCampaign.jsx", import.meta.url), "utf8");
+		assert.match(editor, /<div ref=\{rootRef\} data-campaign-steps/);
+		assert.match(editor, /\n\tuseCollapsedSidebar\(\);\n/);
+		const layout = await readFile(new URL("../components/LayoutDashboard.jsx", import.meta.url), "utf8");
+		assert.match(layout, /has-\[\[data-campaign-steps\]\]:max-w-none/);
 	});
 });

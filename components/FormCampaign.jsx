@@ -48,6 +48,7 @@ import { readPublishTo } from "@/lib/publish-to";
 import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
 import { SEGMENT_DELETED } from "@/lib/segments";
 import { toast } from "@/lib/toast";
+import { useCollapsedSidebar } from "@/lib/use-collapsed-sidebar";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { usePaywall } from "@/lib/use-paywall";
 import { useSendCampaign } from "@/lib/use-send-campaign";
@@ -94,6 +95,7 @@ export default function FormCampaign({
 	});
 	const save = useCallback((snapshot) => saveCampaign(campaign._id, { ...snapshot, format }), [campaign._id, format]);
 	const { isDirty, isSaving, savedAt, error, flush } = useAutosave(values, save);
+	useCollapsedSidebar();
 	const [isTesting, startTesting] = useTransition();
 	const [isWorking, startWorking] = useTransition();
 	const [publishTo, setPublishTo] = useState(() => readPublishTo(campaign));
@@ -297,20 +299,24 @@ export default function FormCampaign({
 		},
 	}[step];
 
-	// Saved shows for a moment after each save, first in every step so a step change doesn't replay it.
+	// Saved shows for a moment after each save, first in every step so a step change doesn't replay it. In the top bar its
+	// place stays taken: where the bar is tight, the steps would shift each time it shows.
 	function renderStatus() {
 		if (error) return <ButtonRetrySave error={error} onRetry={flush} />;
-		const saved = <StatusSaved savedAt={savedAt} />;
+		const saved = (
+			<span className="lg:flex lg:min-w-14 lg:justify-end">
+				<StatusSaved savedAt={savedAt} />
+			</span>
+		);
 		if (step !== "write") return saved;
 		return (
 			<>
 				{saved}
 				<Button
-					variant="ghost"
-					size="sm"
+					variant="outline"
 					onClick={(event) => openPreview(event.currentTarget)}
 					aria-label="Preview"
-					className="text-muted-foreground max-sm:px-2"
+					className="max-sm:w-9 max-sm:px-0"
 				>
 					<Eye data-icon="inline-start" />
 					<span className="max-sm:sr-only">Preview</span>
@@ -339,7 +345,7 @@ export default function FormCampaign({
 				{title}
 				{menu}
 			</div>
-			<header className="sticky top-[calc(var(--plan-bar-height)+3.5rem)] z-20 -mx-4 mb-6 border-b border-border/60 bg-background/80 px-4 py-2 backdrop-blur-md md:top-(--plan-bar-height) md:-mx-10 md:px-10 lg:-mt-10 lg:mb-8 lg:grid lg:h-16 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-6 lg:border-b-0 lg:py-0">
+			<header className="sticky top-[calc(var(--plan-bar-height)+3.5rem)] z-20 -mx-4 mb-6 border-b border-border/60 bg-background/80 px-4 py-2 backdrop-blur-md md:top-(--plan-bar-height) md:-mx-10 md:px-10 lg:-mt-10 lg:mb-8 lg:grid lg:h-16 lg:grid-cols-[minmax(0,1fr)_auto_minmax(max-content,1fr)] lg:items-center lg:gap-6 lg:border-b-0 lg:py-0">
 				<div className="hidden min-w-0 lg:flex">{title}</div>
 				<NavSteps step={step} onStep={goToStep} />
 				<div className="hidden min-w-0 items-center justify-end gap-2 lg:flex">
@@ -604,7 +610,7 @@ function BarAction({ action, status, onEdit, side = "bottom", className }) {
 	}
 
 	return (
-		<div className={cn("flex min-w-0 items-center gap-3", className)}>
+		<div className={cn("flex min-w-0 items-center gap-2", className)}>
 			<div className="flex min-w-0 flex-1 items-center justify-start gap-1 lg:justify-end">{status}</div>
 			<Popover open={isOpen && problems.length > 0} onOpenChange={setIsOpen}>
 				<PopoverAnchor asChild>

@@ -50,7 +50,8 @@ export default async function LayoutDashboard({ user, account, isAdmin, children
 					footer={menu}
 				/>
 				<main className="min-w-0 flex-1">
-					<div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-10 md:py-10">{children}</div>
+					{/* The campaign editor takes the whole width: its top bar runs across it, and it centers its own column. */}
+					<div className="mx-auto w-full max-w-6xl px-4 py-6 has-[[data-campaign-steps]]:max-w-none md:px-10 md:py-10">{children}</div>
 				</main>
 			</div>
 			{isGetStartedOpen(account) && (
