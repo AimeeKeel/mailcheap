@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import LogoWordmark from "@/components/LogoWordmark";
 import NavLinks from "@/components/NavLinks";
+import TooltipSidebar from "@/components/TooltipSidebar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SIDEBAR_COLLAPSED, SIDEBAR_COOKIE, SIDEBAR_EXPANDED } from "@/lib/sidebar";
@@ -121,25 +122,18 @@ export default function NavSidebar({ isCollapsed: isSavedCollapsed, isAdmin, swi
 							</div>
 						</div>
 						{/* Folded, the logo opens the sidebar. Focused, this button's background, opaque, takes the logo's place. */}
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<button
-									ref={expandRef}
-									type="button"
-									onClick={toggle}
-									inert={!isFolded}
-									aria-label="Expand sidebar"
-									className="group/expand absolute inset-y-0 left-0 grid w-11 place-items-center rounded-lg outline-none transition-[background-color,box-shadow] duration-150 focus-visible:bg-[color-mix(in_oklab,var(--muted)_60%,var(--background))] focus-visible:ring-3 focus-visible:ring-ring/50"
-								>
-									<PanelLeftOpen className="size-4 opacity-0 transition-opacity duration-150 group-focus-visible/expand:opacity-100" />
-								</button>
-							</TooltipTrigger>
-							{isFolded && (
-								<TooltipContent side="right" sideOffset={8}>
-									Expand sidebar
-								</TooltipContent>
-							)}
-						</Tooltip>
+						<TooltipSidebar isFolded={isFolded} label="Expand sidebar">
+							<button
+								ref={expandRef}
+								type="button"
+								onClick={toggle}
+								inert={!isFolded}
+								aria-label="Expand sidebar"
+								className="group/expand absolute inset-y-0 left-0 grid w-11 place-items-center rounded-lg outline-none transition-[background-color,box-shadow] duration-150 focus-visible:bg-[color-mix(in_oklab,var(--muted)_60%,var(--background))] focus-visible:ring-3 focus-visible:ring-ring/50"
+							>
+								<PanelLeftOpen className="size-4 opacity-0 transition-opacity duration-150 group-focus-visible/expand:opacity-100" />
+							</button>
+						</TooltipSidebar>
 					</div>
 					<div className="mb-5">{switcher}</div>
 					<NavLinks isAdmin={isAdmin} isFolded={isFolded} />

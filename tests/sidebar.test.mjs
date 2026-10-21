@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { describe, test } from "node:test";
 import { createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -112,5 +112,19 @@ describe("the dashboard's sidebar", () => {
 		assert.match(editor, /\n\tuseCollapsedSidebar\(\);\n/);
 		const layout = await readFile(new URL("../components/LayoutDashboard.jsx", import.meta.url), "utf8");
 		assert.match(layout, /has-\[\[data-campaign-steps\]\]:max-w-none/);
+	});
+
+	test("a tooltip opens only while the sidebar is folded, so none opened over its labels shows up once it folds", async () => {
+		const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+		const tooltip = await read("components/TooltipSidebar.jsx");
+		assert.match(tooltip, /<Tooltip open=\{isOpen\} onOpenChange=\{\(open\) => setIsOpen\(open && isFolded\)\}>/);
+		assert.match(tooltip, /if \(isOpen && !isFolded\) setIsOpen\(false\);/, "unfolding closes it");
+		assert.match(await read("components/NavLinks.jsx"), /<TooltipSidebar isFolded=\{isFolded\} label=\{label\}>/);
+		assert.match(await read("components/NavSidebar.jsx"), /<TooltipSidebar isFolded=\{isFolded\} label="Expand sidebar">/);
+
+		for (const name of await readdir(new URL("../components/", import.meta.url), { recursive: true })) {
+			if (!name.endsWith(".jsx")) continue;
+			assert.doesNotMatch(await read(`components/${name}`), /&& \(?\s*<TooltipContent/, `${name}: a tooltip opened without its content has nothing to close it`);
+		}
 	});
 });

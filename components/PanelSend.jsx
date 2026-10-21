@@ -154,16 +154,12 @@ export default function PanelSend({
 
 			{isEmail && (
 				<CardSettings title="Who gets it" stagger={1}>
-					<RowCampaign label="From">
-						{domainNudge ? (
-							<span className="flex min-w-0 flex-col gap-1 py-2.5">
-								<span className="truncate text-sm">{from}</span>
-								<NoticeOwnDomain nudge={domainNudge} newsletter={newsletter} />
-							</span>
-						) : (
+					<div>
+						<RowCampaign label="From">
 							<span className="truncate text-sm">{from}</span>
-						)}
-					</RowCampaign>
+						</RowCampaign>
+						{domainNudge && <NoticeOwnDomain nudge={domainNudge} newsletter={newsletter} className="mx-3 mb-3" />}
+					</div>
 					<RowCampaign label="To">
 						<span className="flex min-w-0 items-center gap-3">
 							<MenuAudience
