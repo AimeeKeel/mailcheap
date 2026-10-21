@@ -128,16 +128,17 @@ export default function SendingPage() {
 
 			<h2 id="report">The report</h2>
 			<p>
-				Each sent campaign&apos;s page shows how many emails were delivered, opened and clicked, and how many bounced, were marked as
-				spam or led to an unsubscribe, with results by inbox provider, like Gmail or Outlook. It counts the list cleanup&apos;s
-				last-chance emails apart. Opens are an estimate: some inboxes load every email&apos;s images on their own, which counts as an
-				open, and some readers block images. Preview, at the top, shows the email as it went out, in a mail app or in Gmail on a
-				phone, as a sample reader or as one of your contacts.
+				Each sent campaign&apos;s page shows how many emails were delivered, opened and clicked, and how many bounced or led to an
+				unsubscribe, with results by inbox provider, like Gmail or Outlook, where you also see how many were marked as spam. It
+				counts the list cleanup&apos;s last-chance emails apart. Opens are an estimate: some inboxes load every email&apos;s images
+				on their own, which counts as an open, and some readers block images. Preview, at the top, shows the email as it went out,
+				in a mail app or in Gmail on a phone, as a sample reader or as one of your contacts.
 			</p>
 			<p>
-				Opened and clicked compare with the newsletter&apos;s last {COMPARED_ISSUES} issues, for example &ldquo;+4.2 pts vs
-				avg&rdquo;: all their opens or clicks over all the contacts they reached, so a small send barely counts. The comparison
-				shows once a send is {TIMELINE_HOURS / 24} days old, since its opens keep coming until then.
+				Opened and clicked compare with the newsletter&apos;s last {COMPARED_ISSUES} issues: &ldquo;+4.2% vs avg&rdquo; when an
+				issue opened at 46.2% and they averaged 42%. Their average is all their opens or clicks over all the contacts they
+				reached, so a small send barely counts. The comparison shows once a send is {TIMELINE_HOURS / 24} days old, since its
+				opens keep coming until then.
 			</p>
 			<p>
 				A chart shows the opens and clicks hour by hour for the first {TIMELINE_HOURS / 24} days after sending, in your timezone:
@@ -145,9 +146,9 @@ export default function SendingPage() {
 				opens after those {TIMELINE_HOURS / 24} days are counted under the chart.
 			</p>
 			<p>
-				Its links come next, most clicked first: how many contacts clicked each one, every click, and each link&apos;s share of the
-				contacts who clicked a link. A link counts once whatever its tracking parameters, like utm_source, and link scanners and the
-				unsubscribe link don&apos;t count. An issue sent before clicks were counted per link only has the clicks since then. The
+				Its links come next, each with its website&apos;s icon, most clicked first: how many contacts clicked each one, every click,
+				and each link&apos;s share of the contacts who clicked a link. A link counts once whatever its tracking parameters, like
+				utm_source, and link scanners and the unsubscribe link don&apos;t count. An issue sent before clicks were counted per link only has the clicks since then. The
 				API and AI assistants get the same numbers, the comparison and the hours included, in the campaign&apos;s report.
 			</p>
 			<p>

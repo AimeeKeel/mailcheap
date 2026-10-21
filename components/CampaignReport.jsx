@@ -24,7 +24,7 @@ import { isPlanLimitCode } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
 import { REVIEW_CODES, REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
-import { formatCount, formatDate, formatNumber, formatPoints, formatRate, formatWeekdayHour } from "@/lib/format";
+import { formatCount, formatDate, formatNumber, formatRate, formatRateChange, formatWeekdayHour } from "@/lib/format";
 import { rateTone } from "@/lib/health";
 import { toPreviewFrame } from "@/lib/email-preview";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
@@ -210,6 +210,7 @@ export default function CampaignReport({
 						timeZone={timeZone}
 						links={links}
 						providers={providers}
+						showComplaints={readOnly}
 					/>
 				)}
 
@@ -233,45 +234,35 @@ export default function CampaignReport({
 	);
 }
 
-// What the email did: delivery, opens and clicks against the newsletter's average, problems, opens over time, links and
-// inboxes.
-function EmailResults({ campaign, newsletter, html, stats, reached, comparison, timeline, timeZone, links, providers }) {
+// What the email did: delivery, opens and clicks against the newsletter's average, bounces and unsubscribes, opens over
+// time, links and inboxes. Complaints are for an admin to act on: the owner, who can't, sees them by inbox.
+function EmailResults({ campaign, newsletter, html, stats, reached, comparison, timeline, timeZone, links, providers, showComplaints }) {
+	const cards = [
+		{ label: "Delivered", value: formatRate(stats.delivered, stats.sent), detail: formatNumber(stats.delivered) },
+		{ label: "Opened", value: formatRate(stats.opened, reached), detail: formatNumber(stats.opened), change: toChange(comparison, "opened") },
+		{ label: "Clicked", value: formatRate(stats.clicked, reached), detail: formatNumber(stats.clicked), change: toChange(comparison, "clicked") },
+		{
+			label: "Bounced",
+			value: formatQuietRate(stats.bounced, stats.sent, 2),
+			detail: formatNumber(stats.bounced),
+			tone: rateTone(stats.bounced, stats.sent, LIMITS.pause.bounceRate),
+		},
+		showComplaints && {
+			label: "Complaints",
+			value: formatQuietRate(stats.complained, stats.sent, 3),
+			detail: formatNumber(stats.complained),
+			tone: rateTone(stats.complained, stats.sent, LIMITS.pause.complaintRate),
+		},
+		{ label: "Unsubscribed", value: formatQuietRate(stats.unsubscribed, reached, 2), detail: formatNumber(stats.unsubscribed) },
+	].filter(Boolean);
+	const isRow = cards.length === 5;
+
 	return (
 		<>
-			<div className="flex flex-col gap-3">
-				<div style={{ "--stagger": 1 }} className="grid grid-cols-3 gap-3 animate-enter">
-					<CardStat label="Delivered" value={formatRate(stats.delivered, stats.sent)} detail={formatNumber(stats.delivered)} />
-					<CardStat
-						label="Opened"
-						value={formatRate(stats.opened, reached)}
-						detail={formatNumber(stats.opened)}
-						change={toChange(comparison, "opened")}
-					/>
-					<CardStat
-						label="Clicked"
-						value={formatRate(stats.clicked, reached)}
-						detail={formatNumber(stats.clicked)}
-						change={toChange(comparison, "clicked")}
-					/>
-				</div>
-				<ListStatsQuiet
-					style={{ "--stagger": 2 }}
-					items={[
-						{
-							label: "Bounced",
-							value: formatQuietRate(stats.bounced, stats.sent, 2),
-							count: stats.bounced,
-							tone: rateTone(stats.bounced, stats.sent, LIMITS.pause.bounceRate),
-						},
-						{
-							label: "Complaints",
-							value: formatQuietRate(stats.complained, stats.sent, 3),
-							count: stats.complained,
-							tone: rateTone(stats.complained, stats.sent, LIMITS.pause.complaintRate),
-						},
-						{ label: "Unsubscribed", value: formatQuietRate(stats.unsubscribed, reached, 2), count: stats.unsubscribed },
-					]}
-				/>
+			<div style={{ "--stagger": 1 }} className={cn("grid grid-cols-2 gap-3 animate-enter", isRow ? "lg:grid-cols-5" : "sm:grid-cols-3")}>
+				{cards.map((card, index) => (
+					<CardStat key={card.label} {...card} className={isRow && index === 0 ? "max-lg:col-span-2" : undefined} />
+				))}
 			</div>
 
 			{timeline && reached > 0 && <CardOpens style={{ "--stagger": 3 }} timeline={timeline} timeZone={timeZone} />}
@@ -282,23 +273,6 @@ function EmailResults({ campaign, newsletter, html, stats, reached, comparison, 
 
 			{providers.length > 0 && <TableProviders style={{ "--stagger": 5 }} providers={providers} />}
 		</>
-	);
-}
-
-// Bounces, complaints and unsubscribes in one quiet row: colored only once they near the level that pauses sends.
-function ListStatsQuiet({ items, style }) {
-	return (
-		<dl style={style} className="grid grid-cols-3 divide-x divide-border rounded-xl bg-card shadow-border animate-enter">
-			{items.map(({ label, value, count, tone }) => (
-				<div key={label} className="flex min-w-0 flex-col gap-0.5 px-4 py-3">
-					<dt className="truncate text-xs text-muted-foreground">{label}</dt>
-					<dd className="flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
-						<span className={cn("text-sm font-medium", QUIET_TONES[tone])}>{value ?? <TextEmpty />}</span>
-						<span className="text-xs text-muted-foreground">{formatNumber(count)}</span>
-					</dd>
-				</div>
-			))}
-		</dl>
 	);
 }
 
@@ -411,16 +385,16 @@ function TextPauseReason({ reason, code, canUpgrade }) {
 	);
 }
 
-// "+4.2 pts vs avg" against the newsletter's earlier issues, with their average in the title; none while the send's
-// own opens still come in.
+// "+4.2% vs avg" against the newsletter's earlier issues, with their average in the title; none while the send's own
+// opens still come in.
 function toChange(comparison, key) {
 	if (!comparison?.isSettled) return null;
-	const points = formatPoints(comparison.delta[key]);
-	if (!points) return null;
+	const text = formatRateChange(comparison.delta[key]);
+	if (!text) return null;
 	return {
-		text: points,
+		text,
 		note: "vs avg",
-		isUp: points.startsWith("+"),
+		isUp: text.startsWith("+"),
 		title: `Your last ${formatCount(comparison.issues, "issue")} averaged ${(comparison.average[key] * 100).toFixed(1)}%`,
 	};
 }
@@ -440,9 +414,3 @@ function formatSpan(hours) {
 function hoursUntil(date) {
 	return Math.max(1, Math.ceil((new Date(date).getTime() - Date.now()) / 3_600_000));
 }
-
-const QUIET_TONES = {
-	default: "",
-	warn: "text-amber-600 dark:text-amber-400",
-	bad: "text-red-600 dark:text-red-400",
-};

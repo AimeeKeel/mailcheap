@@ -137,7 +137,7 @@ test("the opening line says the one thing worth saying, from facts only", () => 
 	);
 	assert.equal(
 		line("weekly", subscribersOf({ joined: 1, total: 600, bars: [...busyEarlier, { joined: 1, left: 0 }] }), { isSettled: true, comparison: { opened: 0.031 } }),
-		"Your last issue opened 3.1 points above your average."
+		"Your last issue opened 3.1% above your average."
 	);
 	assert.equal(
 		line("weekly", subscribersOf({ joined: 1, total: 600, bars: [...busyEarlier, { joined: 1, left: 0 }] }), { isSettled: false, comparison: { opened: 0.031 } }),
@@ -258,8 +258,9 @@ test("the summary email escapes what customers write and carries a one-click uns
 	});
 	assert.ok(email.html.includes('href="https://mail.example.com/summary/token"'), "the footer changes or stops it");
 	assert.ok(email.html.includes("1 Main St, Singapore"));
-	assert.ok(email.html.includes("+5.0 pts vs your average"));
-	assert.ok(email.html.includes("−1.0 pts vs your average"));
+	assert.ok(email.html.includes("+5.0% vs your average"));
+	assert.ok(email.html.includes("−1.0% vs your average"));
+	assert.ok(!/\bpts\b/.test(email.html), "changes read in percent, never in points");
 	assert.ok(email.html.includes("Share this week"));
 	assert.match(email.text, /Subscribers: 1,210 \(\+0\.9%\)/);
 	assert.match(email.text, /New: 12 \(\+4 vs last week\)/);
