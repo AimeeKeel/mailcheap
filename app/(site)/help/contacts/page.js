@@ -59,10 +59,33 @@ export default function ContactsPage() {
 				</tbody>
 			</table>
 
+			<h2 id="contact-page">Each contact&apos;s page</h2>
+			<p>
+				Click a contact on the <LinkApp href="/contacts">Contacts page</LinkApp> to open their page. At the top: their picture, name
+				and address, their status, their country, their inbox and when they subscribed. Below, how many of your emails they got and
+				the share they opened and clicked, then their activity, newest first: every email they got, when they opened it, the links
+				they clicked, and when they signed up, confirmed or changed status. On the side are their first name, fields and tags, where
+				they came from, the segments they&apos;re in and your other newsletters they&apos;re on.
+			</p>
+			<p>
+				Change their status from the badge under their name. Edit details changes their first name, fields and tags, and the trash
+				button deletes them. Click an issue to open its report, a tag to list everyone who has it, and a segment to list its contacts.
+			</p>
+			<p>
+				Their country comes from where they signed up or confirmed, or for someone who joined another way, like an import, where
+				they first clicked a link in your emails. MailCheap reads it from their connection, then keeps the country only, never the
+				address. Opens never give one, since inboxes load images through their own servers.
+				{!isCloud() && " On a self-hosted server, countries need Vercel, which names each visitor's country."}
+			</p>
+			<p>
+				Their picture is the one they set on Gravatar, if they did. Otherwise it shows their initial, over their company&apos;s logo
+				when their address is on its domain. Google doesn&apos;t share Gmail pictures with other apps.
+			</p>
+
 			<h2 id="details">First names, tags and fields</h2>
 			<p>
-				Besides an email address, each contact can have a first name, tags and values for your own fields. Open a contact&apos;s menu
-				and click Edit details to change them.
+				Besides an email address, each contact can have a first name, tags and values for your own fields. Click Edit details on
+				their page, or in their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>, to change them.
 			</p>
 			<ul>
 				<li>
@@ -70,14 +93,21 @@ export default function ContactsPage() {
 					<Link href={getHelpHref("writing", "first-name")}>Greeting readers by name</Link>
 				</li>
 				<li>
-					<strong>Tags</strong>: labels like vip or podcast, {MAX_TAGS} per contact at most. Tags are lowercase, up to {MAX_TAG_LENGTH}{" "}
-					characters, without commas. Tag lists everyone the page shows with its filters, or takes a tag off them.
+					<strong>Tags</strong>: labels a contact has or doesn&apos;t, like vip, podcast or customer, {MAX_TAGS} per contact at most.
+					Use them to sort people into groups: list everyone with a tag, or send to them through a segment. Tags are lowercase, up
+					to {MAX_TAG_LENGTH} characters, without commas. Tag lists everyone the page shows with its filters, or takes a tag off
+					them.
 				</li>
 				<li>
-					<strong>Fields</strong>: your own, like a last name, a birthday or a plan, as text, a number or a date,{" "}
-					{MAX_CONTACT_FIELDS} at most, shared by your newsletters. <a href="#fields">Adding fields, step by step</a>
+					<strong>Fields</strong>: your own questions with an answer for each contact, like a last name, a birthday or a plan, as
+					text, a number or a date, {MAX_CONTACT_FIELDS} at most, shared by your newsletters.{" "}
+					<a href="#fields">Adding fields, step by step</a>
 				</li>
 			</ul>
+			<p>
+				When the answer is yes or no, use a tag: is this person a customer? When it&apos;s a value that differs from one person to the
+				next, use a field: which company do they work at? Segments can pick contacts by both.
+			</p>
 			<p>
 				When someone signs up again, their first name and fields only fill in what&apos;s missing, and new tags are added to theirs.
 			</p>
@@ -98,8 +128,8 @@ export default function ContactsPage() {
 					<strong>Fill them in</strong>, whichever way suits you:
 					<ul>
 						<li>
-							<strong>By hand</strong>: open a contact&apos;s menu, at the end of their row, click Edit details, and type their first
-							name and a value for each field.
+							<strong>By hand</strong>: open a contact&apos;s page, or their menu at the end of their row, click Edit details, and
+							type their first name and a value for each field.
 						</li>
 						<li>
 							<strong>From a CSV file</strong>: import it from the <LinkApp href="/contacts">Contacts page</LinkApp>. Each column
@@ -170,7 +200,10 @@ export default function ContactsPage() {
 			</p>
 
 			<h2 id="actions">Changing a status, and deleting</h2>
-			<p>Each contact&apos;s menu, at the end of their row, has what applies to them:</p>
+			<p>
+				Each contact&apos;s menu, at the end of their row, has what applies to them, and so do the badge and the buttons at the top of
+				their page:
+			</p>
 			<ul>
 				<li>
 					<strong>Edit details</strong> changes their first name, tags and fields.

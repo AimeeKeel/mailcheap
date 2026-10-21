@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Moon, MoreHorizontal, Pencil, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
 import { deleteContact, setContactStatus } from "@/app/(app)/contacts/actions";
 import DialogContactDetails from "@/components/DialogContactDetails";
@@ -60,7 +61,7 @@ export default function MenuContact({ id, email, status, undeliverableReason, fi
 						size="icon-sm"
 						aria-label={`Actions for ${email}`}
 						disabled={isPending}
-						className="text-muted-foreground hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
+						className="relative z-10 text-muted-foreground hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
 					>
 						{isPending ? <Loader2 className="animate-spin" /> : <MoreHorizontal />}
 					</Button>
@@ -103,7 +104,7 @@ export default function MenuContact({ id, email, status, undeliverableReason, fi
 	);
 }
 
-function getChangeItem(from, to) {
+export function getChangeItem(from, to) {
 	if (to === "unsubscribed") return { label: "Unsubscribe", icon: UserX };
 	if (to === "dormant") return { label: "Mark as dormant", icon: Moon };
 	if (from === "unsubscribed") return { label: "Resubscribe…", icon: UserPlus };
@@ -111,7 +112,7 @@ function getChangeItem(from, to) {
 }
 
 // Before resubscribing someone, or making active someone who never clicked the confirmation email.
-function DialogConsentContact({ id, email, status, isOpen, onOpenChange }) {
+export function DialogConsentContact({ id, email, status, isOpen, onOpenChange }) {
 	const [formKey, setFormKey] = useState(0);
 
 	function changeOpen(open) {
@@ -179,7 +180,9 @@ function FormConsent({ id, email, status, onDone }) {
 	);
 }
 
-function DialogDeleteContact({ id, email, status, isOpen, onOpenChange }) {
+// redirectTo: where to go once it's deleted, from the contact's own page.
+export function DialogDeleteContact({ id, email, status, isOpen, onOpenChange, redirectTo }) {
+	const router = useRouter();
 	const [isDeleting, startDeleting] = useTransition();
 
 	function remove() {
@@ -188,6 +191,7 @@ function DialogDeleteContact({ id, email, status, isOpen, onOpenChange }) {
 			if (result?.error) return void toast.error(result.error);
 			onOpenChange(false);
 			toast.success("Contact deleted");
+			if (redirectTo) router.replace(redirectTo);
 		});
 	}
 

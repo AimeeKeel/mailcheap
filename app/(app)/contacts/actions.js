@@ -43,6 +43,7 @@ export async function addContact(_state, formData) {
 export async function setContactStatus(id, status, consent = false) {
 	const { failure } = await runDashboardAction("update_contact_status", { id: String(id), status, consent: consent === true });
 	revalidatePath("/contacts");
+	revalidatePath("/(app)/contacts/[id]", "page");
 	return failure ? toFormError(failure) : { ok: true };
 }
 
@@ -56,6 +57,7 @@ export async function updateContactDetails(id, { firstName, fields, tags } = {})
 	});
 	if (failure) return toFormError(failure);
 	revalidatePath("/contacts");
+	revalidatePath("/(app)/contacts/[id]", "page");
 	return { contact: output };
 }
 

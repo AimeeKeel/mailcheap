@@ -6,6 +6,7 @@ import { sendAlert } from "@/lib/alerts";
 import { isBotRequest } from "@/lib/bot-check";
 import { isSendingEnabled } from "@/lib/config";
 import { getSignupProblem, upsertContact } from "@/lib/contacts";
+import { readCountry } from "@/lib/countries";
 import { connectDb } from "@/lib/db";
 import { getInbox } from "@/lib/inbox-links";
 import { findSignupNewsletter } from "@/lib/public-newsletters";
@@ -27,7 +28,8 @@ export async function subscribe(_state, formData) {
 
 	// Before the rate limit, so a script doesn't use up the signups of the network it shares with readers.
 	if (await isBotRequest("signup")) return { error: "Couldn't sign you up. Try again in a minute." };
-	if (await isRateLimited({ ...PER_IP, key: getClientIp(await headers()) })) {
+	const requestHeaders = await headers();
+	if (await isRateLimited({ ...PER_IP, key: getClientIp(requestHeaders) })) {
 		return { error: "Too many signups from your network. Try again in a few minutes." };
 	}
 	const emailProblem = await getSignupProblem(email);
@@ -52,7 +54,13 @@ export async function subscribe(_state, formData) {
 		);
 	}
 
-	const { contact, created } = await upsertContact({ newsletter, email, source: "website", resubscribe: true });
+	const { contact, created } = await upsertContact({
+		newsletter,
+		email,
+		source: "website",
+		resubscribe: true,
+		country: readCountry(requestHeaders),
+	});
 	const isPending = contact.status === "pending";
 	if (isSendingEnabled() && (isPending || (created && contact.status === "active"))) {
 		const queue = isPending ? queueConfirmationEmail : queueWelcomeEmail;

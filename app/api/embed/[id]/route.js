@@ -5,6 +5,7 @@ import { isBotRequest } from "@/lib/bot-check";
 import { getAppSecret, getAppUrl } from "@/lib/config";
 import { cleanFirstName } from "@/lib/contact-fields";
 import { getSignupProblem } from "@/lib/contacts";
+import { readCountry } from "@/lib/countries";
 import { connectDb } from "@/lib/db";
 import { findSignupNewsletter } from "@/lib/public-newsletters";
 import { getClientIp, isRateLimited } from "@/lib/rate-limit";
@@ -115,6 +116,7 @@ export async function POST(request, { params }) {
 		source: EMBED_SOURCE,
 		sourceDomain: host,
 		firstName: settings.askFirstName ? cleanFirstName(fields.firstName) : "",
+		country: readCountry(request.headers),
 		confirmReturning: true,
 	});
 	return reply.done({ result: isPending ? "pending" : "subscribed", inbox });

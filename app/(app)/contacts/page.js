@@ -181,7 +181,7 @@ export default async function ContactsPage({ searchParams }) {
 							</TableHeader>
 							<TableBody>
 								{contacts.map((contact) => (
-									<TableRow key={contact._id.toString()} className="tabular-nums">
+									<TableRow key={contact._id.toString()} className="relative tabular-nums">
 										<TableCell className="w-full max-w-0 py-2.5 pl-4 font-medium sm:w-2/5">
 											<span className="flex min-w-0 items-center gap-2.5">
 												<AvatarContact
@@ -189,7 +189,9 @@ export default async function ContactsPage({ searchParams }) {
 													gravatarHash={gravatarHash(contact.email)}
 													size={26}
 												/>
-												<span className="truncate">{contact.email}</span>
+												<Link href={`/contacts/${contact._id}`} className="truncate after:absolute after:inset-0">
+													{contact.email}
+												</Link>
 												{contact.firstName && (
 													<span className="hidden max-w-40 truncate font-normal text-muted-foreground sm:inline">{contact.firstName}</span>
 												)}

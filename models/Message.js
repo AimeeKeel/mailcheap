@@ -53,6 +53,8 @@ messageSchema.index(
 	{ unique: true, partialFilterExpression: { kind: "last-chance" } }
 );
 messageSchema.index({ providerMessageId: 1 }, { sparse: true });
+// A contact's emails, newest first (lib/contact-emails.js), and the checks on its welcome and confirmation emails.
+messageSchema.index({ contactId: 1, _id: -1 });
 messageSchema.index({ kind: 1, createdAt: -1 });
 // The overview's emails sent per hour.
 messageSchema.index({ newsletterId: 1, sentAt: 1 });

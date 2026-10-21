@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 
-export default function BadgeStatus({ status, label, className }) {
+// children: after the label, like a menu's chevron.
+export default function BadgeStatus({ status, label, className, children }) {
 	const key = String(status ?? "").toLowerCase();
 
 	return (
@@ -12,6 +13,7 @@ export default function BadgeStatus({ status, label, className }) {
 		>
 			<span className={cn("size-1.5 rounded-full", DOT_TONES[STATUS_TONES[key] || "gray"])} />
 			{label || statusLabel(key)}
+			{children}
 		</span>
 	);
 }

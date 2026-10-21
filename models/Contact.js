@@ -12,6 +12,9 @@ const contactSchema = new mongoose.Schema(
 		source: { type: String, trim: true },
 		// Signed up with the form on the owner's site (source "embed"): that site's host, as the browser named it.
 		sourceDomain: { type: String, trim: true },
+		// Where the person was, as a two-letter code (lib/countries.js): from the signup that added them, their confirmation, or
+		// else their first click in an email.
+		country: { type: String },
 		// What {{first_name}} prints in its emails (lib/merge-tags.js).
 		firstName: { type: String, trim: true },
 		// Values for the account's own fields (Account.contactFields), by key: text, a number or a date (lib/contact-fields.js).
