@@ -83,6 +83,13 @@ export default function NewslettersPage() {
 				The built-in confirmation email follows your newsletter&apos;s name and description. On the{" "}
 				<LinkApp href="/newsletters/signups">Confirm signups page</LinkApp>, you can write your own subject, preview text and content,
 				as long as it keeps the button.
+				{isCloud() && (
+					<>
+						{" "}
+						Like issues, it goes through the <Link href={getHelpHref("sending", "content-check")}>content check</Link>: while
+						it&apos;s in review, new subscribers get the built-in one.
+					</>
+				)}
 			</p>
 			<p>
 				New subscribers get the confirmation email or your welcome email, not both. Turning on double opt-in while the welcome email
@@ -102,6 +109,13 @@ export default function NewslettersPage() {
 				<LinkApp href="/newsletters/welcome">Welcome email page</LinkApp>.
 				While double opt-in is on, new subscribers get the confirmation email instead: turning the welcome email on turns double
 				opt-in off when you save, and the page says so first.
+				{isCloud() && (
+					<>
+						{" "}
+						Like issues, it goes through the <Link href={getHelpHref("sending", "content-check")}>content check</Link>: while
+						it&apos;s in review, new subscribers don&apos;t get it.
+					</>
+				)}
 			</p>
 			{isCloud() && (
 				<p>

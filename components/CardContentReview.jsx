@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, X } from "lucide-react";
-import { approveContentReview, rejectContentReview } from "@/app/admin/actions";
+import { approveContentReview, approveSignupEmail, rejectContentReview, rejectSignupEmail } from "@/app/admin/actions";
 import BadgeStatus from "@/components/BadgeStatus";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,9 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatRelative } from "@/lib/format";
 import { toast } from "@/lib/toast";
 
-// What the automated content check found (lib/content-review.js), for admins only, and the decision on a held issue.
-export default function CardContentReview({ campaignId, review, isPending, ownerEmail }) {
+// What the automated content check found (lib/content-review.js), for admins only, and the decision on what it holds: an
+// issue (campaignId), or a newsletter's own welcome or confirmation email (newsletterId and kind).
+export default function CardContentReview({ campaignId, newsletterId, kind, review, isPending, ownerEmail, stagger = 6 }) {
 	const status = getStatus(review, isPending);
+	const target = campaignId ? getCampaignTarget(campaignId) : getSignupEmailTarget(newsletterId, kind);
 	const rows = [
 		review.categories?.length > 0 && { label: "Found", value: review.categories.map((name) => name.replaceAll("_", " ")).join(", ") },
 		review.reasons?.length > 0 && {
@@ -48,7 +50,7 @@ export default function CardContentReview({ campaignId, review, isPending, owner
 	].filter(Boolean);
 
 	return (
-		<section style={{ "--stagger": 6 }} className="mt-6 flex flex-col gap-3 animate-enter">
+		<section style={{ "--stagger": stagger }} className="mt-6 flex flex-col gap-3 animate-enter">
 			<div className="flex items-center justify-between gap-3">
 				<h2 className="text-sm font-medium text-muted-foreground">Content check</h2>
 				<BadgeStatus status={status.tone} label={status.label} />
@@ -61,21 +63,48 @@ export default function CardContentReview({ campaignId, review, isPending, owner
 					</div>
 				))}
 			</dl>
-			{isPending && <ActionsReview campaignId={campaignId} ownerEmail={ownerEmail} />}
+			{isPending && <ActionsReview target={target} ownerEmail={ownerEmail} />}
 		</section>
 	);
 }
 
-function ActionsReview({ campaignId, ownerEmail }) {
+// What a decision does, by what the check holds: an issue sends or stays paused, a signup email goes out to new
+// subscribers or stays replaced.
+function getCampaignTarget(campaignId) {
+	return {
+		approve: () => approveContentReview(campaignId),
+		reject: (options) => rejectContentReview(campaignId, options),
+		approveLabel: "Approve and send",
+		approved: "Approved, it's going out",
+		rejectTitle: "Reject this issue?",
+		rejectEffect: "It stays paused for good.",
+	};
+}
+
+function getSignupEmailTarget(newsletterId, kind) {
+	return {
+		approve: () => approveSignupEmail(newsletterId, kind),
+		reject: (options) => rejectSignupEmail(newsletterId, kind, options),
+		approveLabel: "Approve",
+		approved: "Approved, new subscribers get it",
+		rejectTitle: `Reject this ${kind} email?`,
+		rejectEffect:
+			kind === "welcome"
+				? "New subscribers keep getting no welcome email until it's changed."
+				: "New subscribers keep getting the built-in confirmation email until it's changed.",
+	};
+}
+
+function ActionsReview({ target, ownerEmail }) {
 	const router = useRouter();
 	const [isRejecting, setIsRejecting] = useState(false);
 	const [isPending, startTransition] = useTransition();
 
 	function approve() {
 		startTransition(async () => {
-			const result = await approveContentReview(campaignId);
+			const result = await target.approve();
 			if (result?.error) return toast.error(result.error);
-			toast.success("Approved, it's going out");
+			toast.success(target.approved);
 			router.refresh();
 		});
 	}
@@ -84,7 +113,7 @@ function ActionsReview({ campaignId, ownerEmail }) {
 		<div className="flex flex-wrap items-center gap-2">
 			<Button onClick={approve} disabled={isPending}>
 				{isPending ? <Loader2 className="animate-spin" /> : <Check data-icon="inline-start" />}
-				Approve and send
+				{target.approveLabel}
 			</Button>
 			<Button variant="outline" onClick={() => setIsRejecting(true)} disabled={isPending}>
 				<X data-icon="inline-start" />
@@ -92,14 +121,14 @@ function ActionsReview({ campaignId, ownerEmail }) {
 			</Button>
 			<Dialog open={isRejecting} onOpenChange={setIsRejecting}>
 				<DialogContent className="sm:max-w-md">
-					<FormReject campaignId={campaignId} ownerEmail={ownerEmail} onDone={() => setIsRejecting(false)} />
+					<FormReject target={target} ownerEmail={ownerEmail} onDone={() => setIsRejecting(false)} />
 				</DialogContent>
 			</Dialog>
 		</div>
 	);
 }
 
-function FormReject({ campaignId, ownerEmail, onDone }) {
+function FormReject({ target, ownerEmail, onDone }) {
 	const router = useRouter();
 	const [note, setNote] = useState("");
 	const [isBlocking, setIsBlocking] = useState(false);
@@ -108,7 +137,7 @@ function FormReject({ campaignId, ownerEmail, onDone }) {
 	function reject(event) {
 		event.preventDefault();
 		startTransition(async () => {
-			const result = await rejectContentReview(campaignId, { note, block: isBlocking });
+			const result = await target.reject({ note, block: isBlocking });
 			if (result?.error) return toast.error(result.error);
 			toast.success(isBlocking ? "Rejected and account blocked" : "Rejected");
 			onDone();
@@ -119,10 +148,10 @@ function FormReject({ campaignId, ownerEmail, onDone }) {
 	return (
 		<form onSubmit={reject} className="flex flex-col gap-4">
 			<DialogHeader>
-				<DialogTitle>Reject this issue?</DialogTitle>
+				<DialogTitle>{target.rejectTitle}</DialogTitle>
 				<DialogDescription>
-					It stays paused for good and {ownerEmail ?? "its owner"} gets an email saying it can&apos;t be sent, with your message
-					if you write one.
+					{ownerEmail ?? "Its owner"} gets an email saying it can&apos;t be sent, with your message if you write one.{" "}
+					{target.rejectEffect}
 				</DialogDescription>
 			</DialogHeader>
 			<Textarea

@@ -1,33 +1,11 @@
 import mongoose from "mongoose";
 import { accountScoped } from "../lib/account-scope.js";
+import { contentReviewSchema } from "../lib/content-review-schema.js";
 import { PUBLISH_TARGETS } from "../lib/publish-to.js";
 
 export const CAMPAIGN_STATUSES = ["draft", "scheduled", "sending", "paused", "sent", "canceled"];
 
 const counter = { type: Number, default: 0 };
-
-// The automated content check before a send (lib/content-review.js), for the content it read (hash), and an admin's
-// decision when it held the send. Never read unless asked for (select: false): its reasons are for admins only.
-const reviewSchema = new mongoose.Schema(
-	{
-		hash: { type: String },
-		outcome: { type: String, enum: ["allow", "flag", "block", "error"] },
-		verdict: { type: String },
-		categories: { type: [String], default: undefined },
-		reasons: { type: [String], default: undefined },
-		confidence: { type: Number },
-		scores: { type: Map, of: Number },
-		model: { type: String },
-		checkedAt: { type: Date },
-		// Another of the account's issues with the same content and rules, whose check (or approval) this one reuses.
-		reusedFrom: { type: mongoose.Schema.Types.ObjectId },
-		decision: { type: String, enum: ["approved", "rejected"] },
-		decidedBy: { type: String },
-		decidedAt: { type: Date },
-		note: { type: String },
-	},
-	{ _id: false }
-);
 
 const campaignSchema = new mongoose.Schema(
 	{
@@ -82,7 +60,8 @@ const campaignSchema = new mongoose.Schema(
 		archivePinned: { type: Boolean, default: false },
 		// Archive page views, once per browser and day.
 		webViews: { type: Number, default: 0 },
-		review: { type: reviewSchema, select: false },
+		// The content check before a send, of the content it read.
+		review: { type: contentReviewSchema, select: false },
 		stats: {
 			recipients: counter,
 			sent: counter,

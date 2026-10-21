@@ -27,6 +27,7 @@ export default function LayoutSettingsSection({ section, page, preselectDomain =
 				testEmail={page.user.email}
 				cleanupTotals={page.cleanupTotals}
 				welcomePause={page.welcomePause}
+				signupReviews={page.signupReviews}
 				isCloud={page.isCloud}
 				preselectDomain={preselectDomain}
 			/>

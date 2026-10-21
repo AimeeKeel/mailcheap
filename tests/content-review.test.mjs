@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
 	decideOutcome,
 	findInstructionsToAi,
@@ -12,6 +13,8 @@ import {
 	reviewContent,
 } from "../lib/content-review.js";
 import { activate, as, callApi, catchNotFound, catchRedirect, form, mockOpenAI, openaiRequests, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
+import { flushAfter } from "./stubs/next-server.mjs";
+import { sent as sesEmails } from "./stubs/ses.mjs";
 
 const QUIET = { scores: { sexual: 0.01, hate: 0.01, "violence/graphic": 0.01, harassment: 0.02 } };
 const verdict = (value, categories = [], confidence = 0.9, reasons = []) => ({ verdict: value, categories, confidence, reasons });
@@ -443,5 +446,151 @@ describe("the content check before a send", () => {
 		});
 		assert.equal(openaiRequests.length, requestsBefore);
 		assert.equal((await load(user, id)).status, "sending");
+	});
+});
+
+describe("the content check of a newsletter's own welcome and confirmation emails", () => {
+	const WELCOME = { requireConfirmation: false, welcome: { enabled: true, subject: "Welcome aboard", markdown: "Thanks for joining." } };
+	const CONFIRMATION = {
+		requireConfirmation: true,
+		confirmation: { subject: "Confirm now", markdown: `Log in to confirm.\n\n<a href="{{confirm_url}}">Confirm</a>` },
+	};
+	const REASON = CLASSIFIER_ANSWERS.phishing.reasons[0];
+
+	async function api(user, method, path, body) {
+		const response = await callApi(method, `/api/v1${path}`, { key: user.key, body });
+		assert.ok(response.status < 300, JSON.stringify(response.body));
+		return response.body;
+	}
+
+	// A signup through the API, and its welcome or confirmation email once the response is out: the subject that went out.
+	async function signUp(user, email) {
+		const before = sesEmails.length;
+		await api(user, "POST", "/contacts", { email });
+		await flushAfter();
+		return sesEmails.slice(before).find(({ to }) => [to].flat().includes(email))?.subject ?? null;
+	}
+
+	const loadReviews = async (user) =>
+		(await m.Newsletter.findOne({ accountId: user.accountId, _id: user.newsletterId }).select("+reviews").lean()).reviews;
+
+	test("a clean welcome email is checked once, when it's saved, and new subscribers get it", async () => {
+		answer = "clean";
+		const user = await customer("signup-clean@example.com");
+		const requestsBefore = openaiRequests.length;
+		const saved = await api(user, "PATCH", `/newsletters/${user.newsletterId}`, WELCOME);
+		assert.equal(saved.welcome.review, null);
+		assert.deepEqual(openaiRequests.slice(requestsBefore).map(({ path }) => path).sort(), ["/moderations", "/responses"]);
+		assert.equal((await loadReviews(user)).welcome.outcome, "allow");
+
+		const checked = openaiRequests.length;
+		assert.equal(await signUp(user, "fan@signup-clean.example.org"), "Welcome aboard");
+		assert.equal(await signUp(user, "friend@signup-clean.example.org"), "Welcome aboard");
+		assert.equal(openaiRequests.length, checked, "not checked again for each signup");
+		assert.ok(!JSON.stringify(openaiRequests.slice(requestsBefore)).includes("signup-clean.example.org"), "no contact reaches OpenAI");
+	});
+
+	test("a confirmation email it holds: new subscribers get the built-in one, its owner sees In review and never why, and an approval lets it go", async () => {
+		answer = "phishing";
+		const user = await customer("signup-held@example.com");
+		const emailsBefore = platformEmails.length;
+		const saved = await api(user, "PATCH", `/newsletters/${user.newsletterId}`, CONFIRMATION);
+		assert.deepEqual(saved.confirmation.review, { status: "in_review", note: null });
+		assert.equal(saved.confirmation.isCustom, true);
+		const toAdmins = emailsTo("admin@example.com", emailsBefore);
+		assert.ok(toAdmins.some(({ subject, text }) => subject === "[MailCheap] Confirmation email held for review" && text.includes(`/admin/newsletters/${user.newsletterId}`)));
+		assert.equal(emailsTo("signup-held@example.com", emailsBefore).length, 0, "the owner only sees In review");
+
+		const listed = await api(user, "GET", "/newsletters");
+		const read = await api(user, "GET", `/newsletters/${user.newsletterId}`);
+		for (const body of [saved, listed, read]) assert.ok(!JSON.stringify(body).includes(REASON), "the API never shows the check's reasons");
+		assert.deepEqual(read.confirmation.review, { status: "in_review", note: null });
+
+		assert.match(await signUp(user, "fan@signup-held.example.org"), /^Confirm your subscription/, "the built-in confirmation email goes out");
+
+		await catchNotFound(as(user, () => m.admin.approveSignupEmail(user.newsletterId, "confirmation")));
+		assert.deepEqual(await as(admin, () => m.admin.approveSignupEmail(user.newsletterId, "nonsense")), { error: "Nothing waits for a review here" });
+		assert.deepEqual(await as(admin, () => m.admin.approveSignupEmail(user.newsletterId, "confirmation")), { ok: true });
+		const reviews = await loadReviews(user);
+		assert.equal(reviews.confirmation.decision, "approved");
+		assert.equal(reviews.confirmation.decidedBy, "admin@example.com");
+		assert.equal((await api(user, "GET", `/newsletters/${user.newsletterId}`)).confirmation.review, null);
+		assert.equal(await signUp(user, "friend@signup-held.example.org"), "Confirm now", "its own goes out once approved");
+	});
+
+	test("a welcome email it holds isn't sent; rejecting tells its owner, and changing it has it checked again", async () => {
+		answer = "phishing";
+		const user = await customer("signup-rejected@example.com");
+		assert.deepEqual((await api(user, "PATCH", `/newsletters/${user.newsletterId}`, WELCOME)).welcome.review, { status: "in_review", note: null });
+
+		assert.equal(await signUp(user, "fan@signup-rejected.example.org"), null, "no welcome email");
+		const skipped = await m.Message.findOne({ accountId: user.accountId, kind: "welcome" }).lean();
+		assert.deepEqual([skipped.status, skipped.error], ["skipped", "The welcome email is in review"]);
+
+		const emailsBefore = platformEmails.length;
+		assert.deepEqual(await as(admin, () => m.admin.rejectSignupEmail(user.newsletterId, "welcome", { note: "Phishing isn't allowed." })), { ok: true });
+		const toOwner = emailsTo("signup-rejected@example.com", emailsBefore);
+		assert.ok(
+			toOwner.some(
+				({ subject, text }) =>
+					subject === "[MailCheap] Your welcome email can't be sent" &&
+					text.includes("Phishing isn't allowed. New subscribers get no welcome email until you change it.")
+			)
+		);
+		assert.deepEqual((await api(user, "GET", `/newsletters/${user.newsletterId}`)).welcome.review, { status: "rejected", note: "Phishing isn't allowed" });
+		const WelcomePage = (await import("../app/(app)/newsletters/welcome/page.js")).default;
+		const page = renderToStaticMarkup(await as(user, () => WelcomePage()));
+		assert.ok(page.includes("This email can&#x27;t be sent: Phishing isn&#x27;t allowed. Until you change it, new subscribers don&#x27;t get it."), "its page says so");
+		assert.ok(!page.includes(REASON), "never why");
+		assert.deepEqual(await as(admin, () => m.admin.approveSignupEmail(user.newsletterId, "welcome")), { error: "Nothing waits for a review here" });
+		assert.equal(await signUp(user, "friend@signup-rejected.example.org"), null, "still none");
+
+		answer = "clean";
+		const changed = await api(user, "PATCH", `/newsletters/${user.newsletterId}`, { welcome: { markdown: "Thanks for joining. Reply to say hi." } });
+		assert.equal(changed.welcome.review, null);
+		assert.equal(await signUp(user, "pal@signup-rejected.example.org"), "Welcome aboard");
+	});
+
+	test("one saved before the check is checked before it first goes out", async () => {
+		answer = "phishing";
+		const user = await customer("signup-earlier@example.com");
+		await m.Newsletter.updateOne({ accountId: user.accountId, _id: user.newsletterId }, { $set: CONFIRMATION });
+		const requestsBefore = openaiRequests.length;
+		assert.match(await signUp(user, "fan@signup-earlier.example.org"), /^Confirm your subscription/);
+		assert.equal(openaiRequests.length - requestsBefore, 2, "checked once, before it went out");
+		assert.equal((await loadReviews(user)).confirmation.outcome, "block");
+	});
+
+	test("with OpenAI down it goes out, the admins hear of it, and it's checked again an hour later", async () => {
+		answer = "down";
+		const user = await customer("signup-down@example.com");
+		assert.equal((await api(user, "PATCH", `/newsletters/${user.newsletterId}`, WELCOME)).welcome.review, null);
+		assert.equal((await loadReviews(user)).welcome.outcome, "error");
+		const Alert = (await import("../models/Alert.js")).default;
+		const failed = await Alert.findOne({ accountId: null, key: "content-check-failed" }).lean();
+		assert.match(failed.occurrences.at(-1).detail, new RegExp(`The welcome email of newsletter ${user.newsletterId} of account \\w+ went out without it`));
+
+		answer = "phishing";
+		const requestsBefore = openaiRequests.length;
+		assert.equal(await signUp(user, "fan@signup-down.example.org"), "Welcome aboard");
+		assert.equal(openaiRequests.length, requestsBefore, "not again within the hour");
+
+		await m.Newsletter.updateOne(
+			{ accountId: user.accountId, _id: user.newsletterId },
+			{ $set: { "reviews.welcome.checkedAt": new Date(Date.now() - 2 * 3_600_000) } }
+		);
+		assert.equal(await signUp(user, "friend@signup-down.example.org"), null, "checked again, it's held");
+		assert.equal((await loadReviews(user)).welcome.outcome, "block");
+	});
+
+	test("without a key, nothing is checked", async () => {
+		answer = "phishing";
+		const user = await customer("signup-off@example.com");
+		const requestsBefore = openaiRequests.length;
+		await withEnv({ OPENAI_MODERATION_API_KEY: "", OPENAI_API_KEY: "" }, async () => {
+			assert.equal((await api(user, "PATCH", `/newsletters/${user.newsletterId}`, WELCOME)).welcome.review, null);
+			assert.equal(await signUp(user, "fan@signup-off.example.org"), "Welcome aboard");
+		});
+		assert.equal(openaiRequests.length, requestsBefore);
 	});
 });

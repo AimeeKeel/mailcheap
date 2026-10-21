@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { accountScoped } from "../lib/account-scope.js";
+import { contentReviewSchema } from "../lib/content-review-schema.js";
 
 const newsletterSchema = new mongoose.Schema(
 	{
@@ -55,6 +56,12 @@ const newsletterSchema = new mongoose.Schema(
 			subject: { type: String, trim: true },
 			previewText: { type: String, trim: true },
 			markdown: { type: String },
+		},
+		// The content check of its own welcome and confirmation emails (lib/signup-email-review.js), each of the content it
+		// read. Apart from welcome and confirmation, which a save replaces whole.
+		reviews: {
+			type: new mongoose.Schema({ welcome: contentReviewSchema, confirmation: contentReviewSchema }, { _id: false }),
+			select: false,
 		},
 		// The signup form its owner pastes on their own site (lib/signup-form.js), off until they turn it on. No domains:
 		// any site can hold it.

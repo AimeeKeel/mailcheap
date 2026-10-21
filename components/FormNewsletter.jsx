@@ -43,8 +43,9 @@ const IMAGE_PREVIEW_PATTERN = /^(https:\/\/\S+\.\S{2,}\/\S+|\/\S+\.\w{3,4})$/;
 // One section of the open newsletter's settings, on its own page (lib/newsletter-sections.js), which saves only that
 // section's fields. It saves from onSubmit, not a form action: React resets a form after its action, which turned the
 // switches back to how the page opened and dropped what an error refused. Discard goes back to what the newsletter has
-// saved. welcomePause: the notice to show while the month's emails are used up and welcome emails are skipped. isCloud:
-// MailCheap Cloud, whose plans count the confirmation and welcome emails among their monthly emails.
+// saved. welcomePause: the notice to show while the month's emails are used up and welcome emails are skipped.
+// signupReviews: whether the content check holds the saved welcome or confirmation email (lib/signup-email-review.js),
+// never why. isCloud: MailCheap Cloud, whose plans count the confirmation and welcome emails among their monthly emails.
 // defaultPostalAddress: what its emails print until it has its own (lib/postal-address.js); the editor's checks link
 // to the field with #postal-address. hasArchiveHost: the server hosts websites on customers' own subdomains.
 // hasSentIssue: an issue went out, so the website can be live (lib/archive-data.js). preselectDomain: one of the
@@ -62,6 +63,7 @@ export default function FormNewsletter({
 	testEmail,
 	cleanupTotals,
 	welcomePause,
+	signupReviews = null,
 	isCloud = false,
 	preselectDomain = null,
 }) {
@@ -128,9 +130,15 @@ export default function FormNewsletter({
 					defaultPostalAddress={defaultPostalAddress}
 				/>
 			)}
-			{section === "signups" && <SectionSignups {...form} />}
+			{section === "signups" && <SectionSignups {...form} review={signupReviews?.confirmation} />}
 			{section === "welcome" && (
-				<SectionWelcome {...form} isSendingEnabled={isSendingEnabled} testEmail={testEmail} welcomePause={welcomePause} />
+				<SectionWelcome
+					{...form}
+					isSendingEnabled={isSendingEnabled}
+					testEmail={testEmail}
+					welcomePause={welcomePause}
+					review={signupReviews?.welcome}
+				/>
 			)}
 			{section === "cleanup" && <SectionCleanup {...form} fromEmail={fromEmail} totals={cleanupTotals} />}
 			{section === "website" && (
@@ -321,7 +329,7 @@ function SectionSender({ draft, set, update, domains, sharedDomain, fromEmail, d
 
 // Until it's edited, the built-in confirmation email follows the name and the description. Turned on while the welcome
 // email goes out, it says that saving turns the welcome email off (readSettingsForm sends both).
-function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud }) {
+function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud, review }) {
 	const { name, description, confirmationEdits, isConfirmationRequired, postalAddress } = draft;
 	const isWelcomeReplaced = isConfirmationRequired && !newsletter.requireConfirmation && Boolean(newsletter.welcome?.enabled);
 	const confirmation = useMemo(
@@ -365,7 +373,8 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud }) {
 				the list.{isConfirmationRequired && " It's the only email they get: say what comes next."}
 				{isCloud && " Confirmation emails count toward your plan's monthly emails."}
 			</p>
-			{isWelcomeReplaced && <NoticeSwitch>Saving turns off the welcome email: new subscribers get this email instead.</NoticeSwitch>}
+			{isWelcomeReplaced && <NoticeSection>Saving turns off the welcome email: new subscribers get this email instead.</NoticeSection>}
+			{isConfirmationRequired && review && <NoticeReview review={review} instead="new subscribers get the built-in confirmation email" />}
 			{isConfirmationRequired && (
 				<>
 					<Field label="Subject">
@@ -404,7 +413,7 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud }) {
 
 // Its switch works while signups confirm too: turned on, it says that saving turns double opt-in off (readSettingsForm
 // sends both).
-function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled, testEmail, welcomePause, isCloud }) {
+function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled, testEmail, welcomePause, isCloud, review }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const [isTesting, startTesting] = useTransition();
@@ -462,9 +471,10 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled,
 				{isCloud && " Welcome emails count toward your plan's monthly emails."}
 			</p>
 			{isConfirmationOn && isWelcomeEnabled && (
-				<NoticeSwitch>Saving turns off double opt-in: new subscribers join right away, without confirming their address.</NoticeSwitch>
+				<NoticeSection>Saving turns off double opt-in: new subscribers join right away, without confirming their address.</NoticeSection>
 			)}
 			{welcomePause && isWelcomeEnabled && <NoticeWelcomePaused {...welcomePause} className="px-4 py-3" />}
+			{review && isWelcomeEnabled && <NoticeReview review={review} instead="new subscribers don't get it" />}
 			<Field label="Subject">
 				<Input name="welcomeSubject" value={welcome.subject} onChange={updateWelcome("subject")} />
 			</Field>
@@ -745,8 +755,23 @@ export function Section({ title, action, stagger, children }) {
 	);
 }
 
-// What saving also changes in another section, said before it's saved.
-function NoticeSwitch({ children }) {
+// The content check holds the saved email (lib/signup-email-review.js): what new subscribers get meanwhile, never why.
+function NoticeReview({ review, instead }) {
+	return (
+		<NoticeSection>
+			<span>
+				{review.status === "in_review"
+					? `In review: a person at MailCheap checks this email before it goes out, usually within a few hours. Until then, ${instead}.`
+					: `This email can't be sent${review.note ? `: ${review.note}` : ""}. Until you change it, ${instead}.`}{" "}
+				<LinkHelp article="sending" section="content-check" />
+			</span>
+		</NoticeSection>
+	);
+}
+
+// Above a section's fields: what saving also changes in another section, said before it's saved, or what the content
+// check holds.
+function NoticeSection({ children }) {
 	return (
 		<p
 			role="status"

@@ -113,8 +113,14 @@ export default function SendingPage() {
 					</p>
 					<p>
 						The same happens when an issue&apos;s text speaks to the check itself, and to new content past{" "}
-						{formatNumber(CLASSIFIER_CHECKS.limit)} issues an hour from one account. An issue whose content was already checked
+						{formatNumber(CLASSIFIER_CHECKS.limit)} checks an hour from one account. An issue whose content was already checked
 						still goes straight out.
+					</p>
+					<p>
+						The check also reads your own welcome and confirmation emails when you save them. If one looks clearly harmful, the{" "}
+						<LinkApp href="/newsletters/welcome">Welcome email</LinkApp> or <LinkApp href="/newsletters/signups">Confirm signups</LinkApp>{" "}
+						page says In review until a person at MailCheap looks at it. Meanwhile, new subscribers get the built-in confirmation
+						email, or no welcome email. If it can&apos;t go out, you get an email saying why, and changing it has it checked again.
 					</p>
 				</>
 			)}
