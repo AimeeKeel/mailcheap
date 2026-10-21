@@ -4,6 +4,7 @@ import LinkApp from "@/components/LinkApp";
 import { TRIAL_CONTACTS } from "@/lib/actions/contacts";
 import { isCloud } from "@/lib/config";
 import { MAX_CONTACT_FIELDS, MAX_TAGS, MAX_TAG_LENGTH } from "@/lib/contact-fields";
+import { LIST_STARTED_AT } from "@/lib/contacts-header";
 import { isSpamListEnabled } from "@/lib/domain-reputation";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { MAX_SEGMENT_CONDITIONS, SEGMENT_PRESETS, describeSegment } from "@/lib/segments";
@@ -127,10 +128,10 @@ export default function ContactsPage() {
 			</p>
 			<ol>
 				<li>
-					<strong>Make your fields.</strong> Once your list has contacts, click Fields at the top of the{" "}
-					<LinkApp href="/contacts">Contacts page</LinkApp>. Type a name, like Birthday, pick its type (text, a number or a date)
-					and click the plus. Its key, like <code>birthday</code>, is what imports, segments and the API call it. An import can make
-					fields for you too, as below.
+					<strong>Make your fields.</strong> Click Fields at the top of the <LinkApp href="/contacts">Contacts page</LinkApp>.
+					Before your list has contacts, and on a phone, it&apos;s Contact fields in the <strong>⋯</strong> menu there. Type a
+					name, like Birthday, pick its type (text, a number or a date) and click the plus. Its key, like <code>birthday</code>, is
+					what imports, segments and the API call it. An import can make fields for you too, as below.
 				</li>
 				<li>
 					<strong>Fill them in</strong>, whichever way suits you:
@@ -204,9 +205,9 @@ export default function ContactsPage() {
 
 			<h2 id="add">Adding someone by hand</h2>
 			<p>
-				On the <LinkApp href="/contacts">Contacts page</LinkApp>, click Add a contact and type their email address. It works like a
-				signup on your website: they get your confirmation email if
-				the newsletter confirms signups, or your welcome email if it&apos;s on.
+				On the <LinkApp href="/contacts">Contacts page</LinkApp>, click Add contact, type their email address and tick that they
+				agreed to get your emails. They join at once, without a confirmation email, and get your welcome email if it&apos;s on.
+				Once your list has {LIST_STARTED_AT} contacts, Add contact is in the <strong>⋯</strong> menu at the top of the page.
 				{isCloud() && ` Without a plan, you can add ${TRIAL_CONTACTS.limit} contacts a day, enough to try it on yourself.`}
 			</p>
 			<p>
@@ -252,8 +253,9 @@ export default function ContactsPage() {
 
 			<h2 id="export">Exporting</h2>
 			<p>
-				Export downloads the contacts that match your filters as a CSV file, with their first name, tags and a column per field. Its
-				columns go back in through the import as they are, so it&apos;s also a backup.
+				Export, in the <strong>⋯</strong> menu at the top of the <LinkApp href="/contacts">Contacts page</LinkApp>, downloads the
+				contacts that match your filters as a CSV file, with their first name, tags and a column per field. Its columns go back in
+				through the import as they are, so it&apos;s also a backup.
 			</p>
 
 			<h2 id="undeliverable">Addresses no one can reach</h2>

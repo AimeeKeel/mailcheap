@@ -4,11 +4,9 @@ import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import AvatarContact from "@/components/AvatarContact";
 import BadgeStatus from "@/components/BadgeStatus";
-import ButtonExportContacts from "@/components/ButtonExportContacts";
+import ButtonsContacts from "@/components/ButtonsContacts";
 import CardAddContacts from "@/components/CardAddContacts";
 import CardImports from "@/components/CardImports";
-import DialogAddContact from "@/components/DialogAddContact";
-import DialogContactFields from "@/components/DialogContactFields";
 import DialogImportContacts from "@/components/DialogImportContacts";
 import FilterContacts from "@/components/FilterContacts";
 import GatePlan from "@/components/GatePlan";
@@ -34,6 +32,7 @@ import { getAppUrl, isCloud } from "@/lib/config";
 import { cleanTag, contactFieldValues, getFieldOptions } from "@/lib/contact-fields";
 import { UNDELIVERABLE_LABELS } from "@/lib/contact-status";
 import { CONTACTS_PAGE_SIZE, findContactsPage, listContactTags } from "@/lib/contacts";
+import { LIST_STARTED_AT, getContactsHeader } from "@/lib/contacts-header";
 import { getAddContactCurl } from "@/lib/docs/reference";
 import { formatDate, formatNumber } from "@/lib/format";
 import { gravatarHash } from "@/lib/gravatar";
@@ -73,10 +72,13 @@ export default async function ContactsPage({ searchParams }) {
 			])
 		: [{ contacts: [], counts: {}, totalAll: 0, total: 0 }, null, [], []];
 	const pageCount = Math.max(1, Math.ceil(total / CONTACTS_PAGE_SIZE));
-	// totalAll counts within the search, the tag and the segment.
-	const hasContacts =
-		totalAll > 0 ||
-		Boolean((query || tag || segment) && newsletterId && (await Contact.exists(scoped(account, { newsletterId: selected._id }))));
+	// totalAll counts within the search, the tag and the segment, while the actions at the top follow the whole list, which a
+	// filtered page with fewer than LIST_STARTED_AT counts again, up to that.
+	const listCount =
+		(query || tag || segment) && newsletterId && totalAll < LIST_STARTED_AT
+			? await Contact.countDocuments(scoped(account, { newsletterId: selected._id }), { limit: LIST_STARTED_AT })
+			: totalAll;
+	const hasContacts = listCount > 0;
 	const newsletter = selected && toNewsletterOption(selected);
 	const importGuides = isCloud() ? siteExtensions.importGuides : [];
 	const filters = { status, query, segmentId, tag };
@@ -97,12 +99,11 @@ export default async function ContactsPage({ searchParams }) {
 	return (
 		<ProviderContactOptions fields={fields} tags={tags}>
 			<HeaderPage title="Contacts">
-				<ButtonExportContacts newsletterId={newsletterId} {...filters} isDisabled={total === 0} />
-				{hasContacts && <DialogContactFields />}
-				{hasContacts && <DialogAddContact newsletter={newsletter} />}
-				<GatePlan reason="import">
-					<DialogImportContacts newsletter={newsletter} guides={importGuides} />
-				</GatePlan>
+				<ButtonsContacts header={getContactsHeader(listCount)} newsletter={newsletter} filters={filters} count={total}>
+					<GatePlan reason="import">
+						<DialogImportContacts newsletter={newsletter} guides={importGuides} />
+					</GatePlan>
+				</ButtonsContacts>
 			</HeaderPage>
 
 			<div className="flex flex-col gap-4">

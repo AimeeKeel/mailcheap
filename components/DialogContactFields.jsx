@@ -1,29 +1,24 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, Plus, Rows3, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { createContactField, deleteContactField } from "@/app/(app)/contacts/actions";
 import { useContactOptions } from "@/components/ProviderContactOptions";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FIELD_TYPES, MAX_CONTACT_FIELDS, MAX_FIELD_LABEL } from "@/lib/contact-fields";
 import { toast } from "@/lib/toast";
 
 // The account's own contact fields, shared by its newsletters: add one, or delete one (contacts keep their values).
-export default function DialogContactFields() {
+// onCloseAutoFocus: where the focus goes back, as what opened it is outside the dialog.
+export default function DialogContactFields({ isOpen, onOpenChange, onCloseAutoFocus }) {
 	const { fields } = useContactOptions();
 
 	return (
-		<Dialog>
-			<DialogTrigger asChild>
-				<Button variant="outline">
-					<Rows3 data-icon="inline-start" />
-					Fields
-				</Button>
-			</DialogTrigger>
-			<DialogContent className="sm:max-w-md">
+		<Dialog open={isOpen} onOpenChange={onOpenChange}>
+			<DialogContent className="sm:max-w-md" onCloseAutoFocus={onCloseAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>Contact fields</DialogTitle>
 					<DialogDescription>Every contact has a first name and tags. Add your own, like a company or a birthday.</DialogDescription>
