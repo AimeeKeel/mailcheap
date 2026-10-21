@@ -8,7 +8,19 @@ import {
 	hasActiveSubscription,
 	isPaidStatus,
 } from "../lib/account-state.js";
-import { PLANS, getAccountLimits, getAccountPlan, getLookupKey, getPlan, getPrice, isOnFreePlan, parseLookupKey, readInterval } from "../lib/plans.js";
+import {
+	PLANS,
+	getAccountLimits,
+	getAccountPlan,
+	getLookupKey,
+	getPlan,
+	getPrice,
+	getSignupScale,
+	isOnFreePlan,
+	parseLookupKey,
+	readInterval,
+	scaleSignupLimit,
+} from "../lib/plans.js";
 
 // Plans and the paywall are MailCheap Cloud's; the last test is a self-hosted server.
 process.env.MAILCHEAP_CLOUD = "true";
@@ -172,4 +184,24 @@ test("self-hosted, without MAILCHEAP_CLOUD: no paywall, no plan limits, every ac
 		assert.equal(getPlanLimitProblem(huge), null);
 	});
 	assert.equal(getAccountSendProblem({}).code, ERROR_CODES.subscriptionRequired, "back on MailCheap Cloud");
+});
+
+test("signup limits grow with the plan, from Starter's; a self-hosted server gets the largest plan's", () => {
+	assert.deepEqual(
+		PLANS.map(({ id, signupScale }) => [id, signupScale]),
+		[
+			["starter", 1],
+			["growth", 2],
+			["pro", 5],
+			["scale", 10],
+			["max", 25],
+		]
+	);
+	assert.equal(getSignupScale({ plan: "growth", subscriptionStatus: "active" }), 2);
+	assert.equal(getSignupScale({ plan: "starter", comp: { plan: "max", grantedAt: new Date() } }), 25, "a free plan an admin gave");
+	assert.equal(getSignupScale({}), 1, "without a plan, Starter's");
+	const perKey = { name: "api-contacts-key", limit: 600, window: "1 h" };
+	assert.deepEqual(scaleSignupLimit(perKey, { plan: "pro" }), { ...perKey, limit: 3000 });
+	assert.equal(perKey.limit, 600, "the base stays as it is");
+	selfHosted(() => assert.equal(getSignupScale({}), 25));
 });

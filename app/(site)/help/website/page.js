@@ -3,7 +3,9 @@ import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
 import { isBotIdEnabled } from "@/lib/bot-check";
 import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
+import { formatNumber } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
+import { getSignupScale } from "@/lib/plans";
 import { SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
 
 export const metadata = getHelpPageMetadata("website");
@@ -155,9 +157,15 @@ export default function WebsitePage() {
 				So that a script can&apos;t sign up strangers, the form has a field only bots fill in, waits a moment after the page loads
 				{hasBotCheck && ", checks that a real browser sent the script form"}, signs up one address each time it loads and takes{" "}
 				{perIp.limit} signups per visitor every 10 minutes and {perEmail.limit} per address a day, whichever newsletters ask. Past{" "}
-				{perNewsletter.limit} signups in 10 minutes, or {perNewsletterPlain.limit} from the HTML form, it refuses new ones until they
-				slow down, and you get an alert. Someone who unsubscribed confirms their address before they&apos;re back, even with confirmed
-				opt-in off.
+				{formatNumber(perNewsletter.limit * getSignupScale(null))} signups in 10 minutes
+				{isCloud() && (
+					<>
+						{" "}
+						on Starter (<Link href={getHelpHref("plans", "signup-limits")}>more on bigger plans</Link>)
+					</>
+				)}
+				, or {perNewsletterPlain.limit} from the HTML form, it refuses new ones until they slow down, and you get an alert. Someone who
+				unsubscribed confirms their address before they&apos;re back, even with confirmed opt-in off.
 			</p>
 			<p>
 				List your sites under Where it works and browsers only show the form there. Only the script works then, since a plain form
