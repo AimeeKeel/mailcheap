@@ -106,6 +106,7 @@ before(async () => {
 		campaigns: await import("../app/(app)/campaigns/actions.js"),
 		contacts: await import("../app/(app)/contacts/actions.js"),
 		apiKeys: await import("../app/(app)/api-keys/actions.js"),
+		homePage: (await import("../app/archive/[slug]/page.js")).default,
 		issuePage: (await import("../app/archive/[slug]/p/[post]/page.js")).default,
 		sitemapRoute: await import("../app/archive/[slug]/sitemap/route.js"),
 		slugRoute: await import("../app/p/[slug]/route.js"),
@@ -214,5 +215,78 @@ describe("email only", () => {
 		const sent = await load(user, id);
 		assert.equal(await countMessages(user, id), 3);
 		assert.deepEqual(await visit(user, sent.archiveSlug), { page: true, inSitemap: true });
+	});
+});
+
+// Remove from website: an issue that also went out by email becomes email only, and a web-only one, with nothing left,
+// is deleted.
+describe("removing an issue from the website", () => {
+	const isWebsiteLive = async (user) => !(await catchNotFound(m.homePage({ params: Promise.resolve({ slug: user.newsletter.slug }) })));
+
+	test("an issue that also went out by email stays, as email only, while its page goes offline", async () => {
+		const user = await customer("unpublish-both@example.com");
+		const kept = await draft(user, { subject: "Still online", publishTo: "web" });
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(kept, {})), { ok: true });
+		const id = await draft(user, { subject: "Both ways" });
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(id, {})), { ok: true });
+		assert.deepEqual(await as(user, () => m.campaigns.toggleArchivePin(id)), { ok: true });
+		assert.deepEqual(await visit(user, "both-ways"), { page: true, inSitemap: true });
+
+		assert.deepEqual(await as(user, () => m.campaigns.unpublishCampaign(id)), { ok: true, deleted: false });
+		const campaign = await load(user, id);
+		assert.equal(campaign.status, "sending", "its send goes on");
+		assert.equal(campaign.publishTo, "email");
+		assert.equal(campaign.archivePinned, false);
+		assert.equal(campaign.archiveSlug, "both-ways", "its address stays taken, so no other issue shows up at its old links");
+		assert.deepEqual(await visit(user, "both-ways"), { page: false, inSitemap: false });
+		assert.deepEqual(await visit(user, "still-online"), { page: true, inSitemap: true }, "the website stays live with its other issues");
+		const appLink = await m.slugRoute.GET(new Request("http://localhost:3000/p/both-ways"), { params: Promise.resolve({ slug: "both-ways" }) });
+		assert.equal(appLink.status, 404);
+		const newsletter = await m.Newsletter.findOne({ accountId: user.accountId, _id: user.newsletter.id }).lean();
+		assert.equal(getIssueWebUrl({ campaign, newsletter }), null, "the rest of its emails have no Read online link");
+
+		const viaApi = await callApi("GET", `/api/v1/campaigns/${id}`, { key: user.key });
+		assert.equal(viaApi.status, 200, "it stays in the campaigns");
+		assert.deepEqual([viaApi.body.publishTo, viaApi.body.archiveUrl, viaApi.body.archivePinned], ["email", null, false]);
+		assert.match((await as(user, () => m.campaigns.unpublishCampaign(id))).error, /isn't on the website/);
+	});
+
+	test("a web-only issue leaves the campaigns, and with no issue left the website goes offline", async () => {
+		const user = await customer("unpublish-web@example.com");
+		const id = await draft(user, { subject: "Only online", publishTo: "web" });
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(id, {})), { ok: true });
+		assert.equal(await isWebsiteLive(user), true);
+
+		const removed = await callApi("POST", `/api/v1/campaigns/${id}/unpublish`, { key: user.key });
+		assert.equal(removed.status, 200, JSON.stringify(removed.body));
+		assert.deepEqual(removed.body, { id, deleted: true });
+		const campaign = await load(user, id);
+		assert.equal(campaign.status, "canceled", "kept in the database");
+		assert.ok(campaign.sentAt);
+		assert.equal((await callApi("GET", `/api/v1/campaigns/${id}`, { key: user.key })).status, 404);
+		const listed = await callApi("GET", "/api/v1/campaigns", { key: user.key });
+		assert.ok(!listed.body.campaigns.some((item) => item.id === id), "it left the list");
+		assert.deepEqual(await visit(user, "only-online"), { page: false, inSitemap: false });
+		assert.equal(await isWebsiteLive(user), false, "as before its first issue, it answers as if it were off");
+	});
+
+	test("only an issue on the website, and only by its own account", async () => {
+		const user = await customer("unpublish-checks@example.com");
+		const stranger = await customer("unpublish-stranger@example.com");
+		const notYet = await draft(user, { subject: "Not out yet", publishTo: "web" });
+		assert.match((await as(user, () => m.campaigns.unpublishCampaign(notYet))).error, /isn't on the website/);
+		const emailOnly = await draft(user, { subject: "Inbox note", publishTo: "email" });
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(emailOnly, {})), { ok: true });
+		assert.match((await as(user, () => m.campaigns.unpublishCampaign(emailOnly))).error, /isn't on the website/);
+		const held = await draft(user, { subject: "Held back", publishTo: "web" });
+		await m.Campaign.updateOne({ accountId: user.accountId, _id: held }, { $set: { status: "paused", pauseCode: "content_review" } });
+		assert.match((await as(user, () => m.campaigns.unpublishCampaign(held))).error, /isn't on the website/, "held by the content check, it never went out");
+
+		const live = await draft(user, { subject: "Mine to remove", publishTo: "web" });
+		assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(live, {})), { ok: true });
+		assert.equal((await callApi("POST", `/api/v1/campaigns/${live}/unpublish`, { key: stranger.key })).status, 404);
+		assert.match((await as(stranger, () => m.campaigns.unpublishCampaign(live))).error, /not found/i);
+		assert.equal((await load(user, live)).status, "sent");
+		assert.deepEqual(await visit(user, "mine-to-remove"), { page: true, inSitemap: true });
 	});
 });

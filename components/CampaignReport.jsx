@@ -36,10 +36,11 @@ import { timeZoneLabel } from "@/lib/time-zone";
 import { cn } from "@/lib/utils";
 
 // readOnly: an admin looking at a customer's campaign (app/admin/campaigns/[id]): its numbers without its owner's
-// actions, and children above them.
+// actions, and children above them. contactFields: the account's, for the preview to fill in.
 export default function CampaignReport({
 	campaign,
 	newsletter,
+	contactFields = [],
 	providers,
 	links,
 	timeline = null,
@@ -140,12 +141,15 @@ export default function CampaignReport({
 								subject={campaign.subject}
 								previewText={campaign.previewText}
 								newsletterId={String(newsletter._id)}
+								contactFields={contactFields}
 							/>
 						)}
 						<MenuReport
 							id={id}
+							subject={campaign.subject}
 							pageUrl={isOnArchive ? getArchiveUrls(newsletter).post(campaign.archiveSlug) : null}
 							isPinned={Boolean(campaign.archivePinned)}
+							isWebOnly={isWebOnly}
 						/>
 					</>
 				)}

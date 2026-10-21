@@ -10,6 +10,7 @@ import { findCampaignLinks } from "@/lib/campaign-links";
 import { getCampaignActivity, getCampaignComparison } from "@/lib/campaign-report";
 import { countNewContacts, countRemainingContacts, getSendVolumes, sendTimesPipeline } from "@/lib/campaign-queries";
 import { getSharedDomain, isSendingEnabled } from "@/lib/config";
+import { getFieldOptions } from "@/lib/contact-fields";
 import { getPostalAddress } from "@/lib/postal-address";
 import { countAudience, countSegmentCards, findCampaignSegmentFilter, listLiveSegments } from "@/lib/segment-queries";
 import { compileSegment, describeSegment } from "@/lib/segments";
@@ -60,6 +61,7 @@ export default async function CampaignPage({ params }) {
 			<CampaignReport
 				campaign={serialize(campaign)}
 				newsletter={serialize(newsletter)}
+				contactFields={getFieldOptions(account)}
 				providers={providers}
 				links={serialize(links)}
 				timeline={timeline}
@@ -102,6 +104,7 @@ export default async function CampaignPage({ params }) {
 				name,
 				description: describeSegment({ match, conditions }, account.contactFields ?? []),
 			}))}
+			contactFields={getFieldOptions(account)}
 			isSegmentDeleted={isSegmentDeleted}
 			senderProblem={sender.problem ?? null}
 			isSharedSender={isOnSharedDomain(newsletter.fromEmail, sharedDomain)}

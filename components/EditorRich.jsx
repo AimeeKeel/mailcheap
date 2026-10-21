@@ -19,7 +19,8 @@ import { useFileDropGuard } from "@/lib/use-file-drop";
 
 const MIN_HEIGHT = "min-h-[560px]";
 
-export default function EditorRich({ content, onChange }) {
+// contactFields: the account's fields, whose tags the editor draws as placeholders and its slash menu inserts.
+export default function EditorRich({ content, onChange, contactFields = [] }) {
 	const [isEditingLink, setIsEditingLink] = useState(false);
 	const [isPickingImage, setIsPickingImage] = useState(false);
 	const editor = useEditor({
@@ -43,7 +44,7 @@ export default function EditorRich({ content, onChange }) {
 			}),
 			Callout,
 			BlockHandle,
-			MergeTags,
+			MergeTags.configure({ contactFields }),
 			Placeholder.configure({
 				placeholder: ({ node }) => (node.type.name === "heading" ? "Heading" : "Write, or press / for commands"),
 			}),
@@ -53,7 +54,7 @@ export default function EditorRich({ content, onChange }) {
 				onDrop: (current, files, position) => insertImages(current, files, position),
 				onPaste: (current, files) => insertImages(current, files),
 			}),
-			SlashCommand.configure({ onPickImage: () => setIsPickingImage(true) }),
+			SlashCommand.configure({ onPickImage: () => setIsPickingImage(true), contactFields }),
 		],
 		editorProps: {
 			// With a mouse, the left padding holds the blocks' drag handle (lib/editor-block-handle.js).

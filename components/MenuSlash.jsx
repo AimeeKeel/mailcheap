@@ -17,7 +17,8 @@ import {
 	TextQuote,
 	UserRound,
 } from "lucide-react";
-import { firstNameTag } from "@/lib/merge-tags";
+import IconField from "@/components/IconField";
+import { fieldTag, firstNameTag } from "@/lib/merge-tags";
 import { cn } from "@/lib/utils";
 
 export default function MenuSlash({ items, command, ref }) {
@@ -56,7 +57,7 @@ export default function MenuSlash({ items, command, ref }) {
 				const isSelected = itemIndex === index;
 				return (
 					<button
-						key={item.title}
+						key={item.id ?? item.title}
 						type="button"
 						role="option"
 						aria-selected={isSelected}
@@ -70,9 +71,9 @@ export default function MenuSlash({ items, command, ref }) {
 						)}
 					>
 						<span className="grid size-7 shrink-0 place-items-center rounded-md border bg-background text-muted-foreground">
-							<item.icon className="size-4" />
+							<item.icon className="size-4" type={item.type} />
 						</span>
-						{item.title}
+						<span className="min-w-0 truncate">{item.title}</span>
 					</button>
 				);
 			})}
@@ -80,18 +81,20 @@ export default function MenuSlash({ items, command, ref }) {
 	);
 }
 
-// Typing "/" at the start of a line or after a space opens the menu; the text after it filters.
+// Typing "/" at the start of a line or after a space opens the menu; the text after it filters. contactFields: the
+// account's fields, each an item that inserts its tag after the first name's.
 export const SlashCommand = Extension.create({
 	name: "slashCommand",
 	addOptions() {
-		return { onPickImage: () => {} };
+		return { onPickImage: () => {}, contactFields: [] };
 	},
 	addProseMirrorPlugins() {
+		const items = [...SLASH_ITEMS, ...this.options.contactFields.map(toFieldItem)];
 		return [
 			Suggestion({
 				editor: this.editor,
 				char: "/",
-				items: ({ query }) => filterItems(query),
+				items: ({ query }) => filterItems(items, query),
 				command: ({ editor, range, props: item }) => {
 					item.run(editor.chain().focus().deleteRange(range)).run();
 					if (item.isImage) this.options.onPickImage(editor);
@@ -124,9 +127,20 @@ function renderMenu() {
 	};
 }
 
-function filterItems(query) {
+function filterItems(items, query) {
 	const search = query.toLowerCase().trim();
-	return SLASH_ITEMS.filter(({ title, keywords }) => `${title} ${keywords}`.toLowerCase().includes(search));
+	return items.filter(({ title, keywords }) => `${title} ${keywords}`.toLowerCase().includes(search));
+}
+
+function toFieldItem({ key, label, type }) {
+	return {
+		id: `field:${key}`,
+		title: label,
+		keywords: `${key} field personalize merge tag`,
+		icon: IconField,
+		type,
+		run: (chain) => chain.insertContent(fieldTag(key)),
+	};
 }
 
 function scrollIntoView(element) {

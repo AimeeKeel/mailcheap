@@ -33,7 +33,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatCount, formatNumber, formatSendTime } from "@/lib/format";
-import { withMergeFallbacks } from "@/lib/merge-tags";
+import { withoutMergeTags } from "@/lib/merge-tags";
 import { PUBLISH_OPTIONS } from "@/lib/publish-to";
 import { slugify } from "@/lib/slug";
 import { toast } from "@/lib/toast";
@@ -81,7 +81,7 @@ export default function PanelSend({
 			<InputCampaignSlug
 				campaignId={campaign._id}
 				initialSlug={campaign.archiveSlug ?? ""}
-				placeholder={slugify(withMergeFallbacks(subject), 80) || "issue"}
+				placeholder={slugify(withoutMergeTags(subject), 80) || "issue"}
 				urlBase={archiveUrlBase}
 			/>
 		</RowCampaign>

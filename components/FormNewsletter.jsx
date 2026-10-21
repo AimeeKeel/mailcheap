@@ -64,6 +64,7 @@ export default function FormNewsletter({
 	cleanupTotals,
 	welcomePause,
 	signupReviews = null,
+	contactFields = [],
 	isCloud = false,
 	preselectDomain = null,
 }) {
@@ -114,7 +115,7 @@ export default function FormNewsletter({
 		setDiscardCount((count) => count + 1);
 	}
 
-	const form = { draft, setDraft, set, update, newsletter, sender, discardCount, isCloud };
+	const form = { draft, setDraft, set, update, newsletter, sender, contactFields, discardCount, isCloud };
 
 	return (
 		<form onSubmit={save} className="flex flex-col gap-4">
@@ -329,7 +330,7 @@ function SectionSender({ draft, set, update, domains, sharedDomain, fromEmail, d
 
 // Until it's edited, the built-in confirmation email follows the name and the description. Turned on while the welcome
 // email goes out, it says that saving turns the welcome email off (readSettingsForm sends both).
-function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud, review }) {
+function SectionSignups({ draft, setDraft, set, newsletter, sender, contactFields, isCloud, review }) {
 	const { name, description, confirmationEdits, isConfirmationRequired, postalAddress } = draft;
 	const isWelcomeReplaced = isConfirmationRequired && !newsletter.requireConfirmation && Boolean(newsletter.welcome?.enabled);
 	const confirmation = useMemo(
@@ -343,9 +344,9 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud, rev
 				renderEmail({ ...deferredConfirmation, newsletter: { name, postalAddress, theme: newsletter.theme } })
 					.html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#")
 					.replaceAll(CONFIRM_URL_PLACEHOLDER, "#"),
-				{ isHtml: true }
+				{ isHtml: true, contactFields }
 			),
-		[deferredConfirmation, name, postalAddress, newsletter.theme]
+		[deferredConfirmation, name, postalAddress, newsletter.theme, contactFields]
 	);
 
 	function updateConfirmation(key) {
@@ -413,7 +414,7 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender, isCloud, rev
 
 // Its switch works while signups confirm too: turned on, it says that saving turns double opt-in off (readSettingsForm
 // sends both).
-function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled, testEmail, welcomePause, isCloud, review }) {
+function SectionWelcome({ draft, setDraft, newsletter, sender, contactFields, isSendingEnabled, testEmail, welcomePause, isCloud, review }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const [isTesting, startTesting] = useTransition();
@@ -429,9 +430,9 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, isSendingEnabled,
 					previewText: deferredWelcome.previewText,
 					newsletter: { name, postalAddress, theme: newsletter.theme },
 				}).html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"),
-				{ isHtml: true }
+				{ isHtml: true, contactFields }
 			),
-		[deferredWelcome, name, postalAddress, newsletter.theme]
+		[deferredWelcome, name, postalAddress, newsletter.theme, contactFields]
 	);
 
 	function updateWelcome(key) {
@@ -650,16 +651,17 @@ function SectionWebsite({ draft, set, update, newsletter, sharedDomain, appUrl, 
 					/>
 				}
 			>
-				<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
-					Every issue you send gets a page here, with a signup form.
-					{hasArchiveHost && !archiveHost && " Add a domain on the Domains page to put it on your own subdomain."}
-				</p>
+				{hasArchiveHost && !archiveHost && (
+					<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
+						Add a domain on the Domains page to put your website on your own subdomain.
+					</p>
+				)}
 				<Field
 					label="Address"
 					as="div"
 					hint={
 						!isArchiveEnabled ? (
-							"Your website is off. Turn it on above to give every issue you send a page."
+							"Your website is off. Turn it on above to publish your issues on it."
 						) : !hasSentIssue ? (
 							"Goes live after your first issue."
 						) : !hasPlan ? (

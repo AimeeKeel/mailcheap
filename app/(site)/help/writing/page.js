@@ -66,7 +66,7 @@ export default function WritingPage() {
 				other change.
 			</p>
 
-			<h2 id="first-name">Greeting readers by name</h2>
+			<h2 id="first-name">Names and fields in your emails</h2>
 			<p>
 				<code>{"{{first_name}}"}</code> shows each reader&apos;s first name. Type <kbd>/</kbd> and pick First name, or click the person
 				icon at the end of the subject. Both add <code>{"{{first_name|there}}"}</code>: the word after the bar is what readers without a
@@ -74,12 +74,19 @@ export default function WritingPage() {
 				or remove it with the bar to show nothing.
 			</p>
 			<p>
-				It works in the subject, the preview text and the content, and in your welcome and confirmation emails. Your website and its
-				issue pages always show the fallback, so no reader&apos;s name is ever public. The preview shows the name Jane, or the first
-				name of a contact you <Link href={getHelpHref("writing", "preview")}>pick in it</Link>. Test emails show Jane too, or your
-				own first name if you&apos;re one of your contacts with one. The review step flags any other{" "}
-				<code>{"{{...}}"}</code>, like a tag from another platform, since it would go out as written. First names come from{" "}
-				<Link href={getHelpHref("contacts", "details")}>your contacts</Link>.
+				Your own <Link href={getHelpHref("contacts", "fields")}>contact fields</Link> work the same way, by their key:{" "}
+				<code>{"{{birthday}}"}</code>, <code>{"{{plan|free}}"}</code>. Type <kbd>/</kbd> and pick the field, or click the person icon
+				in the subject, which lists your fields once you have some. Text shows as it is, a number with its thousands separated
+				(1,250), and a date written out (April 12, 1991). A reader without a value sees the fallback, or nothing. Tags never show
+				in emails: they&apos;re for picking who gets an issue, with <Link href={getHelpHref("contacts", "segments")}>segments</Link>.
+			</p>
+			<p>
+				Names and fields work in the subject, the preview text and the content, and in your welcome and confirmation emails. Your
+				website and its issue pages always show the fallback, so no reader&apos;s details are ever public. The preview shows the
+				name Jane, with no field values, or the details of a contact you{" "}
+				<Link href={getHelpHref("writing", "preview")}>pick in it</Link>. Test emails show Jane too, or your own first name and
+				fields if you&apos;re one of your contacts. The review step flags any other <code>{"{{...}}"}</code>, like a tag from another
+				platform or a field you deleted, since it would go out as written.
 			</p>
 
 			<h2 id="preview">Preview and test emails</h2>
@@ -93,9 +100,8 @@ export default function WritingPage() {
 				Sample reader, at the top left, shows the email as a reader called Jane gets it. Click it to pick one of your active
 				contacts instead, the newest first, each with their picture as on the <LinkApp href="/contacts">Contacts page</LinkApp>, or
 				find one by typing the start of their email address or first name. The subject, the preview text and the email then read as
-				that person gets them, with their first name, or the fallback if they have none. They stay picked while the campaign is
-				open. Tags and fields aren&apos;t filled in: only <code>{"{{first_name}}"}</code> is. How to add names and fields to
-				contacts, at the bottom of the list, opens{" "}
+				that person gets them, with their first name and field values, or the fallbacks where they have none. They stay picked
+				while the campaign is open. How to add names and fields to contacts, at the bottom of the list, opens{" "}
 				<Link href={getHelpHref("contacts", "fields")}>Adding fields, step by step</Link>.
 			</p>
 			<p>
@@ -107,7 +113,8 @@ export default function WritingPage() {
 			<h2 id="other">Duplicate, discard and HTML</h2>
 			<p>
 				The <strong>⋯</strong> menu also duplicates a campaign into a new draft, or discards a draft. A sent campaign can&apos;t be
-				changed or deleted.
+				changed, but it can come off your website.{" "}
+				<Link href={getHelpHref("website", "remove-issue")}>Removing an issue</Link>
 			</p>
 			<p>
 				A campaign made with the API or an AI assistant can be a whole HTML document. The dashboard then shows its HTML to edit, and it

@@ -56,7 +56,8 @@ export async function setCampaignPublishTo(id, publishTo) {
 }
 
 // The preview's reader picker: the newsletter's active contacts whose address or first name starts with what's typed, the
-// newest before anything is, each with the hash its picture comes from (AvatarContact).
+// newest before anything is, each with its field values, which the preview fills in, and the hash its picture comes
+// from (AvatarContact).
 export async function findPreviewContacts(newsletterId, query) {
 	const { output, failure } = await runDashboardAction("search_contacts", {
 		newsletter: String(newsletterId ?? ""),
@@ -65,7 +66,9 @@ export async function findPreviewContacts(newsletterId, query) {
 		limit: 8,
 	});
 	if (failure) return toFormError(failure);
-	return { contacts: output.contacts.map(({ id, email, firstName }) => ({ id, email, firstName, gravatarHash: gravatarHash(email) })) };
+	return {
+		contacts: output.contacts.map(({ id, email, firstName, fields }) => ({ id, email, firstName, fields, gravatarHash: gravatarHash(email) })),
+	};
 }
 
 export async function sendTestCampaign(id) {
@@ -149,6 +152,16 @@ export async function discardCampaign(id) {
 	revalidatePath("/");
 	revalidatePath("/campaigns");
 	return { ok: true };
+}
+
+// deleted: a web-only issue left the campaigns too, so its own page isn't refreshed while the dialog leaves it.
+export async function unpublishCampaign(id) {
+	const { output, failure } = await runDashboardAction("unpublish_campaign", { id: String(id) });
+	if (failure) return toFormError(failure);
+	revalidatePath("/");
+	revalidatePath("/campaigns");
+	if (!output.deleted) revalidatePath(`/campaigns/${id}`);
+	return { ok: true, deleted: output.deleted };
 }
 
 // The page lives at /p/<slug> once the issue goes out. A draft without one gets the subject's slug then.

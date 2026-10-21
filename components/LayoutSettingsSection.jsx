@@ -1,6 +1,7 @@
 import FormNewsletter from "@/components/FormNewsletter";
 import HeaderPage from "@/components/HeaderPage";
 import LayoutNarrow from "@/components/LayoutNarrow";
+import { getFieldOptions } from "@/lib/contact-fields";
 import { SETTINGS_PATH, getSection } from "@/lib/newsletter-sections";
 import { serialize } from "@/lib/serialize";
 
@@ -28,6 +29,7 @@ export default function LayoutSettingsSection({ section, page, preselectDomain =
 				cleanupTotals={page.cleanupTotals}
 				welcomePause={page.welcomePause}
 				signupReviews={page.signupReviews}
+				contactFields={getFieldOptions(page.account)}
 				isCloud={page.isCloud}
 				preselectDomain={preselectDomain}
 			/>

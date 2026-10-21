@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { scoped } from "@/lib/account-scope";
 import { getAppUrl, isCloud } from "@/lib/config";
-import { cleanTag, contactFieldValues } from "@/lib/contact-fields";
+import { cleanTag, contactFieldValues, getFieldOptions } from "@/lib/contact-fields";
 import { UNDELIVERABLE_LABELS } from "@/lib/contact-status";
 import { CONTACTS_PAGE_SIZE, findContactsPage, listContactTags } from "@/lib/contacts";
 import { getAddContactCurl } from "@/lib/docs/reference";
@@ -59,7 +59,7 @@ export default async function ContactsPage({ searchParams }) {
 	const query = typeof params.q === "string" ? params.q.trim().toLowerCase().slice(0, 254) : "";
 	const tag = typeof params.tag === "string" ? cleanTag(params.tag) : null;
 	const page = Math.max(1, Number.parseInt(params.page, 10) || 1);
-	const fields = (account.contactFields ?? []).map(({ key, label, type }) => ({ key, label, type }));
+	const fields = getFieldOptions(account);
 	const segments = newsletterId ? await listLiveSegments(account, newsletterId) : [];
 	const segment = segments.find(({ _id }) => String(_id) === params.segment) ?? null;
 	const segmentId = segment ? String(segment._id) : null;

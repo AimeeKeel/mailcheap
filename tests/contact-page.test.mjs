@@ -231,6 +231,7 @@ describe("the contact page and its data", () => {
 
 	test("the page shows who they are, their emails, history and segments, to its account only", async () => {
 		const user = await customer("contact-page@example.com");
+		assert.equal((await callApi("POST", "/api/v1/contacts/fields", { key: user.key, body: { label: "Plan", type: "text" } })).status, 201);
 		const contact = await m.Contact.create({
 			accountId: user.accountId,
 			newsletterId: user.newsletterId,
@@ -240,11 +241,16 @@ describe("the contact page and its data", () => {
 			source: "website",
 			country: "FR",
 			tags: ["vip"],
+			fields: { plan: "Pro" },
 			subscribedAt: new Date(Date.now() - 30 * 24 * HOUR),
 			createdAt: new Date(Date.now() - 30 * 24 * HOUR),
 			lastOpenAt: new Date(Date.now() - 23 * HOUR),
 		});
-		await sendIssue(user, contact, { subject: "Hello {{first_name|there}}", sentAt: new Date(Date.now() - 24 * HOUR), links: ["https://example.com/story"] });
+		await sendIssue(user, contact, {
+			subject: "Hello {{first_name|there}}, on {{plan|free}}",
+			sentAt: new Date(Date.now() - 24 * HOUR),
+			links: ["https://example.com/story"],
+		});
 		await m.Segment.create([
 			{ accountId: user.accountId, newsletterId: user.newsletterId, name: "VIP readers", match: "all", conditions: [{ field: "tag", op: "has", value: "vip" }] },
 			{ accountId: user.accountId, newsletterId: user.newsletterId, name: "Never opened", match: "all", conditions: [{ field: "opened", op: "never" }] },
@@ -253,7 +259,7 @@ describe("the contact page and its data", () => {
 		const html = await renderPage(user, String(contact._id));
 		assert.ok(html.includes(">Jane</h1>"), "their first name heads the page");
 		assert.ok(html.includes("France") && html.includes("https://flagcdn.com/fr.svg"), "their country, with its flag");
-		assert.ok(html.includes("Hello Jane"), "the subject as they got it");
+		assert.ok(html.includes("Hello Jane, on Pro"), "the subject as they got it, with their first name and fields");
 		assert.ok(html.includes(`href="/campaigns/`), "each issue links to its report");
 		assert.ok(html.includes("example.com/story") && html.includes("google.com/s2/favicons?domain=example.com"), "the link they clicked, with its favicon");
 		assert.ok(html.includes("Signed up on your website"));

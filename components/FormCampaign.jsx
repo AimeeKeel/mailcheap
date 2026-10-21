@@ -25,6 +25,7 @@ import CardSettings from "@/components/CardSettings";
 import DialogDiscardCampaign from "@/components/DialogDiscardCampaign";
 import DialogPreviewEmail from "@/components/DialogPreviewEmail";
 import EditorRich from "@/components/EditorRich";
+import IconField from "@/components/IconField";
 import ListChecks from "@/components/ListChecks";
 import NavSteps from "@/components/NavSteps";
 import NoticeSendProblems, { ListSendProblems } from "@/components/NoticeSendProblems";
@@ -36,6 +37,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -43,7 +45,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { getCheckFix } from "@/lib/campaign-steps";
 import { toPreviewFrame } from "@/lib/email-preview";
 import { markdownToHtml } from "@/lib/markdown";
-import { firstNameTag } from "@/lib/merge-tags";
+import { fieldTag, firstNameTag } from "@/lib/merge-tags";
 import { getPresendChecks } from "@/lib/presend-checks";
 import { readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
@@ -68,6 +70,7 @@ export default function FormCampaign({
 	audienceCount,
 	everyoneCount,
 	segments,
+	contactFields = [],
 	isSegmentDeleted,
 	senderProblem,
 	isSharedSender = false,
@@ -111,6 +114,7 @@ export default function FormCampaign({
 	const isCompact = useMediaQuery(COMPACT_SCREEN);
 	const rootRef = useRef(null);
 	const subjectRef = useRef(null);
+	const subjectSelectionRef = useRef(null);
 	const previewTextRef = useRef(null);
 	const previewOpenerRef = useRef(null);
 	const scrollsRef = useRef({});
@@ -137,6 +141,7 @@ export default function FormCampaign({
 		campaign: { ...campaign, ...values, publishTo },
 		newsletter,
 		rendered,
+		contactFields,
 		senderProblem,
 		isSharedSender,
 		isSendingEnabled,
@@ -258,14 +263,13 @@ export default function FormCampaign({
 		return (event) => setValues((current) => ({ ...current, [key]: event.target.value }));
 	}
 
-	// {{first_name|there}} where the cursor is in the subject, or at its end (lib/merge-tags.js). The button keeps the
-	// focus in the subject, so its cursor is still there.
-	function insertFirstName() {
+	// A merge tag (lib/merge-tags.js) where the cursor last was in the subject, or at its end if it never was there: the
+	// fields' menu takes the focus, so the subject's selection is kept as it changes.
+	function insertTag(tag) {
 		const input = subjectRef.current;
-		const tag = firstNameTag();
-		const isTyping = document.activeElement === input;
-		const start = isTyping ? input.selectionStart : input.value.length;
-		const end = isTyping ? input.selectionEnd : start;
+		const [start, end] = (subjectSelectionRef.current ?? [input.value.length, input.value.length]).map((index) =>
+			Math.min(index, input.value.length)
+		);
 		const subject = `${input.value.slice(0, start)}${tag}${input.value.slice(end)}`.slice(0, SUBJECT_MAX);
 		setValues((current) => ({ ...current, subject }));
 		requestAnimationFrame(() => {
@@ -372,23 +376,13 @@ export default function FormCampaign({
 										ref={subjectRef}
 										value={values.subject}
 										onChange={update("subject")}
+										onSelect={(event) => (subjectSelectionRef.current = [event.target.selectionStart, event.target.selectionEnd])}
 										placeholder="Subject"
 										aria-label="Subject"
 										maxLength={SUBJECT_MAX}
 										className="h-11 w-full min-w-0 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground"
 									/>
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon-sm"
-										onMouseDown={(event) => event.preventDefault()}
-										onClick={insertFirstName}
-										aria-label="Insert first name"
-										title="Insert first name"
-										className="-mr-2 shrink-0 text-muted-foreground"
-									>
-										<UserRound />
-									</Button>
+									<ButtonInsertTag contactFields={contactFields} onInsert={insertTag} />
 								</div>
 							</RowCampaign>
 							<RowCampaign label="Preview text">
@@ -416,7 +410,7 @@ export default function FormCampaign({
 								/>
 							</div>
 						) : (
-							<EditorRich content={initialBody} onChange={updateBody} />
+							<EditorRich content={initialBody} onChange={updateBody} contactFields={contactFields} />
 						)}
 					</div>
 				</section>
@@ -497,6 +491,7 @@ export default function FormCampaign({
 				subject={deferredValues.subject}
 				previewText={deferredValues.previewText}
 				newsletterId={newsletter._id}
+				contactFields={contactFields}
 			/>
 			<DialogDiscardCampaign
 				id={campaign._id}
@@ -524,6 +519,73 @@ function TitleCampaign({ title, newsletter, status }) {
 			<h1 className="truncate text-lg font-semibold tracking-tight lg:text-base">{title || "Untitled"}</h1>
 			<BadgeStatus status={status} />
 		</div>
+	);
+}
+
+// The subject's merge tags: the first name in one click, or with the account's own fields, a menu of them all. Once one
+// is picked, the subject keeps the focus onInsert gives it, instead of the menu's button.
+function ButtonInsertTag({ contactFields, onInsert }) {
+	const isInsertingRef = useRef(false);
+	const className = "-mr-2 shrink-0 text-muted-foreground";
+
+	if (contactFields.length === 0) {
+		return (
+			<Button
+				type="button"
+				variant="ghost"
+				size="icon-sm"
+				onMouseDown={(event) => event.preventDefault()}
+				onClick={() => onInsert(firstNameTag())}
+				aria-label="Insert first name"
+				title="Insert first name"
+				className={className}
+			>
+				<UserRound />
+			</Button>
+		);
+	}
+
+	function insert(tag) {
+		isInsertingRef.current = true;
+		onInsert(tag);
+	}
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-sm"
+					aria-label="Insert a first name or a field"
+					title="Insert a first name or a field"
+					className={className}
+				>
+					<UserRound />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent
+				align="end"
+				className="w-56"
+				onCloseAutoFocus={(event) => {
+					if (isInsertingRef.current) event.preventDefault();
+					isInsertingRef.current = false;
+				}}
+			>
+				<DropdownMenuItem onSelect={() => insert(firstNameTag())}>
+					<UserRound />
+					First name
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuLabel>Your fields</DropdownMenuLabel>
+				{contactFields.map((field) => (
+					<DropdownMenuItem key={field.key} onSelect={() => insert(fieldTag(field.key))}>
+						<IconField type={field.type} />
+						<span className="min-w-0 truncate">{field.label}</span>
+					</DropdownMenuItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 

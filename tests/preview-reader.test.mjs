@@ -151,8 +151,8 @@ describe("picking a contact to preview as", () => {
 		const [joanna] = (await find("joanna")).contacts;
 		assert.deepEqual(
 			joanna,
-			{ id: joanna.id, email: "joanna@example.com", firstName: "Joanna", gravatarHash: gravatarHash("joanna@example.com") },
-			"only what the preview needs, and the hash its picture comes from"
+			{ id: joanna.id, email: "joanna@example.com", firstName: "Joanna", fields: {}, gravatarHash: gravatarHash("joanna@example.com") },
+			"only what the preview fills in, and the hash its picture comes from"
 		);
 		assert.deepEqual((await find("nameless")).contacts[0].firstName, null);
 	});
@@ -197,7 +197,7 @@ describe("picking a contact to preview as", () => {
 		const messages = await m.Message.countDocuments({ accountId: user.accountId });
 		const preview = await callApi("GET", `/api/v1/campaigns/${campaignId}/preview?contact=Joanna@Example.com`, { key: user.key });
 		assert.equal(preview.status, 200, JSON.stringify(preview.body));
-		assert.deepEqual(preview.body.contact, { id: preview.body.contact.id, email: "joanna@example.com", firstName: "Joanna", status: "active" });
+		assert.deepEqual(preview.body.contact, { id: preview.body.contact.id, email: "joanna@example.com", firstName: "Joanna", status: "active", fields: {} });
 		assert.equal(preview.body.subject, "Joanna, issue 12");
 		assert.equal(preview.body.previewText, "For Joanna");
 		assert.ok(preview.body.html.includes("<p>Hi Joanna, Joanna!</p>"), preview.body.html);

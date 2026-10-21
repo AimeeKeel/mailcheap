@@ -47,14 +47,26 @@ export default function WebsitePage() {
 
 			<h2 id="issue-pages">Issue pages</h2>
 			<p>
-				Every issue you send gets a page at <code>/p/</code> followed by its slug, made from the subject. Change the slug in the
-				send step&apos;s Web page row before it goes out, or later from the campaign&apos;s page. There you can also pin an issue: pinned
-				issues lead the home page, in its Featured row.
+				Every issue on your website gets a page at <code>/p/</code> followed by its slug, made from the subject. Change the slug in
+				the send step&apos;s Web page row before it goes out, or later from the campaign&apos;s page. There you can also pin an issue:
+				pinned issues lead the home page, in its Featured row.
 			</p>
 			<p>
 				The send step decides where each issue goes. An email-only issue never gets a page, and a web-only issue goes on the
 				website without an email.{" "}
 				<Link href={getHelpHref("sending", "where")}>Email, web or both</Link>
+			</p>
+
+			<h2 id="remove-issue">Removing an issue</h2>
+			<p>
+				Remove from website, in an issue&apos;s <strong>⋯</strong> menu on the <LinkApp href="/campaigns">Campaigns page</LinkApp>{" "}
+				or on its own page, takes it off your website: its page stops working, and it leaves the home page and the sitemap. This
+				can&apos;t be undone.
+			</p>
+			<p>
+				An issue you also sent by email stays in your campaigns with its report, as email only, and the Read online link in its
+				emails stops working. A web-only issue has nothing left, so it leaves your campaigns too. With no issue left on it, your
+				website goes offline until the next one, as before your first.
 			</p>
 
 			<h2 id="signups">How people sign up</h2>

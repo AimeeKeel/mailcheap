@@ -90,17 +90,18 @@ export default function ContactsPage() {
 			<ul>
 				<li>
 					<strong>First name</strong>: what <code>{"{{first_name}}"}</code> shows in your emails.{" "}
-					<Link href={getHelpHref("writing", "first-name")}>Greeting readers by name</Link>
+					<Link href={getHelpHref("writing", "first-name")}>Names and fields in your emails</Link>
 				</li>
 				<li>
 					<strong>Tags</strong>: labels a contact has or doesn&apos;t, like vip, podcast or customer, {MAX_TAGS} per contact at most.
 					Use them to sort people into groups: list everyone with a tag, or send to them through a segment. Tags are lowercase, up
 					to {MAX_TAG_LENGTH} characters, without commas. Tag lists everyone the page shows with its filters, or takes a tag off
-					them.
+					them. Tags never show in emails.
 				</li>
 				<li>
 					<strong>Fields</strong>: your own questions with an answer for each contact, like a last name, a birthday or a plan, as
-					text, a number or a date, {MAX_CONTACT_FIELDS} at most, shared by your newsletters.{" "}
+					text, a number or a date, {MAX_CONTACT_FIELDS} at most, shared by your newsletters. Each one&apos;s tag shows the
+					reader&apos;s answer in your emails.{" "}
 					<a href="#fields">Adding fields, step by step</a>
 				</li>
 			</ul>
@@ -152,9 +153,14 @@ export default function ContactsPage() {
 					</ul>
 				</li>
 				<li>
-					<strong>Use them.</strong> <code>{"{{first_name}}"}</code> greets each reader by name in your emails, and{" "}
-					<a href="#segments">segments</a> pick contacts by their fields, like everyone on a plan.{" "}
-					<Link href={getHelpHref("writing", "first-name")}>Greeting readers by name</Link>
+					<strong>Use them in your emails.</strong> In an issue, type <kbd>/</kbd> and pick a field, or click the person icon at the
+					end of the subject, to add its tag, like <code>{"{{birthday}}"}</code>. Each reader gets their own value, and a fallback
+					after a bar, like <code>{"{{plan|free}}"}</code>, shows for readers without one. Pick a contact in the preview to see the
+					email with their values. <Link href={getHelpHref("writing", "first-name")}>Names and fields in your emails</Link>
+				</li>
+				<li>
+					<strong>Pick readers by them.</strong> <a href="#segments">Segments</a> pick contacts by their fields, like everyone on the
+					Pro plan.
 				</li>
 			</ol>
 			<p>

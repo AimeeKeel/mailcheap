@@ -253,7 +253,13 @@ export default async function ContactPage({ params, searchParams }) {
 						<ol className="flex flex-col border-t border-border/60 p-4">
 							{timeline.map((item) =>
 								item.email ? (
-									<ItemEmail key={item.key} email={item.email} firstName={contact.firstName} timeZone={timeZone} />
+									<ItemEmail
+										key={item.key}
+										email={item.email}
+										contact={contact}
+										contactFields={account.contactFields}
+										timeZone={timeZone}
+									/>
 								) : (
 									<ItemEvent key={item.key} event={item.event} source={source} timeZone={timeZone} />
 								)
@@ -322,8 +328,8 @@ function ItemTimeline({ icon: Icon, tone = "muted", title, at, timeZone, childre
 }
 
 // An email, by what it came to: the furthest of delivered, opened and clicked, or what stopped it. Its subject shows as
-// they got it, with their first name.
-function ItemEmail({ email, firstName, timeZone }) {
+// they got it, with their first name and field values.
+function ItemEmail({ email, contact, contactFields, timeZone }) {
 	const outcome = getOutcome(email);
 	const { verb, icon, tone } = OUTCOMES[outcome];
 	const links = email.clickedLinks.filter((url) => /^https?:\/\//i.test(url));
@@ -347,7 +353,7 @@ function ItemEmail({ email, firstName, timeZone }) {
 							href={`/campaigns/${email.campaign.id}`}
 							className="font-medium underline decoration-foreground/0 underline-offset-4 transition-colors duration-150 hover:decoration-foreground/40"
 						>
-							{fillSubject(email.campaign.subject || "Untitled", firstName)}
+							{fillSubject(email.campaign.subject || "Untitled", { firstName: contact.firstName, values: contact.fields, contactFields })}
 						</Link>
 					) : (
 						<span className="font-medium">{KIND_LABELS[email.kind] ?? "An email"}</span>

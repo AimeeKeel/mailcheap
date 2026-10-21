@@ -90,6 +90,7 @@ export default function TableCampaigns({ campaigns, newsletter, hasActions = fal
 											subject={campaign.subject}
 											scheduledAt={campaign.scheduledAt?.toISOString() ?? null}
 											pageUrl={pageUrls[id] ?? null}
+											isWebOnly={campaign.publishTo === "web"}
 										/>
 									</TableCell>
 								)}

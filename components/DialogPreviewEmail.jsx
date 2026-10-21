@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 // Gmail on a phone. Escape, the close button and a click on the dimmed space close it; Radix keeps the focus inside
 // meanwhile. With a newsletterId, html, subject and previewText keep their merge tags for the preview to fill in as the
 // reader it shows gets them: the sample reader, or one of the newsletter's contacts picked in it, who stays picked for
-// the next look.
+// the next look. contactFields: the account's fields, whose tags print the reader's values.
 export default function DialogPreviewEmail({ isOpen, onOpenChange, onCloseAutoFocus, ...email }) {
 	const [contact, setContact] = useState(null);
 
@@ -56,11 +56,21 @@ export default function DialogPreviewEmail({ isOpen, onOpenChange, onCloseAutoFo
 
 // Narrower than the device (a phone showing the desktop), the device scales down whole instead of reflowing. On an
 // actual phone, the mobile version is the email itself, edge to edge, instead of a smaller phone drawn inside it.
-function Stage({ html: emailHtml, subject: emailSubject, previewText: emailPreviewText, sender, newsletterId, contact, onContactChange, onClose }) {
+function Stage({
+	html: emailHtml,
+	subject: emailSubject,
+	previewText: emailPreviewText,
+	sender,
+	newsletterId,
+	contactFields,
+	contact,
+	onContactChange,
+	onClose,
+}) {
 	const { html, subject, previewText } = useMemo(() => {
 		const email = { html: emailHtml, subject: emailSubject, previewText: emailPreviewText };
-		return newsletterId ? fillForReader(email, contact ?? SAMPLE_READER) : email;
-	}, [emailHtml, emailSubject, emailPreviewText, newsletterId, contact]);
+		return newsletterId ? fillForReader(email, contact ?? SAMPLE_READER, contactFields) : email;
+	}, [emailHtml, emailSubject, emailPreviewText, newsletterId, contact, contactFields]);
 	const [device, setDevice] = useState(() => (window.matchMedia(SMALL_SCREEN).matches ? "mobile" : "desktop"));
 	const [space, setSpace] = useState(null);
 	const [hasOpenedEmail, setHasOpenedEmail] = useState(false);
