@@ -44,6 +44,18 @@ test("the report's links come below its results by inbox", () => {
 	assert.ok(html.indexOf(">Link</th>") > inbox, "the links table follows it");
 });
 
+test("Gmail's row in the inbox table shows Gmail's logo, and other inboxes their favicon", () => {
+	const html = renderReport({
+		providers: [
+			{ provider: "gmail", sent: 600, delivered: 595, opened: 300, clicked: 50, bounced: 5, complained: 0 },
+			{ provider: "outlook", sent: 400, delivered: 395, opened: 162, clicked: 20, bounced: 5, complained: 1 },
+		],
+	});
+	assert.ok(html.includes('<svg viewBox="52 42 88 66" width="16" height="16"'), "Gmail's own logo");
+	assert.ok(!html.includes("s2/favicons?domain=gmail.com"), "the favicon service answers gmail.com with Google's G");
+	assert.ok(html.includes("s2/favicons?domain=outlook.com&amp;"));
+});
+
 test("the report compares opens and clicks with the average in percent, never in points", () => {
 	const html = renderReport();
 	assert.ok(html.includes("+4.2%"));
