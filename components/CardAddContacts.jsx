@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // The contacts page of a newsletter without contacts: the two ways in, side by side, and adding one by hand to try it.
-export default function CardAddContacts({ newsletter, curl }) {
+export default function CardAddContacts({ newsletter, curl, importGuides }) {
 	return (
 		<section
 			aria-labelledby="add-contacts-title"
@@ -46,7 +46,7 @@ export default function CardAddContacts({ newsletter, curl }) {
 					</ul>
 					<div className="flex items-center">
 						<GatePlan reason="import">
-							<DialogImportContacts newsletter={newsletter} label="Import contacts" variant="default" />
+							<DialogImportContacts newsletter={newsletter} guides={importGuides} label="Import contacts" variant="default" />
 						</GatePlan>
 					</div>
 				</ColumnWay>

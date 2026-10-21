@@ -31,7 +31,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { scoped } from "@/lib/account-scope";
-import { getAppUrl } from "@/lib/config";
+import { getAppUrl, isCloud } from "@/lib/config";
 import { cleanTag, contactFieldValues } from "@/lib/contact-fields";
 import { UNDELIVERABLE_LABELS } from "@/lib/contact-status";
 import { CONTACTS_PAGE_SIZE, findContactsPage, listContactTags } from "@/lib/contacts";
@@ -42,6 +42,7 @@ import { toNewsletterOption } from "@/lib/newsletters";
 import { countSegmentCards, listLiveSegments } from "@/lib/segment-queries";
 import { compileSegment, describeSegment } from "@/lib/segments";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
+import { siteExtensions } from "@/lib/site-extensions";
 import { cn } from "@/lib/utils";
 import Contact, { CONTACT_STATUSES } from "@/models/Contact";
 
@@ -77,6 +78,7 @@ export default async function ContactsPage({ searchParams }) {
 		totalAll > 0 ||
 		Boolean((query || tag || segment) && newsletterId && (await Contact.exists(scoped(account, { newsletterId: selected._id }))));
 	const newsletter = selected && toNewsletterOption(selected);
+	const importGuides = isCloud() ? siteExtensions.importGuides : [];
 	const filters = { status, query, segmentId, tag };
 
 	function href(changes) {
@@ -99,7 +101,7 @@ export default async function ContactsPage({ searchParams }) {
 				{hasContacts && <DialogContactFields />}
 				{hasContacts && <DialogAddContact newsletter={newsletter} />}
 				<GatePlan reason="import">
-					<DialogImportContacts newsletter={newsletter} />
+					<DialogImportContacts newsletter={newsletter} guides={importGuides} />
 				</GatePlan>
 			</HeaderPage>
 
@@ -160,7 +162,7 @@ export default async function ContactsPage({ searchParams }) {
 				)}
 
 				{!hasContacts ? (
-					<CardAddContacts newsletter={newsletter} curl={getAddContactCurl(getAppUrl(), selected?.slug)} />
+					<CardAddContacts newsletter={newsletter} curl={getAddContactCurl(getAppUrl(), selected?.slug)} importGuides={importGuides} />
 				) : contacts.length === 0 ? (
 					<StateEmpty icon={Users} title="No contacts match" />
 				) : (
