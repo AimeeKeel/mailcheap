@@ -8,12 +8,10 @@ import CardSettings from "@/components/CardSettings";
 import DialogSegment from "@/components/DialogSegment";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import ListCleanupPreview from "@/components/ListCleanupPreview";
-import NoticeFirstSend from "@/components/NoticeFirstSend";
 import NoticeOwnDomain from "@/components/NoticeOwnDomain";
-import NoticeWarmup from "@/components/NoticeWarmup";
+import NoticePace from "@/components/NoticePace";
 import PickerSendTime from "@/components/PickerSendTime";
 import RowCampaign from "@/components/RowCampaign";
-import TextPlanLimit from "@/components/TextPlanLimit";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -34,11 +32,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FIRST_SEND } from "@/lib/config";
 import { formatCount, formatNumber, formatSendTime } from "@/lib/format";
 import { withMergeFallbacks } from "@/lib/merge-tags";
 import { PUBLISH_OPTIONS } from "@/lib/publish-to";
-import { getPaceHours } from "@/lib/send-spread";
 import { slugify } from "@/lib/slug";
 import { toast } from "@/lib/toast";
 import { useIsClient } from "@/lib/use-is-client";
@@ -56,7 +52,6 @@ export default function PanelSend({
 	everyoneCount,
 	segments,
 	isSegmentDeleted,
-	emailsLeft,
 	pace,
 	newContacts,
 	archiveUrlBase,
@@ -80,10 +75,7 @@ export default function PanelSend({
 	const isWebsiteOn = Boolean(newsletter.archiveEnabled);
 	// As the send and schedule dialogs counted them: a send with its last-chance emails, a schedule its contacts.
 	const paceEmails = isNow ? sending.sendEmails : sending.scheduleRecipients;
-	const isPaced = isEmail && (Boolean(pace?.warmup) || getPaceHours(pace, { emails: paceEmails, newContacts }) > 0);
-	const hasFirstSlice = isEmail && newContacts > FIRST_SEND.minSlice;
 	const isCleanupEnabled = isEmail && Boolean(newsletter.cleanup?.enabled);
-	const isOverPlan = isEmail && isNow && emailsLeft !== null && sending.sendEmails > emailsLeft;
 	const slugRow = archiveUrlBase && publishTo !== "email" && (
 		<RowCampaign label="Web page">
 			<InputCampaignSlug
@@ -262,16 +254,9 @@ export default function PanelSend({
 							</div>
 						</div>
 					)}
-					{(isPaced || hasFirstSlice) && (
-						<div className="flex flex-col gap-2">
-							<NoticeWarmup pace={pace} emails={paceEmails} newContacts={newContacts} />
-							{hasFirstSlice && <NoticeFirstSend count={newContacts} />}
-						</div>
-					)}
+					{isEmail && <NoticePace pace={pace} emails={paceEmails} newContacts={newContacts} />}
 				</div>
 			</CardSettings>
-
-			{isOverPlan && <TextPlanLimit emailsLeft={emailsLeft} instead="Pick a smaller segment" />}
 
 			<DialogSegment
 				newsletterId={newsletter._id}

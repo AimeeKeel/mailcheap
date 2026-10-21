@@ -87,7 +87,7 @@ export default function WarmupPage() {
 				</li>
 				<li>
 					The send step says when an issue will be spread, and over how many hours. A send at full speed only shows your day in the
-					warm-up.
+					warm-up. When an issue reaches contacts you never emailed, the same notice says a slice of them goes first.
 				</li>
 				<li>A campaign that is going out over hours says about how long it has left.</li>
 			</ul>

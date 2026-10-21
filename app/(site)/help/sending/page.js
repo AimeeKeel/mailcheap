@@ -28,8 +28,9 @@ export default function SendingPage() {
 			<p>
 				It also warns about a subject over 70 characters, which inboxes cut off, a missing preview text and a missing test email.
 				Warnings don&apos;t stop you.
-				{isCloud() && " Problems with your account, like your plan's limits, show in a banner above the steps."} A web-only issue
-				sends no email, so it only needs a subject, content and the website on.
+				{isCloud() &&
+					" Problems with your account show in red above the steps: your plan's limits, and on the send step a send bigger than what your plan has left this month."}{" "}
+				A web-only issue sends no email, so it only needs a subject, content and the website on.
 			</p>
 
 			<h2 id="where">Email, web or both</h2>
@@ -79,7 +80,8 @@ export default function SendingPage() {
 				The first time an issue goes to contacts who never got an email from you, usually right after an import, they don&apos;t all
 				get it at once. With more than {formatNumber(FIRST_SEND.minSlice)} of them, a slice goes first: {formatPercent(FIRST_SEND.share)}{" "}
 				of them, between {formatNumber(FIRST_SEND.minSlice)} and {formatNumber(FIRST_SEND.maxSlice)}. The rest follows{" "}
-				{FIRST_SEND.waitMinutes / 60} hours later, once the slice&apos;s bounces and spam complaints are in.
+				{FIRST_SEND.waitMinutes / 60} hours later, once the slice&apos;s bounces and spam complaints are in. The send step says when
+				an issue goes out this way, with how many of its contacts never got an email from you.
 			</p>
 			<p>
 				If the slice gets more than {formatPercent(pause.bounceRate)} hard bounces (at least {pause.minBounces}) or{" "}

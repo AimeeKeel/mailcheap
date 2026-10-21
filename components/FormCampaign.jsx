@@ -8,7 +8,6 @@ import {
 	CalendarClock,
 	ChevronLeft,
 	CircleAlert,
-	CircleX,
 	Copy,
 	Eye,
 	FlaskConical,
@@ -28,6 +27,7 @@ import DialogPreviewEmail from "@/components/DialogPreviewEmail";
 import EditorRich from "@/components/EditorRich";
 import ListChecks from "@/components/ListChecks";
 import NavSteps from "@/components/NavSteps";
+import NoticeSendProblems, { ListSendProblems } from "@/components/NoticeSendProblems";
 import PanelSend from "@/components/PanelSend";
 import RowCampaign from "@/components/RowCampaign";
 import StatusSaved from "@/components/StatusSaved";
@@ -145,8 +145,6 @@ export default function FormCampaign({
 		planProblem,
 	});
 	const reviewChecks = checks.map((check) => ({ ...check, fix: getCheckFix(check, { newsletterId: newsletter._id }) }));
-	// Without a plan, Send and Schedule open the paywall first, and the checks wait until there's one.
-	const accountProblems = hasPlan ? reviewChecks.filter(({ isAccount, isOk }) => isAccount && !isOk) : [];
 	const blocking = [
 		...(isUploading ? [{ id: "uploading", message: UPLOADING_MESSAGE }] : []),
 		...(isSegmentDeleted && !isWebOnly ? [{ id: "segment", message: SEGMENT_DELETED }] : []),
@@ -165,6 +163,10 @@ export default function FormCampaign({
 		isWebOnly,
 		onBeforeSend: persist,
 	});
+	// The account's doing rather than the email's, so above the review and send steps instead of in the checklist; the
+	// send step adds the plan's emails a send now would go over. Without a plan, Send and Schedule open the paywall
+	// first, and the checks wait until there's one.
+	const accountProblems = hasPlan ? (step === "send" ? sending.problems : blocking).filter(({ isAccount }) => isAccount) : [];
 	const isTestDisabled = hasPlan && !isSendingEnabled;
 
 	// Saved right away, like the segment: the send step and the checks follow it.
@@ -355,7 +357,13 @@ export default function FormCampaign({
 			</header>
 
 			<div className="mx-auto w-full max-w-2xl">
-				{step !== "write" && accountProblems.length > 0 && <NoticeAccountProblems problems={accountProblems} />}
+				{step !== "write" && accountProblems.length > 0 && (
+					<NoticeSendProblems
+						problems={accountProblems}
+						renderFix={({ fix }) => fix && <ButtonFix fix={fix} onEdit={editField} />}
+						className="mb-6 animate-enter"
+					/>
+				)}
 
 				<section aria-label="Write" hidden={step !== "write"}>
 					<div className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
@@ -457,7 +465,6 @@ export default function FormCampaign({
 						everyoneCount={everyoneCount}
 						segments={segments}
 						isSegmentDeleted={isSegmentDeleted}
-						emailsLeft={emailsLeft}
 						pace={pace}
 						newContacts={newContacts}
 						archiveUrlBase={archiveUrlBase}
@@ -500,26 +507,6 @@ export default function FormCampaign({
 				onOpenChange={setIsDiscardOpen}
 				redirectTo="/campaigns"
 			/>
-		</div>
-	);
-}
-
-// Above the review and send steps while the account can't send: the account's doing rather than the email's, so not
-// in its checklist.
-function NoticeAccountProblems({ problems }) {
-	return (
-		<div role="status" className="mb-6 flex flex-col gap-2 animate-enter">
-			{problems.map(({ id, message, fix }) => (
-				<div key={id} className="flex min-h-12 items-center gap-3 rounded-xl bg-red-500/10 py-2 pr-2 pl-4 text-sm">
-					<CircleX aria-hidden="true" className="size-4 shrink-0 text-red-500" />
-					<p className="min-w-0 flex-1 font-medium text-pretty">{message}</p>
-					{fix?.href && (
-						<Button asChild size="sm" variant="outline" className="bg-background">
-							<Link href={fix.href}>{fix.label}</Link>
-						</Button>
-					)}
-				</div>
-			))}
 		</div>
 	);
 }
@@ -638,15 +625,11 @@ function BarAction({ action, status, onEdit, side = "bottom", className }) {
 				</PopoverAnchor>
 				<PopoverContent side={side} align="end" onCloseAutoFocus={returnFocus} className="w-80 p-0">
 					<p className="px-4 pt-3.5 pb-1 text-sm font-medium">{action.problemsTitle}</p>
-					<ul className="pb-2">
-						{problems.map((problem) => (
-							<li key={problem.id} className="flex min-h-11 items-center gap-3 px-4 py-1.5">
-								<CircleX aria-hidden="true" className="size-4 shrink-0 text-red-500" />
-								<span className="min-w-0 flex-1 text-sm text-pretty">{problem.message}</span>
-								{problem.fix && <ButtonFix fix={problem.fix} onEdit={fix} />}
-							</li>
-						))}
-					</ul>
+					<ListSendProblems
+						problems={problems}
+						renderFix={(problem) => problem.fix && <ButtonFix fix={problem.fix} onEdit={fix} />}
+						className="px-4 pb-2"
+					/>
 				</PopoverContent>
 			</Popover>
 		</div>

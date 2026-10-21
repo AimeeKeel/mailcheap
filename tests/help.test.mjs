@@ -5,12 +5,12 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import NoticeWarmup from "../components/NoticeWarmup.jsx";
+import NoticePace from "../components/NoticePace.jsx";
 import { HELP_ARTICLES, getHelpArticles } from "../lib/help.js";
 import { listAppPages } from "./helpers/app-pages.mjs";
 
 // The help center (app/(site)/help): its articles, the dashboard's links into it and its links into the dashboard, and
-// the send step's warm-up notice that links to it. Its pages opening without a session, in the sitemap and with their
+// the send step's pace notice that links to it. Its pages opening without a session, in the sitemap and with their
 // metadata: tests/public-site.test.mjs.
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const HELP_DIR = "app/(site)/help";
@@ -54,7 +54,7 @@ test("every link into the help center opens one of its articles, at a section th
 		for (const [, slug, section] of source.matchAll(/<LinkHelp article="([^"]+)"(?: section="([^"]+)")?/g)) links.push({ file, slug, section });
 		for (const [, slug, section] of source.matchAll(/getHelpHref\("([^"]+)"(?:, "([^"]+)")?\)/g)) links.push({ file, slug, section });
 	}
-	assert.ok(links.some(({ file }) => file === "components/NoticeWarmup.jsx"), "the warm-up notice links to its article");
+	assert.ok(links.some(({ file }) => file === "components/NoticePace.jsx"), "the pace notice links to its articles");
 	for (const { file, slug, section } of links) {
 		assert.ok(
 			HELP_ARTICLES.some((article) => article.slug === slug),
@@ -84,8 +84,8 @@ test("the help center never names an email provider", async () => {
 	for (const file of files) assert.doesNotMatch(await readSource(file), PROVIDERS, file);
 });
 
-test("the warm-up notice titles a send only when it's spread over hours, and links to the warm-up article", () => {
-	const render = (pace, emails) => renderToStaticMarkup(createElement(NoticeWarmup, { pace, emails }));
+test("the pace notice titles a send only when it's spread over hours, and links to the warm-up article", () => {
+	const render = (pace, emails) => renderToStaticMarkup(createElement(NoticePace, { pace, emails }));
 	const warmup = (day) => ({ days: 30, day, hasStarted: true, progress: day / 30, endsAt: "2026-11-15T00:00:00.000Z" });
 
 	const quick = render({ proven: 1_000, recent: 0, warmup: warmup(3) }, 100);
@@ -105,4 +105,23 @@ test("the warm-up notice titles a send only when it's spread over hours, and lin
 
 	assert.equal(render({ proven: 1_000, recent: 0, warmup: null }, 100), "", "past the warm-up, a send at full speed says nothing");
 	assert.match(render({ proven: 1_000, recent: 0, warmup: null }, 50_000), /Goes out over \d+ hours while your account warms up to sends this size/);
+});
+
+test("a first slice is part of the pace notice, never a notice of its own", () => {
+	const render = (pace, emails, newContacts) => renderToStaticMarkup(createElement(NoticePace, { pace, emails, newContacts }));
+	const learnMore = (html) => html.match(/>Learn more</g)?.length ?? 0;
+
+	const warming = render({ proven: 0, recent: 0, warmup: { days: 30, day: 6, hasStarted: true, progress: 0.2, endsAt: "2026-11-15T00:00:00.000Z" } }, 1_000, 1_000);
+	assert.match(warming, /Goes out over 17 hours while your account warms up/, "the slice's 3-hour check is in the hours");
+	assert.match(warming, /Day 6 of 30\..*1,000 contacts never got an email from you, so a slice of them goes first and the rest 3 hours later/);
+	assert.equal(learnMore(warming), 1);
+	assert.match(warming, /href="\/help\/warm-up"/);
+
+	const selfHosted = render(null, 1_000, 1_000);
+	assert.match(selfHosted, /^<div[^>]*><div[^>]*><div[^>]*><p>1,000 contacts never got an email from you/, "no icon or title without a warm-up");
+	assert.match(selfHosted, /href="\/help\/sending#first-send"/);
+	assert.doesNotMatch(selfHosted, /warm|role="progressbar"/);
+
+	assert.equal(render(null, 1_000, 200), "", "the smallest slice goes at once");
+	assert.equal(render(null, 150, 5_000), "", "a send capped under the smallest slice has none");
 });
