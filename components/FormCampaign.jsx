@@ -469,7 +469,7 @@ export default function FormCampaign({
 			<div
 				data-save-bar={isCompact ? "" : undefined}
 				data-shown={isCompact ? "" : undefined}
-				className="fixed right-(--dock-right) bottom-(--dock-bottom) left-4 z-30 flex h-12 items-center rounded-xl bg-card p-1.5 pl-4 shadow-float md:left-64 lg:hidden"
+				className="fixed right-(--dock-right) bottom-(--dock-bottom) left-4 z-30 flex h-12 items-center rounded-xl bg-card p-1.5 pl-4 shadow-float transition-[left] duration-250 ease-drawer motion-reduce:transition-none md:left-[calc(var(--sidebar-width)+1rem)] lg:hidden"
 			>
 				<BarAction action={action} status={renderStatus()} onEdit={editField} side="top" className="w-full" />
 			</div>

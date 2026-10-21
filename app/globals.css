@@ -245,9 +245,36 @@ html:has([data-support-chat]) {
    save-bar variant). */
 @custom-variant save-bar (html:has([data-save-bar][data-shown]) &);
 
-/* A spring with a little bounce (0.3), sampled for linear(): BarSave's first entrance overshoots by 4.6% and settles. */
+/* A spring with a little bounce (0.3), sampled for linear(): BarSave's first entrance overshoots by 4.6% and settles.
+   --ease-drawer: iOS's drawer curve, which the sidebar folds and opens with. */
 @theme {
   --ease-settle: linear(0, 0.02, 0.072, 0.146, 0.233, 0.327, 0.423, 0.517, 0.605, 0.685, 0.757, 0.82, 0.874, 0.919, 0.955, 0.984, 1.006, 1.023, 1.034, 1.041, 1.045, 1.046, 1.045, 1.043, 1.039, 1.035, 1.031, 1.027, 1.022, 1.018, 1.014, 1.011, 1.008, 1.006, 1.004, 1.002, 1.001, 1, 0.999, 0.998, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* The dashboard's sidebar (NavSidebar): 15rem wide, or folded down to its icons, 4.25rem inside its border. Folded, its
+   logo and avatars stay where they were and its links' icons move 4px, so all of them line up in its middle. What's
+   fixed beside it starts past it. */
+html {
+  --sidebar-width: 15rem;
+}
+
+html:has([data-sidebar-collapsed]) {
+  --sidebar-width: calc(4.25rem + 1px);
+}
+
+@custom-variant sidebar-collapsed (&:where([data-sidebar-collapsed] *));
+
+/* What only the open sidebar shows, its names and labels: gone before it's half folded, back once it's mostly open.
+   Only opacity, so it also runs without motion. */
+@utility sidebar-label {
+  transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1) 100ms;
+
+  &:where([data-sidebar-collapsed] *) {
+    opacity: 0;
+    transition-duration: 100ms;
+    transition-delay: 0ms;
+  }
 }
 
 @keyframes enter {

@@ -85,6 +85,13 @@ export default function GettingStartedPage() {
 					<Link href={getHelpHref("warm-up")}>Warm-up and sending pace</Link>
 				</p>
 			)}
+
+			<h2 id="sidebar">The sidebar</h2>
+			<p>
+				The sidebar lists your newsletter&apos;s pages, then your account&apos;s, like the <LinkApp href="/domains">Domains page</LinkApp>.
+				The button next to MailCheap at its top folds it down to its icons, for more room on the page: point at an icon for its
+				name, and click the MailCheap logo to open the sidebar again. Your browser remembers your choice.
+			</p>
 		</ArticleHelp>
 	);
 }
