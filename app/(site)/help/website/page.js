@@ -28,7 +28,7 @@ export default function WebsitePage() {
 						It lives at <code>your-newsletter.{sharedDomain}</code>
 						{hasOwnHost && (
 							<>
-								, or on a subdomain of your own domain once you add it on the <LinkApp href="/domains">Domains page</LinkApp>
+								, or on a subdomain of <a href="#own-domain">your own domain</a>
 							</>
 						)}
 						.
@@ -46,6 +46,59 @@ export default function WebsitePage() {
 				Its fonts, colors and shapes are your newsletter&apos;s theme, the same as in your emails.{" "}
 				<Link href={getHelpHref("design")}>Design and themes</Link>
 			</p>
+
+			{hasOwnHost && (
+				<>
+					<h2 id="own-domain">Your own domain</h2>
+					<p>
+						Your website can live on a subdomain of a domain you own, like <code>news.example.com</code>
+						{sharedDomain && (
+							<>
+								, instead of <code>your-newsletter.{sharedDomain}</code>
+							</>
+						)}
+						. It&apos;s separate from the address you send from: you don&apos;t need to send from that domain.
+						{isCloud() && " It needs a plan."}
+					</p>
+					<p>
+						In the <LinkApp href="/newsletters/website">Website section</LinkApp> of the newsletter&apos;s settings, type the subdomain
+						under Your own domain and click Add domain. The card then lists the DNS records to add where your domain is managed (your
+						registrar or DNS provider):
+					</p>
+					<ol>
+						<li>
+							<strong>Points to MailCheap</strong>: a CNAME record that sends your subdomain&apos;s visitors to MailCheap.
+						</li>
+						<li>
+							<strong>Proves it&apos;s yours</strong>: a TXT record only your account gets, so nobody else can claim your subdomain, even
+							with the CNAME in place.
+						</li>
+						{isCloud() && (
+							<li>
+								<strong>Vercel&apos;s check</strong>: only when your domain is already used with Vercel, where MailCheap runs. It asks for
+								one more TXT record.
+							</li>
+						)}
+					</ol>
+					<p>
+						Copy each host and value with its button. DNS changes can take up to a few hours: click Check now to look again. Once the
+						records are found, your website and the tracked and unsubscribe links in your next emails move to your subdomain.
+						{sharedDomain && (
+							<>
+								{" "}
+								Your website still opens at <code>your-newsletter.{sharedDomain}</code>
+							</>
+						)}
+						{sharedDomain ? ", and" : " The"} emails you already sent keep their links. If your DNS is on Cloudflare, turn off the
+						proxy (the orange cloud) for the CNAME record.
+					</p>
+					<p>
+						Keep the CNAME record: without it, your website and the links in your emails stop working, and the card says so. A newsletter
+						has one domain at a time. Removing it puts your website and the links in your next emails back where they were. Links in
+						emails you already sent keep working as long as the subdomain points at MailCheap.
+					</p>
+				</>
+			)}
 
 			<h2 id="issue-pages">Issue pages</h2>
 			<p>

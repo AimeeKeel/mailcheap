@@ -8,7 +8,7 @@ export const metadata = getHelpPageMetadata("sender-addresses");
 
 export default function SenderAddressesPage() {
 	const sharedDomain = getSharedDomain();
-	const hasWebsiteStep = Boolean(getArchiveCnameTarget());
+	const hasOwnHost = Boolean(getArchiveCnameTarget());
 
 	return (
 		<ArticleHelp slug="sender-addresses">
@@ -38,9 +38,15 @@ export default function SenderAddressesPage() {
 			<p>
 				Sending from an address at your own domain{sharedDomain ? " is optional. It" : ""} puts your domain in the From address and
 				builds its own reputation with inboxes. On the <LinkApp href="/domains">Domains page</LinkApp>, under Add your domain, type
-				the domain and the address&apos;s name before the @
-				{hasWebsiteStep && ", plus a subdomain for your website and links, like news for news.yourdomain.com"}.
+				the domain and the address&apos;s name before the @.
 				{isCloud() && " Adding a domain needs a plan."}
+				{hasOwnHost && (
+					<>
+						{" "}
+						Your website goes on your own domain separately, from its settings:{" "}
+						<Link href={getHelpHref("website", "own-domain")}>Your own domain</Link>
+					</>
+				)}
 			</p>
 			<p>The page then lists the DNS records to add where your domain is managed (your registrar or DNS provider):</p>
 			<ol>
@@ -50,12 +56,6 @@ export default function SenderAddressesPage() {
 				<li>
 					<strong>Return path</strong>: bounces come back to a subdomain of yours, so SPF passes for your domain.
 				</li>
-				{hasWebsiteStep && (
-					<li>
-						<strong>Website and links</strong>: a CNAME record that puts your website, tracked links and unsubscribe links on your
-						subdomain.
-					</li>
-				)}
 				<li>
 					<strong>DMARC</strong>: tells inboxes what to do with emails that fail the checks. Gmail and Yahoo require one from bulk
 					senders. Start with <code>p=none</code>, then move to <code>p=quarantine</code> once your reports look clean.
@@ -71,9 +71,7 @@ export default function SenderAddressesPage() {
 			<h2 id="switch">Switching to your domain</h2>
 			<p>
 				Once the domain is verified, its card on the <LinkApp href="/domains">Domains page</LinkApp> lets you send the open
-				newsletter from an address at it. Your next
-				emails go out from that address{hasWebsiteStep && ", and your website and links move to your subdomain once its record is found"}
-				.
+				newsletter from an address at it. Your next emails go out from that address.
 			</p>
 			<p>
 				You can also switch from the newsletter&apos;s <LinkApp href="/newsletters/sender">sender settings</LinkApp>: pick the

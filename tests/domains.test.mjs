@@ -3,7 +3,20 @@ import { after, before, describe, test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getSenderPath } from "../lib/newsletters.js";
-import { activate, addVerifiedDomain, as, callApi, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
+import {
+	activate,
+	addLiveWebsiteDomain,
+	addVerifiedDomain,
+	as,
+	callApi,
+	catchRedirect,
+	form,
+	jsonRequest,
+	platformEmails,
+	signIn,
+	startTestApp,
+	withEnv,
+} from "./helpers/app.mjs";
 import { cnames, txts } from "./stubs/dns-check.mjs";
 import { published } from "./stubs/qstash.mjs";
 import { calls, sent, state } from "./stubs/ses.mjs";
@@ -54,7 +67,7 @@ async function customer(email, slug) {
 }
 
 // The Domains page as React renders it on the server: its own components called, client components left with their props.
-const PAGE_COMPONENTS = ["CardDomain", "TableRecords"];
+const PAGE_COMPONENTS = ["CardDomain", "ListDnsSteps", "TableDnsRecords"];
 
 function renderPage(node) {
 	if (Array.isArray(node)) return node.map(renderPage);
@@ -251,14 +264,13 @@ describe("from addresses", () => {
 });
 
 describe("own domains", () => {
-	test("adding a domain creates its identity in the tenant, with DKIM, a return path and an archive subdomain", async () => {
+	test("adding a domain creates its identity in the tenant, with DKIM and a return path; the website stays where it is", async () => {
 		const user = await customer("owner@example.com", "owner-news");
-		const result = await as(user, () => m.domains.addDomainAction(null, form({ domain: "https://Owner-Mail.com/", archiveHost: "" })));
+		const result = await as(user, () => m.domains.addDomainAction(null, form({ domain: "https://Owner-Mail.com/" })));
 		assert.deepEqual(result, { ok: true, domain: "owner-mail.com" });
 
 		const domain = await m.Domain.findOne({ accountId: user.accountId }).lean();
 		assert.equal(domain.mailFromDomain, "bounce.owner-mail.com");
-		assert.equal(domain.archiveHost, "news.owner-mail.com");
 		assert.equal(domain.verified, false);
 		assert.equal(domain.records.filter(({ purpose }) => purpose === "dkim").length, 3);
 		assert.deepEqual(
@@ -275,30 +287,30 @@ describe("own domains", () => {
 
 		state.identities.get("owner-mail.com").verified = true;
 		cnames.set("news.owner-mail.com", ["cname.mailcheap.ai"]);
-		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(domain._id))), { ok: true, verified: true, archiveHostVerified: true });
-		assert.equal((await m.Newsletter.findOne({ accountId: user.accountId }).lean()).archiveHost, "news.owner-mail.com");
+		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(domain._id))), { ok: true, verified: true });
+		assert.equal((await m.Newsletter.findOne({ accountId: user.accountId }).lean()).archiveHost, undefined, "a CNAME to MailCheap moves nothing");
 
 		assert.deepEqual(await as(user, () => m.campaigns.sendTestCampaign(id)), { ok: true });
 		const email = sent.at(-1);
 		assert.equal(email.from, "hi@owner-mail.com");
 		assert.equal(email.tenantName, `mc-${user.accountId}`);
-		assert.match(email.html, /https:\/\/news\.owner-mail\.com\/c\//);
-		assert.match(email.headers["List-Unsubscribe"], /^<https:\/\/news\.owner-mail\.com\/api\/unsubscribe/);
+		assert.match(email.html, /https:\/\/owner-news\.mailcheapmail\.com\/c\//);
+		assert.match(email.headers["List-Unsubscribe"], /^<https:\/\/owner-news\.mailcheapmail\.com\/api\/unsubscribe/);
 	});
 
 	test("an address or a link pasted as the domain adds the domain alone, from the dashboard and the API", async () => {
 		const user = await customer("paste@example.com", "paste-news");
-		const pasted = await as(user, () => m.domains.addDomainAction(null, form({ domain: "Jane Doe <jane@Pasted-Mail.com>", archiveHost: "" })));
+		const pasted = await as(user, () => m.domains.addDomainAction(null, form({ domain: "Jane Doe <jane@Pasted-Mail.com>" })));
 		assert.deepEqual(pasted, { ok: true, domain: "pasted-mail.com" });
-		assert.equal((await m.Domain.findOne({ accountId: user.accountId, domain: "pasted-mail.com" }).lean()).archiveHost, "news.pasted-mail.com");
 		assert.ok(state.identities.has("pasted-mail.com"), "added at the provider under the domain alone");
 
 		const { key } = await as(user, () => m.apiKeys.createApiKey(null, form({ name: "Agent", level: "full" })));
 		const linked = await callApi("POST", "/api/v1/domains", { key, body: { domain: "https://www.linked-mail.com/about", archiveHost: "letters.linked-mail.com" } });
-		assert.equal(linked.status, 201);
-		assert.deepEqual([linked.body.domain, linked.body.archiveHost], ["linked-mail.com", "letters.linked-mail.com"]);
+		assert.equal(linked.status, 201, "an archiveHost from before is ignored");
+		assert.equal(linked.body.domain, "linked-mail.com");
+		assert.equal("archiveHost" in linked.body, false);
 		const plain = await callApi("POST", "/api/v1/domains", { key, body: { domain: "plain-mail.com" } });
-		assert.deepEqual([plain.status, plain.body.domain, plain.body.archiveHost], [201, "plain-mail.com", "news.plain-mail.com"], "a plain domain, as before");
+		assert.deepEqual([plain.status, plain.body.domain], [201, "plain-mail.com"], "a plain domain, as before");
 	});
 
 	test("the Domains page shows each record's host without the zone and copies what it shows; the API keeps the full name", async () => {
@@ -323,12 +335,11 @@ describe("own domains", () => {
 			["CNAME", "tok3._domainkey", "tok3.dkim.amazonses.com"],
 			["MX", "bounce", "10 feedback-smtp.us-east-1.amazonses.com"],
 			["TXT", "bounce", "v=spf1 include:amazonses.com ~all"],
-			["CNAME", "news", "cname.mailcheap.ai"],
 			["TXT", "_dmarc", "v=DMARC1; p=none;"],
 		]);
 		assert.deepEqual(
 			shown(cards[1]).map(([, host]) => host),
-			["tok1._domainkey.mail", "tok2._domainkey.mail", "tok3._domainkey.mail", "bounce.mail", "bounce.mail", "news.mail", "_dmarc.mail"],
+			["tok1._domainkey.mail", "tok2._domainkey.mail", "tok3._domainkey.mail", "bounce.mail", "bounce.mail", "_dmarc.mail"],
 			"a subdomain of a co.uk domain: the zone is sub-hosts.co.uk"
 		);
 		assert.ok(textOf(cards[0]).includes("If your DNS provider asks for the full name, use tok1._domainkey.apex-hosts.com"));
@@ -357,11 +368,11 @@ describe("own domains", () => {
 		assert.ok(folded, "every record found");
 		assert.equal(folded.props.open, undefined, "closed until it's opened");
 		assert.match(textOf(findAll(folded, ({ type }) => type === "summary")), /^DNS records/);
-		assert.equal(findAll(folded, ({ type }) => type === "table").length, 4, "each record is still there, with its Copy buttons");
+		assert.equal(findAll(folded, ({ type }) => type === "table").length, 3, "each record is still there, with its Copy buttons");
 
 		const open = card("open-records.com");
 		assert.equal(findAll(open, ({ type }) => type === "details").length, 0, "without DMARC, its records stay out");
-		assert.equal(findAll(open, ({ type }) => type === "table").length, 4);
+		assert.equal(findAll(open, ({ type }) => type === "table").length, 3);
 	});
 
 	test("the Domains page switches the newsletter to a verified domain, with the same checks as its settings", async () => {
@@ -370,7 +381,7 @@ describe("own domains", () => {
 		assert.deepEqual(await switchTo(user, domain, "not valid"), { error: "From email is invalid" });
 		assert.deepEqual(await switchTo(user, domain, " Jane "), { ok: true, fromEmail: "jane@switch-mail.com" });
 		const newsletter = await m.Newsletter.findOne({ accountId: user.accountId }).lean();
-		assert.deepEqual([newsletter.fromEmail, newsletter.archiveHost], ["jane@switch-mail.com", "news.switch-mail.com"], "its archive and links move too");
+		assert.deepEqual([newsletter.fromEmail, newsletter.archiveHost], ["jane@switch-mail.com", undefined], "its website has a domain of its own");
 	});
 
 	test("the Domains page links to the sender settings of a newsletter on the shared address only once a domain is verified", async () => {
@@ -444,7 +455,6 @@ describe("own domains", () => {
 		assert.deepEqual(await as(user, () => m.domains.removeDomainAction(String(domain._id))), { ok: true, removed: "leaving.com" });
 		assert.equal(state.identities.has("leaving.com"), false);
 		assert.equal(state.associations.get(`mc-${user.accountId}`).has("identity/leaving.com"), false);
-		assert.equal((await m.Newsletter.findOne({ accountId: user.accountId }).lean()).archiveHost, undefined);
 		assert.match((await as(user, () => m.campaigns.sendTestCampaign(id))).error, /leaving.com isn't one of your domains/);
 	});
 });
@@ -452,8 +462,7 @@ describe("own domains", () => {
 describe("hosts", () => {
 	test("each host resolves to its newsletter; the app host and unknown hosts don't", async () => {
 		const user = await customer("hosts@example.com", "hosts-news");
-		await addVerifiedDomain(user, "hosts.dev", { archiveHost: "letters.hosts.dev" });
-		await saveFrom(user, "hosts-news", "hi@hosts.dev");
+		assert.deepEqual(await addLiveWebsiteDomain(user, "letters.hosts.dev"), { ok: true, live: true });
 		const resolve = m.hostRouting.resolveArchiveHost;
 		assert.deepEqual(await resolve("hosts-news.mailcheapmail.com"), { isArchiveHost: true, slug: "hosts-news" });
 		assert.deepEqual(await resolve("Letters.Hosts.dev:443"), { isArchiveHost: true, slug: "hosts-news" });

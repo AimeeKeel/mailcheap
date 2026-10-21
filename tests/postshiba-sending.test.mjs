@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { decryptSecret } from "../lib/credentials.js";
 import { activate, as, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
 import { POSTSHIBA, POSTSHIBA_ENV, createFakePostshiba } from "./helpers/postshiba.mjs";
-import { cnames, txts } from "./stubs/dns-check.mjs";
+import { txts } from "./stubs/dns-check.mjs";
 import { published } from "./stubs/qstash.mjs";
 import { dnsRecords } from "./stubs/dns-broker.mjs";
 
@@ -88,7 +88,7 @@ async function customer(email, slug) {
 	fake.verifyDomain(domain);
 	await m.Domain.updateOne({ accountId: user.accountId, domain }, { $unset: { checkedAt: 1 } });
 	const stored = await m.Domain.findOne({ accountId: user.accountId, domain }).lean();
-	assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(stored._id))), { ok: true, verified: true, archiveHostVerified: false });
+	assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(stored._id))), { ok: true, verified: true });
 	assert.equal((await saveFrom(user, `hello@${domain}`)).ok, true);
 	user.account = await loadAccount(user);
 	return user;
@@ -235,7 +235,7 @@ describe("PostShiba domains", () => {
 		assert.equal(verifyCalls(), 0, "PostShiba checks a new domain on its own");
 
 		const readsBefore = reads();
-		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(domain._id))), { ok: true, verified: false, archiveHostVerified: false });
+		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(domain._id))), { ok: true, verified: false });
 		assert.deepEqual([verifyCalls(), reads()], [0, readsBefore], "checked a moment ago: no call");
 
 		fake.verifyDomain("letters.dev");
@@ -331,7 +331,7 @@ describe("PostShiba domains", () => {
 		// PostShiba sends once DKIM is in: the return path can verify at a later round of its own checks.
 		Object.assign(atPostshiba, { dkim_status: "verified", sending_allowed: true });
 		await checkedLongAgo();
-		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(_id))), { ok: true, verified: true, archiveHostVerified: false });
+		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(_id))), { ok: true, verified: true });
 		assert.equal(await returnPathStatus(), "Waiting for DNS");
 		atPostshiba.return_path_status = "verified";
 
@@ -350,7 +350,7 @@ describe("PostShiba domains", () => {
 		assert.equal(verifyCalls(), before.verifyCalls + 1, "the page's reads don't hold Check now back");
 	});
 
-	test("the Domains page leaves a domain alone once PostShiba verified it and DMARC is found, and the archive to Check now", async () => {
+	test("the Domains page leaves a domain alone once PostShiba verified it and DMARC is found", async () => {
 		const user = await signIn("ps-settled@example.com");
 		await activate(user);
 		assert.deepEqual(await as(user, () => m.domains.addDomainAction(null, form({ domain: "settled.dev" }))), { ok: true, domain: "settled.dev" });
@@ -360,38 +360,33 @@ describe("PostShiba domains", () => {
 		const longAgo = new Date(Date.now() - 120_000);
 		fake.verifyDomain("settled.dev");
 		txts.set("_dmarc.settled.dev", [["v=DMARC1; p=none;"]]);
-		cnames.set("news.settled.dev", ["cname.mailcheap.ai"]);
 		await m.Domain.updateOne({ accountId: user.accountId, _id }, { $set: { checkedAt: longAgo } });
 		await as(user, () => m.domainsPage.default());
 		const read = await stored();
 		assert.deepEqual([read.verified, read.mailFromStatus, read.dmarc.status], [true, "SUCCESS", "found"]);
-		assert.equal(read.archiveHostVerified, false, "moving the archive refreshes its cached pages, which can't happen while a page renders");
 
 		const readsBefore = reads();
 		await m.Domain.updateOne({ accountId: user.accountId, _id }, { $set: { checkedAt: longAgo, readAt: longAgo } });
 		await as(user, () => m.domainsPage.default());
 		assert.equal(reads(), readsBefore);
-		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(_id))), { ok: true, verified: true, archiveHostVerified: true });
+		assert.deepEqual(await as(user, () => m.domains.checkDomainAction(String(_id))), { ok: true, verified: true });
 	});
 
-	test("without an archive target, a verified domain is ready and nothing asks for its archive subdomain, on the page or in the API", async () => {
+	test("a verified domain is ready and nothing asks for a website record, on the page or in the API, with or without a website target", async () => {
 		const user = await customer("ps-no-archive@example.com", "ps-no-archive");
 		const listDomain = async () => (await as(user, () => m.dashboard.runDashboardAction("list_domains"))).output.domains[0];
 		const renderPage = async () => renderToStaticMarkup(createElement(m.TooltipProvider, null, await as(user, () => m.domainsPage.default())));
 
-		await withEnv({ ARCHIVE_CNAME_TARGET: "" }, async () => {
-			const domain = await listDomain();
-			assert.equal(domain.status, "Ready");
-			assert.deepEqual(domain.setup.map(({ key }) => key), ["dkim", "mail-from", "dmarc"]);
-			const page = await renderPage();
-			assert.doesNotMatch(page, /Website and links|website waiting|Waiting for DNS/);
-			assert.match(page, /Send from an address at your domain\.</);
-		});
-
-		const domain = await listDomain();
-		assert.equal(domain.status, "Sending ready, website waiting", "with a target, the archive subdomain counts again");
-		assert.equal(domain.setup.find(({ key }) => key === "archive").status, "Waiting for DNS");
-		assert.match(await renderPage(), /Website and links/);
+		for (const target of ["", "cname.mailcheap.ai"]) {
+			await withEnv({ ARCHIVE_CNAME_TARGET: target }, async () => {
+				const domain = await listDomain();
+				assert.equal(domain.status, "Ready", target);
+				assert.deepEqual(domain.setup.map(({ key }) => key), ["dkim", "mail-from", "dmarc"]);
+				const page = await renderPage();
+				assert.doesNotMatch(page, /Website and links|website waiting|Waiting for DNS/);
+				assert.match(page, /Send from an address at your domain\.</);
+			});
+		}
 	});
 });
 

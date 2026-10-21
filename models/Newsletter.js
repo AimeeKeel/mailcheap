@@ -15,9 +15,25 @@ const newsletterSchema = new mongoose.Schema(
 		postalAddress: { type: String, trim: true },
 		postalAddressCleared: { type: Boolean },
 		archiveEnabled: { type: Boolean, default: false },
-		// The account's verified archive subdomain (lib/domains.js syncArchiveHosts). Without one, the
-		// archive and the links in its emails use <slug>.<shared domain>.
+		// Its website domain's host once it's live (lib/website-domains.js). Without one, the archive and the links in its
+		// emails use <slug>.<shared domain>.
 		archiveHost: { type: String, lowercase: true, trim: true },
+		// Its own domain for its website and the links in its emails, as last checked.
+		websiteDomain: {
+			host: { type: String, lowercase: true, trim: true },
+			cnameFound: { type: Boolean },
+			// The TXT record that proves the account controls the host (lib/website-domain-rules.js).
+			txtFound: { type: Boolean },
+			// The TXT records Vercel asks for when the domain is verified for another Vercel team.
+			verification: { type: [{ _id: false, type: { type: String }, name: String, value: String }], default: undefined },
+			// On the app's Vercel project, through the DNS helper.
+			attachedAt: { type: Date },
+			checkedAt: { type: Date },
+			liveAt: { type: Date },
+		},
+		// Hosts its website was live on before. They stay on the app's Vercel project, so the links in the emails sent
+		// then keep working, until the account is purged.
+		pastHosts: { type: [String], default: undefined },
 		// The shared address's sending domain, <slug>.<shared domain>, in the account's tenant at the email
 		// provider, with the DNS records MailCheap published for it on the shared domain (lib/shared-sender.js).
 		sharedSender: {

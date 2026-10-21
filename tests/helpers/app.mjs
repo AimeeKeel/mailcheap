@@ -242,18 +242,33 @@ export async function addSentIssue(user) {
 	await Campaign.create({ accountId: user.accountId, newsletterId: user.newsletterId, subject: "Sent issue", status: "sent", sentAt: new Date() });
 }
 
-// A domain added through the Domains page, with its DNS records in and its archive subdomain pointed at us.
-export async function addVerifiedDomain(user, domain, { archiveHost = `news.${domain}`, isArchiveLive = true } = {}) {
+// A domain added through the Domains page, with its DNS records in.
+export async function addVerifiedDomain(user, domain) {
 	const { addDomain, checkDomain } = await import("../../lib/domains.js");
 	const { verifyIdentity } = await import("../stubs/ses.mjs");
-	const { cnames } = await import("../stubs/dns-check.mjs");
 	const Account = (await import("../../models/Account.js")).default;
 	const account = await Account.findById(user.accountId).lean();
-	const added = await addDomain({ account, domain, archiveHost });
+	const added = await addDomain({ account, domain });
 	verifyIdentity(domain);
-	if (isArchiveLive) cnames.set(archiveHost, ["cname.mailcheap.ai"]);
 	user.account = await Account.findById(user.accountId).lean();
 	return checkDomain({ account: user.account, domainId: added._id });
+}
+
+// The CNAME and TXT records a website domain needs, as the account would add them.
+export async function pointWebsiteDomain(user, host) {
+	const { cnames, txts } = await import("../stubs/dns-check.mjs");
+	const { getOwnershipRecord } = await import("../../lib/website-domain-rules.js");
+	const ownership = getOwnershipRecord(user.accountId, host);
+	cnames.set(host, ["cname.mailcheap.ai"]);
+	txts.set(ownership.name, [[ownership.value]]);
+	return ownership;
+}
+
+// A website domain added from the newsletter's Website settings with its records in: it goes live at once.
+export async function addLiveWebsiteDomain(user, host, newsletterId = user.newsletterId) {
+	await pointWebsiteDomain(user, host);
+	const { setWebsiteDomain } = await import("../../app/(app)/newsletters/actions.js");
+	return as(user, () => setWebsiteDomain(newsletterId, host));
 }
 
 export function jsonRequest(url, { method = "GET", body, headers = {} } = {}) {

@@ -22,6 +22,7 @@ export default function LayoutSettingsSection({ section, page, preselectDomain =
 				sharedDomain={page.sharedDomain}
 				appUrl={page.appUrl}
 				hasArchiveHost={page.hasArchiveHost}
+				websiteDomain={serialize(page.websiteDomain)}
 				hasSentIssue={page.hasSentIssue}
 				defaultPostalAddress={page.defaultPostalAddress}
 				isSendingEnabled={page.isSendingEnabled}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
 import { CLEANUP_LIMITS, getCleanupDefaults } from "@/lib/cleanup";
-import { getSharedDomain, isCloud } from "@/lib/config";
+import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { formatWindow } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { MAX_NEWSLETTERS_PER_ACCOUNT, SLUG_CHANGES } from "@/lib/newsletters";
@@ -11,6 +11,7 @@ export const metadata = getHelpPageMetadata("newsletters");
 
 export default function NewslettersPage() {
 	const sharedDomain = getSharedDomain();
+	const hasOwnHost = Boolean(getArchiveCnameTarget());
 	const cleanup = getCleanupDefaults();
 
 	return (
@@ -36,7 +37,8 @@ export default function NewslettersPage() {
 					<strong>Slug</strong>: lowercase letters, digits and dashes.
 					{sharedDomain
 						? ` Your shared address (hello@slug.${sharedDomain}) and your website (slug.${sharedDomain}) follow it, so changing it moves them.`
-						: " Your website's address follows it."}{" "}
+						: " Your website's address follows it."}
+					{hasOwnHost && " A website on your own domain stays there."}{" "}
 					A few names like www, api or mail are kept by MailCheap. An account changes slugs {SLUG_CHANGES.limit} times{" "}
 					{formatWindow(SLUG_CHANGES.window)} at most.
 				</li>
@@ -69,8 +71,13 @@ export default function NewslettersPage() {
 			<p>
 				Each newsletter has a public website with a page for each issue and a signup form. It&apos;s on for new newsletters and goes
 				live after your first issue. On the <LinkApp href="/newsletters/website">Website page</LinkApp>, you set its description (one
-				sentence under the name and in the subscribe popup), your author bio and photo, and your social links.{" "}
-				<Link href={getHelpHref("website")}>Website and signups</Link>
+				sentence under the name and in the subscribe popup), your author bio and photo, and your social links
+				{hasOwnHost && (
+					<>
+						, and you can put it on <Link href={getHelpHref("website", "own-domain")}>your own domain</Link>
+					</>
+				)}
+				. <Link href={getHelpHref("website")}>Website and signups</Link>
 			</p>
 
 			<h2 id="confirm-signups">Confirm new signups</h2>

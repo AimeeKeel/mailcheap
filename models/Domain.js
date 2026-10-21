@@ -6,7 +6,8 @@ const domainSchema = new mongoose.Schema(
 	{
 		domain: { type: String, required: true, unique: true, lowercase: true, trim: true },
 		mailFromDomain: { type: String, required: true, lowercase: true, trim: true },
-		// Archive, tracked links and unsubscribe links live here once it points at MailCheap.
+		// Its news. subdomain, which carried the website before newsletters had a website domain of their own. Every
+		// database has the unique index on it, so new domains still fill it in.
 		archiveHost: { type: String, required: true, unique: true, lowercase: true, trim: true },
 		// The email provider it was added at (lib/email-provider), and its id there. Domains from before the
 		// provider switch are SES's.
@@ -16,7 +17,6 @@ const domainSchema = new mongoose.Schema(
 		verified: { type: Boolean, default: false },
 		dkimStatus: { type: String, default: "PENDING" },
 		mailFromStatus: { type: String, default: "PENDING" },
-		archiveHostVerified: { type: Boolean, default: false },
 		records: [{ _id: false, purpose: String, type: { type: String }, name: String, value: String }],
 		// The DMARC record found on the domain, or on the closest parent with one (lib/dmarc-rules.js).
 		dmarc: { status: { type: String }, host: { type: String } },

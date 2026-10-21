@@ -6,6 +6,7 @@ import { Check, CircleAlert, ExternalLink, FlaskConical, Loader2, X } from "luci
 import { checkSlug, saveNewsletter, sendWelcomeTest } from "@/app/(app)/newsletters/actions";
 import BarSave from "@/components/BarSave";
 import ButtonCopy from "@/components/ButtonCopy";
+import CardWebsiteDomain from "@/components/CardWebsiteDomain";
 import InputImage from "@/components/InputImage";
 import LinkHelp from "@/components/LinkHelp";
 import NoticeWelcomePaused from "@/components/NoticeWelcomePaused";
@@ -47,9 +48,10 @@ const IMAGE_PREVIEW_PATTERN = /^(https:\/\/\S+\.\S{2,}\/\S+|\/\S+\.\w{3,4})$/;
 // signupReviews: whether the content check holds the saved welcome or confirmation email (lib/signup-email-review.js),
 // never why. isCloud: MailCheap Cloud, whose plans count the confirmation and welcome emails among their monthly emails.
 // defaultPostalAddress: what its emails print until it has its own (lib/postal-address.js); the editor's checks link
-// to the field with #postal-address. hasArchiveHost: the server hosts websites on customers' own subdomains.
-// hasSentIssue: an issue went out, so the website can be live (lib/archive-data.js). preselectDomain: one of the
-// account's domains a link asked for in the from field; the page opens with it picked and unsaved.
+// to the field with #postal-address. hasArchiveHost: the server hosts websites on customers' own subdomains, and
+// websiteDomain is the newsletter's (lib/website-domain-rules.js). hasSentIssue: an issue went out, so the website can
+// be live (lib/archive-data.js). preselectDomain: one of the account's domains a link asked for in the from field; the
+// page opens with it picked and unsaved.
 export default function FormNewsletter({
 	section,
 	newsletter,
@@ -57,6 +59,7 @@ export default function FormNewsletter({
 	sharedDomain,
 	appUrl,
 	hasArchiveHost,
+	websiteDomain = null,
 	hasSentIssue,
 	defaultPostalAddress,
 	isSendingEnabled,
@@ -148,6 +151,7 @@ export default function FormNewsletter({
 					sharedDomain={sharedDomain}
 					appUrl={appUrl}
 					hasArchiveHost={hasArchiveHost}
+					websiteDomain={websiteDomain}
 					hasSentIssue={hasSentIssue}
 				/>
 			)}
@@ -630,12 +634,13 @@ function SectionStoppedDomains({ totals }) {
 	);
 }
 
-function SectionWebsite({ draft, set, update, newsletter, sharedDomain, appUrl, hasArchiveHost, hasSentIssue, discardCount }) {
+function SectionWebsite({ draft, set, update, newsletter, sharedDomain, appUrl, hasArchiveHost, websiteDomain, hasSentIssue, discardCount }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const { isArchiveEnabled } = draft;
 	const archiveHost = newsletter.archiveHost;
-	const websiteAddress = getWebsiteAddress({ slug: newsletter.slug || draft.slug || "slug", archiveHost }, { sharedDomain, appUrl });
+	const slug = newsletter.slug || draft.slug || "slug";
+	const websiteAddress = getWebsiteAddress({ slug, archiveHost }, { sharedDomain, appUrl });
 
 	return (
 		<>
@@ -651,11 +656,6 @@ function SectionWebsite({ draft, set, update, newsletter, sharedDomain, appUrl, 
 					/>
 				}
 			>
-				{hasArchiveHost && !archiveHost && (
-					<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
-						Add a domain on the Domains page to put your website on your own subdomain.
-					</p>
-				)}
 				<Field
 					label="Address"
 					as="div"
@@ -698,7 +698,15 @@ function SectionWebsite({ draft, set, update, newsletter, sharedDomain, appUrl, 
 					</span>
 				</Field>
 			</Section>
-			<Section title="Profile" stagger={2}>
+			{hasArchiveHost && (
+				<CardWebsiteDomain
+					newsletterId={newsletter._id}
+					setup={websiteDomain}
+					sharedAddress={getWebsiteAddress({ slug }, { sharedDomain, appUrl }).replace(/^https?:\/\//, "")}
+					stagger={2}
+				/>
+			)}
+			<Section title="Profile" stagger={3}>
 				<Field label="Description" hint="One sentence under the name and in the subscribe popup">
 					<Textarea
 						name="description"

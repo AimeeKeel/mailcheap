@@ -2,17 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Check, ChevronDown, ChevronRight, Mail } from "lucide-react";
 import ButtonCheckDomain from "@/components/ButtonCheckDomain";
-import ButtonCopy from "@/components/ButtonCopy";
 import DialogRemoveDomain from "@/components/DialogRemoveDomain";
 import FormAddDomain from "@/components/FormAddDomain";
 import FormSwitchToDomain from "@/components/FormSwitchToDomain";
 import GatePlan from "@/components/GatePlan";
 import HeaderPage from "@/components/HeaderPage";
 import ImageFavicon from "@/components/ImageFavicon";
+import ListDnsSteps from "@/components/ListDnsSteps";
+import TextStatus from "@/components/TextStatus";
 import { Button } from "@/components/ui/button";
 import { scoped } from "@/lib/account-scope";
 import { hasActiveSubscription } from "@/lib/account-state";
-import { getArchiveCnameTarget, getSharedDomain } from "@/lib/config";
+import { getSharedDomain } from "@/lib/config";
 import { getDomainSetup, getDomainSummary } from "@/lib/domain-records";
 import { refreshDomains } from "@/lib/domains";
 import { getEmailProvider } from "@/lib/email-provider";
@@ -54,7 +55,6 @@ export default async function DomainsPage() {
 		),
 	]);
 	const domains = refreshed.map((domain) => withActiveProvider(domain));
-	const cnameTarget = getArchiveCnameTarget();
 	const isProviderSetUp = getEmailProvider().isConfigured();
 	const verifiedDomain = domains.find(({ verified }) => verified) ?? null;
 	const hasVerifiedDomain = Boolean(verifiedDomain);
@@ -71,7 +71,7 @@ export default async function DomainsPage() {
 			<HeaderPage title="Domains" />
 			<div className="flex flex-col gap-6">
 				<GatePlan reason="domain">
-					<FormAddDomain fromLocalPart={getOwnDomainLocalPart(current?.fromEmail, sharedDomain)} hasArchiveHost={Boolean(cnameTarget)} />
+					<FormAddDomain fromLocalPart={getOwnDomainLocalPart(current?.fromEmail, sharedDomain)} />
 				</GatePlan>
 				{domains.map((domain, index) => (
 					<CardDomain
@@ -80,7 +80,6 @@ export default async function DomainsPage() {
 						newsletters={hasPlan ? newsletters : []}
 						current={hasPlan ? current : null}
 						sharedDomain={sharedDomain}
-						cnameTarget={cnameTarget}
 						stagger={index + 1}
 					/>
 				))}
@@ -177,36 +176,13 @@ function RowNote({ href, icon, label, detail, end, stagger }) {
 	);
 }
 
-function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, stagger }) {
-	const summary = getDomainSummary(domain, { cnameTarget });
-	const setup = getDomainSetup(domain, { cnameTarget });
-	const fullNameExample = setup.flatMap(({ records }) => records).find(({ host, name }) => host !== name)?.name;
+function CardDomain({ domain, newsletters, current, sharedDomain, stagger }) {
+	const summary = getDomainSummary(domain);
+	const setup = getDomainSetup(domain);
 	const id = String(domain._id);
 	// Once every record is found, they fold under one line, so sending from the domain is what the card is about.
 	const isSetUp = domain.verified && setup.every(({ status }) => status.tone === "good");
-	const records = (
-		<>
-			<ol className="divide-y divide-border/60 border-t border-border/60">
-				{setup.map((step) => (
-					<li key={step.key} className="flex flex-col gap-3 px-4 py-4">
-						<div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
-							<div className="min-w-0 max-w-xl">
-								<p className="text-sm font-medium">{step.title}</p>
-								<p className="text-xs text-pretty text-muted-foreground">{step.description}</p>
-							</div>
-							<TextStatus {...step.status} className="text-xs" />
-						</div>
-						{step.records.length > 0 && <TableRecords records={step.records} />}
-					</li>
-				))}
-			</ol>
-			{fullNameExample && (
-				<p className="border-t border-border/60 px-4 py-3 text-xs text-pretty text-muted-foreground">
-					If your DNS provider asks for the full name, use <span className="font-mono wrap-anywhere">{fullNameExample}</span>
-				</p>
-			)}
-		</>
-	);
+	const records = <ListDnsSteps steps={setup} />;
 	return (
 		<section style={{ "--stagger": stagger }} className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
 			<div className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -220,8 +196,8 @@ function CardDomain({ domain, newsletters, current, sharedDomain, cnameTarget, s
 					</div>
 				</div>
 				<div className="flex items-center gap-1">
-					<ButtonCheckDomain id={id} hasArchiveHost={Boolean(cnameTarget)} />
-					<DialogRemoveDomain id={id} domain={domain.domain} hasArchiveHost={Boolean(cnameTarget)} />
+					<ButtonCheckDomain id={id} />
+					<DialogRemoveDomain id={id} domain={domain.domain} />
 				</div>
 			</div>
 			{current && <RowsSender domain={domain} newsletters={newsletters} current={current} sharedDomain={sharedDomain} />}
@@ -287,42 +263,6 @@ function RowsSender({ domain, newsletters, current, sharedDomain }) {
 	);
 }
 
-// The host column fits ps1._domainkey on a 375 px phone; values get cut first, and their button copies them whole.
-function TableRecords({ records }) {
-	return (
-		<div className="overflow-x-auto rounded-lg shadow-border">
-			<table className="w-full text-sm">
-				<thead>
-					<tr className="text-left text-xs text-muted-foreground">
-						<th className="w-16 py-2 pl-3 font-normal">Type</th>
-						<th className="w-[46%] py-2 pr-2 font-normal">Host</th>
-						<th className="py-2 pr-3 font-normal">Value</th>
-					</tr>
-				</thead>
-				<tbody className="divide-y divide-border/60 border-t border-border/60">
-					{records.map((record) => (
-						<tr key={`${record.type}-${record.name}-${record.value}`}>
-							<td className="py-2 pl-3 align-middle font-mono text-xs text-muted-foreground">{record.type}</td>
-							<td className="max-w-0 py-2 pr-2 align-middle">
-								<div className="flex items-center gap-1">
-									<span className="truncate font-mono text-xs">{record.host}</span>
-									<ButtonCopy value={record.host} label="Copy host" />
-								</div>
-							</td>
-							<td className="max-w-0 py-2 pr-3 align-middle">
-								<div className="flex items-center gap-1">
-									<span className="truncate font-mono text-xs">{record.value}</span>
-									<ButtonCopy value={record.value} label="Copy value" />
-								</div>
-							</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
-		</div>
-	);
-}
-
 // A newsletter's sender settings, which open that newsletter first.
 function LinkSender({ href, className, children }) {
 	return (
@@ -341,19 +281,3 @@ function LinkSender({ href, className, children }) {
 		</Link>
 	);
 }
-
-function TextStatus({ label, tone, className }) {
-	return (
-		<span className={cn("flex items-center gap-2 text-muted-foreground", className)}>
-			<span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", DOT_TONES[tone])} />
-			{label}
-		</span>
-	);
-}
-
-const DOT_TONES = {
-	good: "bg-emerald-500",
-	wait: "bg-amber-500",
-	bad: "bg-red-500",
-	none: "bg-zinc-300 dark:bg-zinc-600",
-};

@@ -76,3 +76,22 @@ export async function saveTheme(newsletterId, theme) {
 	revalidatePath("/newsletters", "layout");
 	return { ok: true, theme: output.theme };
 }
+
+// The website's own domain (CardWebsiteDomain). Each answer reloads the page, which shows the records and their status.
+export async function setWebsiteDomain(newsletterId, host) {
+	const { output, failure } = await runDashboardAction("set_website_domain", { id: String(newsletterId ?? ""), host: String(host ?? "") });
+	revalidatePath(SETTINGS_PATH, "layout");
+	return failure ? toFormError(failure) : { ok: true, live: output.live };
+}
+
+export async function checkWebsiteDomain(newsletterId) {
+	const { output, failure } = await runDashboardAction("check_website_domain", { id: String(newsletterId ?? "") });
+	revalidatePath(SETTINGS_PATH, "layout");
+	return failure ? toFormError(failure) : { ok: true, live: output.live, pointed: output.pointed };
+}
+
+export async function removeWebsiteDomain(newsletterId) {
+	const { output, failure } = await runDashboardAction("remove_website_domain", { id: String(newsletterId ?? "") });
+	revalidatePath(SETTINGS_PATH, "layout");
+	return failure ? toFormError(failure) : { ok: true, removed: output.removed };
+}
