@@ -114,13 +114,12 @@ describe("the dashboard's sidebar", () => {
 		assert.match(layout, /has-\[\[data-campaign-steps\]\]:max-w-none/);
 	});
 
-	test("a tooltip opens only while the sidebar is folded, so none opened over its labels shows up once it folds", async () => {
+	test("its only tooltip is the button's next to the logo: the links and the logo have none", async () => {
 		const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-		const tooltip = await read("components/TooltipSidebar.jsx");
-		assert.match(tooltip, /<Tooltip open=\{isOpen\} onOpenChange=\{\(open\) => setIsOpen\(open && isFolded\)\}>/);
-		assert.match(tooltip, /if \(isOpen && !isFolded\) setIsOpen\(false\);/, "unfolding closes it");
-		assert.match(await read("components/NavLinks.jsx"), /<TooltipSidebar isFolded=\{isFolded\} label=\{label\}>/);
-		assert.match(await read("components/NavSidebar.jsx"), /<TooltipSidebar isFolded=\{isFolded\} label="Expand sidebar">/);
+		assert.doesNotMatch(await read("components/NavLinks.jsx"), /Tooltip/);
+		const sidebar = await read("components/NavSidebar.jsx");
+		assert.equal(sidebar.match(/<Tooltip>/g)?.length, 1);
+		assert.match(sidebar, /<TooltipContent side="bottom">\{toggleLabel\}<\/TooltipContent>/);
 
 		for (const name of await readdir(new URL("../components/", import.meta.url), { recursive: true })) {
 			if (!name.endsWith(".jsx")) continue;

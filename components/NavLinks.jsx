@@ -3,13 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Globe, KeyRound, LayoutGrid, Send, Settings, Shield, Users } from "lucide-react";
-import TooltipSidebar from "@/components/TooltipSidebar";
 import { cn } from "@/lib/utils";
 
-// The open newsletter's pages, then the account's, which every newsletter shares. isFolded: the sidebar shows only
-// their icons (NavSidebar), and each names its page in a tooltip. The tooltips are always there, closed while it's
-// open, so folding it keeps the links and their transitions.
-export default function NavLinks({ isAdmin, isFolded = false, onNavigate }) {
+// The open newsletter's pages, then the account's, which every newsletter shares.
+export default function NavLinks({ isAdmin, onNavigate }) {
 	const pathname = usePathname();
 	const groups = [NEWSLETTER_ITEMS, [...ACCOUNT_ITEMS, ...(isAdmin ? [ADMIN_ITEM] : [])]];
 
@@ -21,22 +18,20 @@ export default function NavLinks({ isAdmin, isFolded = false, onNavigate }) {
 						const isActive = href === "/" ? pathname === href : pathname.startsWith(href);
 						return (
 							<li key={href}>
-								<TooltipSidebar isFolded={isFolded} label={label}>
-									<Link
-										href={href}
-										onClick={onNavigate}
-										aria-current={isActive ? "page" : undefined}
-										className={cn(
-											"flex h-9 items-center gap-2.5 overflow-hidden rounded-lg pr-3 pl-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-150",
-											isActive
-												? "bg-muted text-foreground"
-												: "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-										)}
-									>
-										<Icon className="size-4 shrink-0 transition-[translate] duration-250 ease-drawer motion-reduce:transition-none sidebar-folded:translate-x-1" />
-										<span className="sidebar-label">{label}</span>
-									</Link>
-								</TooltipSidebar>
+								<Link
+									href={href}
+									onClick={onNavigate}
+									aria-current={isActive ? "page" : undefined}
+									className={cn(
+										"flex h-9 items-center gap-2.5 overflow-hidden rounded-lg pr-3 pl-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-150",
+										isActive
+											? "bg-muted text-foreground"
+											: "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+									)}
+								>
+									<Icon className="size-4 shrink-0 transition-[translate] duration-250 ease-drawer motion-reduce:transition-none sidebar-folded:translate-x-1" />
+									<span className="sidebar-label">{label}</span>
+								</Link>
 							</li>
 						);
 					})}
