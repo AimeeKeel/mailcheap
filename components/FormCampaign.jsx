@@ -41,11 +41,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { getCheckFix } from "@/lib/campaign-steps";
+import { toPreviewFrame } from "@/lib/email-preview";
 import { markdownToHtml } from "@/lib/markdown";
-import { fillSampleName, firstNameTag } from "@/lib/merge-tags";
+import { firstNameTag } from "@/lib/merge-tags";
 import { getPresendChecks } from "@/lib/presend-checks";
 import { readPublishTo } from "@/lib/publish-to";
-import { UNSUBSCRIBE_PLACEHOLDER, renderEmail, withResponsiveImages } from "@/lib/render-email";
+import { renderEmail } from "@/lib/render-email";
 import { SEGMENT_DELETED } from "@/lib/segments";
 import { toast } from "@/lib/toast";
 import { useCollapsedSidebar } from "@/lib/use-collapsed-sidebar";
@@ -131,10 +132,7 @@ export default function FormCampaign({
 			}),
 		[format, deferredValues, newsletter]
 	);
-	const previewHtml = useMemo(
-		() => withResponsiveImages(fillSampleName(rendered.html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"), { isHtml: true })),
-		[rendered.html]
-	);
+	const previewHtml = useMemo(() => toPreviewFrame(rendered.html), [rendered.html]);
 	const { checks } = getPresendChecks({
 		campaign: { ...campaign, ...values, publishTo },
 		newsletter,
@@ -496,8 +494,9 @@ export default function FormCampaign({
 				}}
 				html={previewHtml}
 				sender={newsletter}
-				subject={fillSampleName(deferredValues.subject)}
-				previewText={fillSampleName(deferredValues.previewText)}
+				subject={deferredValues.subject}
+				previewText={deferredValues.previewText}
+				newsletterId={newsletter._id}
 			/>
 			<DialogDiscardCampaign
 				id={campaign._id}

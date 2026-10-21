@@ -22,14 +22,20 @@ import {
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import IconWifi from "@/components/IconWifi";
 import LogoGmail from "@/components/LogoGmail";
+import PickerReader from "@/components/PickerReader";
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
+import { SAMPLE_READER, fillForReader } from "@/lib/merge-tags";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 // The email over the whole dashboard on a dimmed backdrop: in a mail app's window as wide as a desktop gives it, or in
 // Gmail on a phone. Escape, the close button and a click on the dimmed space close it; Radix keeps the focus inside
-// meanwhile.
+// meanwhile. With a newsletterId, html, subject and previewText keep their merge tags for the preview to fill in as the
+// reader it shows gets them: the sample reader, or one of the newsletter's contacts picked in it, who stays picked for
+// the next look.
 export default function DialogPreviewEmail({ isOpen, onOpenChange, onCloseAutoFocus, ...email }) {
+	const [contact, setContact] = useState(null);
+
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
 			<DialogPortal>
@@ -40,7 +46,7 @@ export default function DialogPreviewEmail({ isOpen, onOpenChange, onCloseAutoFo
 					className="fixed inset-0 z-50 outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-2 data-closed:animate-out data-closed:fade-out-0"
 				>
 					<DialogTitle className="sr-only">Preview</DialogTitle>
-					<Stage {...email} onClose={() => onOpenChange(false)} />
+					<Stage {...email} contact={contact} onContactChange={setContact} onClose={() => onOpenChange(false)} />
 				</DialogPrimitive.Content>
 			</DialogPortal>
 		</Dialog>
@@ -49,7 +55,11 @@ export default function DialogPreviewEmail({ isOpen, onOpenChange, onCloseAutoFo
 
 // Narrower than the device (a phone showing the desktop), the device scales down whole instead of reflowing. On an
 // actual phone, the mobile version is the email itself, edge to edge, instead of a smaller phone drawn inside it.
-function Stage({ html, sender, subject, previewText, onClose }) {
+function Stage({ html: emailHtml, subject: emailSubject, previewText: emailPreviewText, sender, newsletterId, contact, onContactChange, onClose }) {
+	const { html, subject, previewText } = useMemo(() => {
+		const email = { html: emailHtml, subject: emailSubject, previewText: emailPreviewText };
+		return newsletterId ? fillForReader(email, contact ?? SAMPLE_READER) : email;
+	}, [emailHtml, emailSubject, emailPreviewText, newsletterId, contact]);
 	const [device, setDevice] = useState(() => (window.matchMedia(SMALL_SCREEN).matches ? "mobile" : "desktop"));
 	const [space, setSpace] = useState(null);
 	const [hasOpenedEmail, setHasOpenedEmail] = useState(false);
@@ -76,7 +86,17 @@ function Stage({ html, sender, subject, previewText, onClose }) {
 			onClick={(event) => isPressOnDim.current && isDim(event.target) && onClose()}
 			className="flex h-full flex-col"
 		>
-			<div data-dim className="relative flex h-16 shrink-0 items-center justify-center px-16">
+			{/* The reader picker takes the room a phone has left, so there the devices show their icons only. */}
+			<div
+				data-dim
+				className={cn(
+					"grid h-16 shrink-0 items-center gap-2 px-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4 sm:px-5",
+					newsletterId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+				)}
+			>
+				<div data-dim className="flex min-w-0">
+					{newsletterId && <PickerReader newsletterId={newsletterId} contact={contact} onChange={onContactChange} />}
+				</div>
 				<div role="radiogroup" aria-label="Device" className="flex items-center gap-1 rounded-full bg-white/10 p-1">
 					{DEVICES.map(({ id, label, icon: Icon }) => (
 						<button
@@ -91,18 +111,20 @@ function Stage({ html, sender, subject, previewText, onClose }) {
 							)}
 						>
 							<Icon className="size-4" aria-hidden="true" />
-							{label}
+							<span className={cn(newsletterId && "max-sm:sr-only")}>{label}</span>
 						</button>
 					))}
 				</div>
-				<button
-					type="button"
-					onClick={onClose}
-					aria-label="Close preview"
-					className="absolute top-1/2 right-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white outline-none transition-[background-color,scale] duration-150 ease-out hover:bg-white/20 focus-visible:ring-3 focus-visible:ring-white/40 active:scale-[0.96] sm:right-5"
-				>
-					<X className="size-4" />
-				</button>
+				<div data-dim className="flex justify-end">
+					<button
+						type="button"
+						onClick={onClose}
+						aria-label="Close preview"
+						className="grid size-9 place-items-center rounded-full bg-white/10 text-white outline-none transition-[background-color,scale] duration-150 ease-out hover:bg-white/20 focus-visible:ring-3 focus-visible:ring-white/40 active:scale-[0.96]"
+					>
+						<X className="size-4" />
+					</button>
+				</div>
 			</div>
 			<div data-dim className={cn("min-h-0 flex-1", !isEdgeToEdge && "px-3 pb-3 sm:px-8 sm:pb-8")}>
 				<div ref={spaceRef} data-dim className="relative h-full">

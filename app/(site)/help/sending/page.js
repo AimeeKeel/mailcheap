@@ -132,7 +132,7 @@ export default function SendingPage() {
 				spam or led to an unsubscribe, with results by inbox provider, like Gmail or Outlook. It counts the list cleanup&apos;s
 				last-chance emails apart. Opens are an estimate: some inboxes load every email&apos;s images on their own, which counts as an
 				open, and some readers block images. Preview, at the top, shows the email as it went out, in a mail app or in Gmail on a
-				phone.
+				phone, as a sample reader or as one of your contacts.
 			</p>
 			<p>
 				Opened and clicked compare with the newsletter&apos;s last {COMPARED_ISSUES} issues, for example &ldquo;+4.2 pts vs

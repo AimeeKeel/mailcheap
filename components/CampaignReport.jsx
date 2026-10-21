@@ -26,8 +26,7 @@ import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
 import { REVIEW_CODES, REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
 import { formatCount, formatDate, formatNumber, formatPoints, formatRate, formatWeekdayHour } from "@/lib/format";
 import { rateTone } from "@/lib/health";
-import { toPreviewHtml } from "@/lib/email-preview";
-import { fillSampleName } from "@/lib/merge-tags";
+import { toPreviewFrame } from "@/lib/email-preview";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
 import { describePublishTo, isOnWebsite, readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
@@ -136,10 +135,11 @@ export default function CampaignReport({
 						)}
 						{!isWebOnly && (
 							<ButtonPreview
-								html={toPreviewHtml(html)}
+								html={toPreviewFrame(html)}
 								sender={sender}
-								subject={fillSampleName(campaign.subject)}
-								previewText={fillSampleName(campaign.previewText)}
+								subject={campaign.subject}
+								previewText={campaign.previewText}
+								newsletterId={String(newsletter._id)}
 							/>
 						)}
 						<MenuReport

@@ -75,8 +75,9 @@ export default function WritingPage() {
 			</p>
 			<p>
 				It works in the subject, the preview text and the content, and in your welcome and confirmation emails. Your website and its
-				issue pages always show the fallback, so no reader&apos;s name is ever public. The preview and test emails show the name Jane,
-				or in a test email your own first name if you&apos;re one of your contacts with one. The review step flags any other{" "}
+				issue pages always show the fallback, so no reader&apos;s name is ever public. The preview shows the name Jane, or the first
+				name of a contact you <Link href={getHelpHref("writing", "preview")}>pick in it</Link>. Test emails show Jane too, or your
+				own first name if you&apos;re one of your contacts with one. The review step flags any other{" "}
 				<code>{"{{...}}"}</code>, like a tag from another platform, since it would go out as written. First names come from{" "}
 				<Link href={getHelpHref("contacts", "details")}>your contacts</Link>.
 			</p>
@@ -87,6 +88,13 @@ export default function WritingPage() {
 				desktop, or in Gmail on a phone: the inbox first, with a fingertip tapping the issue&apos;s row until you open it, then the
 				email.
 				On your own phone, Mobile shows the email itself, edge to edge. Press <kbd>Esc</kbd> to close it.
+			</p>
+			<p>
+				Sample reader, at the top left, shows the email as a reader called Jane gets it. Click it to pick one of your active
+				contacts instead, the newest first, or find one by typing the start of their email address or first name. The subject, the
+				preview text and the email then read as that person gets them, with their first name, or the fallback if they have none.
+				They stay picked while the campaign is open. Tags and fields aren&apos;t filled in: only{" "}
+				<code>{"{{first_name}}"}</code> is. First names come from the <LinkApp href="/contacts">Contacts page</LinkApp>.
 			</p>
 			<p>
 				Send a test email, in the same menu, sends the email as saved to your account&apos;s address, with [Test] before the subject.

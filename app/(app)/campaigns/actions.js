@@ -54,6 +54,19 @@ export async function setCampaignPublishTo(id, publishTo) {
 	return { ok: true };
 }
 
+// The preview's reader picker: the newsletter's active contacts whose address or first name starts with what's typed, the
+// newest before anything is.
+export async function findPreviewContacts(newsletterId, query) {
+	const { output, failure } = await runDashboardAction("search_contacts", {
+		newsletter: String(newsletterId ?? ""),
+		query: String(query ?? "").slice(0, 100),
+		status: "active",
+		limit: 8,
+	});
+	if (failure) return toFormError(failure);
+	return { contacts: output.contacts.map(({ id, email, firstName }) => ({ id, email, firstName })) };
+}
+
 export async function sendTestCampaign(id) {
 	const { failure } = await runDashboardAction("send_test_email", { id: String(id) });
 	revalidatePath(`/campaigns/${id}`);
