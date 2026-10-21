@@ -35,8 +35,11 @@ const contactSchema = new mongoose.Schema(
 		ignoredIssues: { type: Number },
 		lastEngagedAt: { type: Date },
 		lastChanceAt: { type: Date },
-		// Bounced without a send of this account: a send skipped it, on the never-email list (lib/global-suppressions.js).
+		// Bounced without a send of this account: a send skipped it, on the never-email list (lib/global-suppressions.js),
+		// or the list hygiene stopped it (lib/list-hygiene.js), which sets undeliverableReason and the status it had.
 		undeliverableAt: { type: Date },
+		undeliverableReason: { type: String, enum: ["no-mail-server", "spam-domain"] },
+		undeliverableFrom: { type: String },
 		// The last status changes made by hand or through the API and MCP (lib/contact-status.js): who made each, from
 		// where, and whether it came with the person's consent.
 		statusChanges: {

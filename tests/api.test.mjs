@@ -520,7 +520,7 @@ describe("newsletters and images", () => {
 
 	test("a new newsletter starts with list cleanup on and the default numbers, unless it says false", async () => {
 		const user = await customer("cleanup-new@example.com");
-		const totals = { waiting: 0, kept: 0, dormant: 0 };
+		const totals = { waiting: 0, kept: 0, dormant: 0, noMailServer: 0, spamDomain: 0 };
 		const created = await api(user.key, "POST", "/newsletters", { name: "Cleaned up" });
 		assert.equal(created.status, 201);
 		assert.deepEqual(created.body.cleanup, { enabled: true, issues: 6, days: 180, ...totals });

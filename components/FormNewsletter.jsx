@@ -6,6 +6,7 @@ import { checkSlug, saveNewsletter, sendWelcomeTest } from "@/app/(app)/newslett
 import BarSave from "@/components/BarSave";
 import ButtonCopy from "@/components/ButtonCopy";
 import InputImage from "@/components/InputImage";
+import LinkHelp from "@/components/LinkHelp";
 import NoticeWelcomePaused from "@/components/NoticeWelcomePaused";
 import PreviewEmail from "@/components/PreviewEmail";
 import { Button } from "@/components/ui/button";
@@ -505,58 +506,101 @@ function SectionCleanup({ draft, setDraft, set, newsletter, sender, fromEmail, t
 	}
 
 	return (
-		<Section
-			title="Clean up at each send"
-			stagger={1}
-			action={
-				<Switch
-					name="cleanupEnabled"
-					checked={isCleanupEnabled}
-					onCheckedChange={(isChecked) => set("isCleanupEnabled", isChecked)}
-					aria-label="List cleanup"
-				/>
-			}
-		>
-			<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
-				Stops sending to contacts who stopped opening, unless they answer a last-chance email. Each time you send an
-				issue, contacts who ignored the last {cleanup.issues || savedCleanup.issues} issues and showed no sign of life
-				for {cleanup.days || savedCleanup.days} days get this email instead. A click on its button keeps them. Anyone who
-				doesn&apos;t answer by a send {LAST_CHANCE_DAYS} days later becomes dormant: not unsubscribed, not deleted, and
-				back if they sign up again.
-			</p>
-			<Field label="Ignored issues" hint="In a row, counting from the first issue MailCheap sent">
-				<Input
-					name="cleanupIssues"
-					type="number"
-					inputMode="numeric"
-					min={CLEANUP_LIMITS.minIssues}
-					max={CLEANUP_LIMITS.maxIssues}
-					value={cleanup.issues}
-					onChange={updateCleanup("issues")}
-					className="w-28 tabular-nums"
-				/>
-			</Field>
-			<Field label="Quiet for" hint="Days since the last open, click or signup">
-				<span className="flex items-center gap-2">
+		<>
+			<Section
+				title="Clean up at each send"
+				stagger={1}
+				action={
+					<Switch
+						name="cleanupEnabled"
+						checked={isCleanupEnabled}
+						onCheckedChange={(isChecked) => set("isCleanupEnabled", isChecked)}
+						aria-label="List cleanup"
+					/>
+				}
+			>
+				<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
+					Stops sending to contacts who stopped opening, unless they answer a last-chance email. Each time you send an
+					issue, contacts who ignored the last {cleanup.issues || savedCleanup.issues} issues and showed no sign of life
+					for {cleanup.days || savedCleanup.days} days get this email instead. A click on its button keeps them. Anyone who
+					doesn&apos;t answer by a send {LAST_CHANCE_DAYS} days later becomes dormant: not unsubscribed, not deleted, and
+					back if they sign up again.
+				</p>
+				<Field label="Ignored issues" hint="In a row, counting from the first issue MailCheap sent">
 					<Input
-						name="cleanupDays"
+						name="cleanupIssues"
 						type="number"
 						inputMode="numeric"
-						min={CLEANUP_LIMITS.minDays}
-						max={CLEANUP_LIMITS.maxDays}
-						value={cleanup.days}
-						onChange={updateCleanup("days")}
+						min={CLEANUP_LIMITS.minIssues}
+						max={CLEANUP_LIMITS.maxIssues}
+						value={cleanup.issues}
+						onChange={updateCleanup("issues")}
 						className="w-28 tabular-nums"
 					/>
-					<span className="text-sm text-muted-foreground">days</span>
-				</span>
-			</Field>
-			{totals && <CleanupTotals totals={totals} />}
-			{isCleanupEnabled && (
-				<div className="p-3">
-					<PreviewEmail html={lastChance.html} sender={sender} subject={lastChance.subject} previewText={lastChance.previewText} fit="content" />
-				</div>
+				</Field>
+				<Field label="Quiet for" hint="Days since the last open, click or signup">
+					<span className="flex items-center gap-2">
+						<Input
+							name="cleanupDays"
+							type="number"
+							inputMode="numeric"
+							min={CLEANUP_LIMITS.minDays}
+							max={CLEANUP_LIMITS.maxDays}
+							value={cleanup.days}
+							onChange={updateCleanup("days")}
+							className="w-28 tabular-nums"
+						/>
+						<span className="text-sm text-muted-foreground">days</span>
+					</span>
+				</Field>
+				{totals && <CleanupTotals totals={totals} />}
+				{isCleanupEnabled && (
+					<div className="p-3">
+						<PreviewEmail html={lastChance.html} sender={sender} subject={lastChance.subject} previewText={lastChance.previewText} fit="content" />
+					</div>
+				)}
+			</Section>
+			{totals && <SectionStoppedDomains totals={totals} />}
+		</>
+	);
+}
+
+// The list hygiene's daily check of subscribers' domains (lib/list-hygiene.js): always on, so only its counts show.
+// StopForumSpam's license asks for its credit wherever its spam domains are used.
+function SectionStoppedDomains({ totals }) {
+	const stats = [
+		{ label: "No mail server", value: totals.noMailServer },
+		...(totals.isSpamListOn || totals.spamDomain > 0 ? [{ label: "Spam domain", value: totals.spamDomain }] : []),
+	];
+	return (
+		<Section title="Stopped for their domain" stagger={2}>
+			<p className="px-4 py-3 text-sm text-pretty text-muted-foreground">
+				MailCheap checks your contacts&apos; domains in the background.
+				{totals.isSpamListOn && " Contacts on a known spam domain stop getting issues at once."} Contacts on one that
+				can&apos;t receive email stop after two checks a day apart, and get issues again once it can.{" "}
+				<LinkHelp article="list-cleanup" section="domains" />
+			</p>
+			{totals.isSpamListOn && (
+				<p className="-mt-1 px-4 pb-3 text-xs text-muted-foreground">
+					Spam domain data from{" "}
+					<a
+						href="https://www.stopforumspam.com"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="underline underline-offset-2 hover:text-foreground"
+					>
+						StopForumSpam.com
+					</a>
+				</p>
 			)}
+			<dl className={cn("grid divide-x divide-border/60", stats.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
+				{stats.map(({ label, value }) => (
+					<div key={label} className="flex flex-col gap-1 px-4 py-3">
+						<dt className="text-xs text-pretty text-muted-foreground">{label}</dt>
+						<dd className="text-lg font-semibold tabular-nums">{formatNumber(value)}</dd>
+					</div>
+				))}
+			</dl>
 		</Section>
 	);
 }

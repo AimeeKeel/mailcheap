@@ -4,6 +4,7 @@ import LinkApp from "@/components/LinkApp";
 import { FIRST_SEND, isCloud } from "@/lib/config";
 import { MAX_CONTACT_FIELDS } from "@/lib/contact-fields";
 import { MAX_IMPORT_ROWS } from "@/lib/csv-import";
+import { isSpamListEnabled } from "@/lib/domain-reputation";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { CONSENT_TEXT } from "@/lib/import-checks";
 
@@ -95,7 +96,11 @@ export default function ImportingContactsPage() {
 			<p>The import checks each address and leaves out, with a count for each reason:</p>
 			<ul>
 				<li>invalid addresses, and misspelled domains like gmial.com;</li>
-				<li>spam traps, throwaway inboxes and role addresses like info@ or support@;</li>
+				<li>
+					spam traps, role addresses like info@ or support@, and throwaway inboxes, from a list of thousands of throwaway services
+					updated every day;
+				</li>
+				{(isCloud() || isSpamListEnabled()) && <li>known spam domains, from StopForumSpam&apos;s list;</li>}
 				<li>duplicates in the file, and addresses on domains that can&apos;t receive email;</li>
 				<li>people who unsubscribed, bounced or complained before, even if you deleted them since;</li>
 				<li>addresses MailCheap knows can&apos;t receive email, because they bounced or hit a spam trap for any sender.</li>

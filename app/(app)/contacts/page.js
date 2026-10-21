@@ -33,6 +33,7 @@ import {
 import { scoped } from "@/lib/account-scope";
 import { getAppUrl } from "@/lib/config";
 import { cleanTag, contactFieldValues } from "@/lib/contact-fields";
+import { UNDELIVERABLE_LABELS } from "@/lib/contact-status";
 import { CONTACTS_PAGE_SIZE, findContactsPage, listContactTags } from "@/lib/contacts";
 import { getAddContactCurl } from "@/lib/docs/reference";
 import { formatDate, formatNumber } from "@/lib/format";
@@ -196,7 +197,10 @@ export default async function ContactsPage({ searchParams }) {
 											<ListTags tags={contact.tags} />
 										</TableCell>
 										<TableCell>
-											<BadgeStatus status={contact.status} label={contact.undeliverableAt && "Undeliverable"} />
+											<BadgeStatus
+												status={contact.status}
+												label={contact.undeliverableAt && (UNDELIVERABLE_LABELS[contact.undeliverableReason] ?? "Undeliverable")}
+											/>
 										</TableCell>
 										<TableCell className="hidden text-right lg:table-cell">
 											{engagement(contact, "opens", "openRate")}
@@ -212,6 +216,7 @@ export default async function ContactsPage({ searchParams }) {
 												id={contact._id.toString()}
 												email={contact.email}
 												status={contact.status}
+												undeliverableReason={contact.undeliverableReason}
 												firstName={contact.firstName ?? ""}
 												tags={contact.tags ?? []}
 												fields={contactFieldValues(contact, fields)}

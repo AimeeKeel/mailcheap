@@ -4,6 +4,7 @@ import LinkApp from "@/components/LinkApp";
 import { TRIAL_CONTACTS } from "@/lib/actions/contacts";
 import { isCloud } from "@/lib/config";
 import { MAX_CONTACT_FIELDS, MAX_TAGS, MAX_TAG_LENGTH } from "@/lib/contact-fields";
+import { isSpamListEnabled } from "@/lib/domain-reputation";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { MAX_SEGMENT_CONDITIONS, SEGMENT_PRESETS, describeSegment } from "@/lib/segments";
 
@@ -165,6 +166,15 @@ export default function ContactsPage() {
 				When an address hard bounces or turns out to be a spam trap, MailCheap remembers it for every sender: imports and signups
 				leave it out, and sends skip it, showing the contact as bounced. A bounced address is remembered for 180 days, a spam trap for
 				good.
+			</p>
+			<p>
+				MailCheap also checks in the background that your contacts&apos; domains can receive email. Contacts on one that can&apos;t show as
+				bounced, marked &ldquo;No mail server&rdquo;, and come back on their own once it can.
+				{(isCloud() || isSpamListEnabled()) &&
+					" Contacts on a known spam domain show as bounced, marked \u201cSpam domain\u201d, unless they ever opened or clicked."}{" "}
+				<Link href={getHelpHref("list-cleanup", "domains")}>
+					{(isCloud() || isSpamListEnabled()) ? "Spam domains and domains without mail" : "Domains that can\u2019t receive email"}
+				</Link>
 			</p>
 		</ArticleHelp>
 	);

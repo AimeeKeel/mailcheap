@@ -22,7 +22,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { STATUS_LOCKS, getStatusChanges, needsConsent } from "@/lib/contact-status";
+import { getStatusChanges, getStatusLock, needsConsent } from "@/lib/contact-status";
 import { toast } from "@/lib/toast";
 
 // Deleted, they leave their status behind (lib/contacts.js).
@@ -33,11 +33,11 @@ const AFTER_DELETE = {
 };
 
 // Its details, the status changes lib/contact-status.js allows for this contact, then delete. firstName, tags, fields:
-// what the details dialog edits.
-export default function MenuContact({ id, email, status, firstName = "", tags = [], fields = {} }) {
+// what the details dialog edits. undeliverableReason: why the list hygiene stopped it, if it did.
+export default function MenuContact({ id, email, status, undeliverableReason, firstName = "", tags = [], fields = {} }) {
 	const [dialog, setDialog] = useState(null);
 	const [isPending, startTransition] = useTransition();
-	const lock = STATUS_LOCKS[status];
+	const lock = getStatusLock(status, undeliverableReason);
 
 	function change(nextStatus) {
 		if (needsConsent(status, nextStatus)) return void setDialog("consent");
