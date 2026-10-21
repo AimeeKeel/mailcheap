@@ -3,6 +3,7 @@
 import { useId, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { updateContactDetails } from "@/app/(app)/contacts/actions";
+import InputDate from "@/components/InputDate";
 import InputTags from "@/components/InputTags";
 import { useContactOptions } from "@/components/ProviderContactOptions";
 import { Button } from "@/components/ui/button";
@@ -124,16 +125,20 @@ function InputField({ field, value, onChange }) {
 			<label htmlFor={inputId} className="text-sm font-medium">
 				{field.label}
 			</label>
-			<Input
-				id={inputId}
-				type={field.type === "date" ? "date" : field.type === "number" ? "number" : "text"}
-				step={field.type === "number" ? "any" : undefined}
-				value={value ?? ""}
-				onChange={(event) => onChange(event.target.value)}
-				maxLength={field.type === "text" ? 500 : undefined}
-				autoComplete="off"
-				className={field.type === "number" ? "tabular-nums" : undefined}
-			/>
+			{field.type === "date" ? (
+				<InputDate id={inputId} value={value ?? ""} onChange={onChange} />
+			) : (
+				<Input
+					id={inputId}
+					type={field.type === "number" ? "number" : "text"}
+					step={field.type === "number" ? "any" : undefined}
+					value={value ?? ""}
+					onChange={(event) => onChange(event.target.value)}
+					maxLength={field.type === "text" ? 500 : undefined}
+					autoComplete="off"
+					className={field.type === "number" ? "tabular-nums" : undefined}
+				/>
+			)}
 		</div>
 	);
 }

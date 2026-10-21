@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 import { Ban, CircleOff, Gauge, Gift, Loader2, MoreHorizontal, ShieldCheck } from "lucide-react";
 import { blockAccountAction, endFreePlan, giveFreePlan, saveLimits, setSpread, unblockAccountAction } from "@/app/admin/actions";
 import IconWarmup from "@/components/IconWarmup";
+import InputDate from "@/components/InputDate";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -258,13 +259,11 @@ function FormFreePlan({ accountId, email, freePlan, onDone }) {
 				<Label htmlFor={`free-plan-until-${accountId}`}>
 					Ends on <span className="font-normal text-muted-foreground">(optional)</span>
 				</Label>
-				<Input
+				<InputDate
 					id={`free-plan-until-${accountId}`}
-					type="date"
 					name="until"
 					min={getTomorrow()}
 					defaultValue={freePlan?.until?.slice(0, 10) ?? ""}
-					className="tabular-nums"
 				/>
 				<p className="text-xs text-muted-foreground">Without a date, it has no end.</p>
 			</div>

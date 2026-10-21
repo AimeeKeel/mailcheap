@@ -137,7 +137,8 @@ export default function ContactsPage() {
 					<ul>
 						<li>
 							<strong>By hand</strong>: open a contact&apos;s page, or their menu at the end of their row, click Edit details, and
-							type their first name and a value for each field.
+							type their first name and a value for each field. A date field opens a calendar: pick the month and year at its top,
+							then the day, and the cross at its end clears it.
 						</li>
 						<li>
 							<strong>From a CSV file</strong>: import it from the <LinkApp href="/contacts">Contacts page</LinkApp>. Each column
