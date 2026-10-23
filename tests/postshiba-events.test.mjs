@@ -78,6 +78,8 @@ test("PostShiba's events take the one event shape, with the account and message 
 	const blocked = getEventPlan(normalizePostshibaEvent(postshibaEvent("bounce", { type: "blocked", reason: "550 5.7.1 reputation" })));
 	assert.deepEqual([blocked.suppression, blocked.error], [null, "Soft bounce: 550 5.7.1 reputation"]);
 	assert.equal(getEventPlan(normalizePostshibaEvent(postshibaEvent("bounce", { type: "bounce", reason: "expired" }))).suppression, null, "expired isn't the address");
+	const flushed = getEventPlan(normalizePostshibaEvent(postshibaEvent("bounce", { type: "bounce", reason: "flushed by sender" })));
+	assert.deepEqual([flushed.suppression, flushed.status, flushed.error], [null, null, "Soft bounce: flushed by sender"], "a flushed queue isn't the address");
 	assert.equal(getEventPlan(normalizePostshibaEvent(postshibaEvent("bounce", {}))).suppression, null, "no type: PostShiba suppresses it if it was hard");
 
 	const complaint = getEventPlan(normalizePostshibaEvent(postshibaEvent("spamreport", { attribution: "verified" })));
