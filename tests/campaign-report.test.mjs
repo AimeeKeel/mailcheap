@@ -56,6 +56,59 @@ test("Gmail's row in the inbox table shows Gmail's logo, and other inboxes their
 	assert.ok(html.includes("s2/favicons?domain=outlook.com&amp;"));
 });
 
+const HOUR_MS = 3_600_000;
+const inHours = (hours) => new Date(Date.now() + hours * HOUR_MS - 60_000).toISOString();
+const sending = (campaign) => ({
+	_id: "6ad87a2affc219b3be2cc72c",
+	subject: "Hello",
+	format: "markdown",
+	markdown: "Hi",
+	stats: { ...STATS, sent: 200 },
+	...campaign,
+});
+const newAddress = { day: 2, intoDayMs: HOUR_MS, waitMs: 0, firstDay: 1_000, inFlight: 0, hasStarted: true, domain: "news.example.com" };
+
+test("a send going out gradually and in steps says where its warm-up is, what comes next, and why", () => {
+	const html = renderReport({
+		campaign: sending({ status: "sending", sendingUntil: inHours(10), spreadHours: 12, firstSend: { slice: 200, held: 800, checkAt: inHours(2) } }),
+		pace: { proven: 10_000, recent: 0, warmup: null, sender: newAddress },
+	});
+	assert.match(html, /Going out gradually: about 10 hours to go/);
+	assert.match(html, /Day 2 of 7/);
+	assert.match(html, /2,000 emails today\./);
+	assert.match(html, /Next: 4,000 tomorrow, full speed in 6 days\./);
+	assert.match(html, /200 contacts who never got an email from you go first\./);
+	assert.match(html, /The other 800 follow in about 2 hours, if few bounce or complain\./);
+	assert.match(html, /href="\/help\/warm-up"/);
+
+	const steps = renderReport({ campaign: sending({ status: "sending", firstSend: { slice: 200, held: 800, checkAt: inHours(2) } }), pace: null });
+	assert.match(steps, /Going out in steps/);
+	assert.match(steps, /href="\/help\/sending#first-send"/);
+	assert.doesNotMatch(steps, /role="progressbar"/, "no warm-up to show");
+});
+
+test("a send Gmail paused says when it starts again, in the warm-up's look", () => {
+	const campaign = sending({
+		status: "paused",
+		pauseCode: "rate_limited",
+		pauseReason: "Gmail asked to slow down, so this newsletter's sends wait 6 hours, then go on by themselves, more slowly at first",
+	});
+	// Read only: without its buttons, whose tooltips need the dashboard's provider.
+	const html = renderReport({
+		campaign,
+		readOnly: true,
+		pace: { proven: 10_000, recent: 0, warmup: null, sender: { ...newAddress, day: 1, intoDayMs: 0, waitMs: 4 * HOUR_MS, firstDay: 500 } },
+	});
+	assert.match(html, /Paused: Gmail asked to slow down/);
+	assert.match(html, /Starts again in 4 hours: 500 emails that day\./);
+	assert.match(html, /Next: twice as many each day after\./);
+	assert.match(html, /href="\/help\/warm-up#gmail"/);
+	assert.doesNotMatch(html, /Paused: Gmail asked to slow down, so/, "not the look of a pause that needs something from its owner");
+
+	const withoutPace = renderReport({ campaign, readOnly: true, pace: null });
+	assert.match(withoutPace, /this newsletter&#x27;s sends wait 6 hours/, "the reason, when the domain's warm-up isn't there to say it");
+});
+
 test("the report compares opens and clicks with the average in percent, never in points", () => {
 	const html = renderReport();
 	assert.ok(html.includes("+4.2%"));

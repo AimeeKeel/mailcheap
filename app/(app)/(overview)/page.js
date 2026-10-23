@@ -29,7 +29,8 @@ import { getAccountPlan } from "@/lib/plans";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
 import { getPace, getWarmup } from "@/lib/send-spread";
 import { findAccountDomains } from "@/lib/sender";
-import { getOwnDomainNudge, isOwnDomainNudgeShown } from "@/lib/sender-rules";
+import { getOwnDomainNudge, getSendingDomain, isOwnDomainNudgeShown } from "@/lib/sender-rules";
+import { getSenderWarmup } from "@/lib/sender-warmup";
 import { TIME_ZONE_COOKIE, resolveTimeZone, timeZoneLabel } from "@/lib/time-zone";
 import { getUsage, hasWelcomeEmailsOn } from "@/lib/usage";
 import { cn } from "@/lib/utils";
@@ -50,7 +51,7 @@ export default async function OverviewPage({ searchParams }) {
 	const selectedId = selected?._id.toString();
 	const accountId = account._id;
 	const hasPlan = hasActiveSubscription(account);
-	const pace = hasPlan && getWarmup(account) ? getPace(account, await getSendVolumes(account)) : null;
+	const pace = hasPlan ? await getWarmupPace(account, selected) : null;
 	const isWelcomePaused = usage.welcomeEmailsPaused && (await hasWelcomeEmailsOn(accountId));
 	// With a plan only: until then there's no shared address, and adding a domain waits for one.
 	const domainNudge =
@@ -126,6 +127,17 @@ export default async function OverviewPage({ searchParams }) {
 			</div>
 		</>
 	);
+}
+
+// The account's warm-up and the open newsletter's address's, for the card that shows where they stand: null past both.
+async function getWarmupPace(account, newsletter) {
+	const domain = newsletter && (newsletter.sendingDomain ?? getSendingDomain(newsletter));
+	const [volumes, sender] = await Promise.all([
+		getWarmup(account) ? getSendVolumes(account) : null,
+		domain ? getSenderWarmup(account, newsletter, domain) : null,
+	]);
+	const pace = getPace(account, { ...volumes, sender: sender && { startedAt: sender.startedAt, firstDay: sender.firstDay, domain } });
+	return pace?.warmup || pace?.sender ? pace : null;
 }
 
 async function StatsEmail({ accountId, newsletterId }) {

@@ -11,18 +11,18 @@ import ChartOpens from "@/components/ChartOpens";
 import DialogSendMore from "@/components/DialogSendMore";
 import GatePlan from "@/components/GatePlan";
 import HeaderPage from "@/components/HeaderPage";
-import IconWarmup from "@/components/IconWarmup";
 import ImageFavicon from "@/components/ImageFavicon";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import LinkHelp from "@/components/LinkHelp";
 import ListLegend from "@/components/ListLegend";
 import MenuReport from "@/components/MenuReport";
+import NoticeWarmup from "@/components/NoticeWarmup";
 import TableCampaignLinks from "@/components/TableCampaignLinks";
 import TextEmpty from "@/components/TextEmpty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { isPlanLimitCode } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
-import { FIRST_SEND, LIMITS, isSendingEnabled } from "@/lib/config";
+import { LIMITS, isSendingEnabled } from "@/lib/config";
 import { REVIEW_CODES, REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
 import { formatCount, formatDate, formatNumber, formatRate, formatRateChange, formatWeekdayHour } from "@/lib/format";
 import { rateTone } from "@/lib/health";
@@ -35,6 +35,7 @@ import { formatPaceTime } from "@/lib/send-spread";
 import { getIssueWebUrl } from "@/lib/sending-rules";
 import { timeZoneLabel } from "@/lib/time-zone";
 import { cn } from "@/lib/utils";
+import { BACKOFF_WHY, FIRST_SEND_WHY, WARMUP_WHY, getAddressTrack, getFirstSendSteps, getPaceTrack } from "@/lib/warmup-status";
 
 // readOnly: an admin looking at a customer's campaign (app/admin/campaigns/[id]): its numbers without its owner's
 // actions, and children above them. contactFields: the account's, for the preview to fill in.
@@ -74,6 +75,10 @@ export default function CampaignReport({
 			: null;
 	const reached = reachedOf(stats);
 	const progress = stats.recipients ? Math.min(stats.sent / stats.recipients, 1) : 0;
+	// A send going out over hours, and one whose contacts never emailed wait for its first slice's check.
+	const isGradual = Boolean(campaign.sendingUntil) && campaign.spreadHours > 0;
+	const isInSteps = campaign.firstSend?.held > 0 && !campaign.firstSend.checkedAt;
+	const paceTrack = getPaceTrack(pace);
 	const { html } = renderEmail({
 		format: campaign.format,
 		markdown: campaign.markdown,
@@ -157,8 +162,19 @@ export default function CampaignReport({
 			</HeaderPage>
 
 			<div className="flex flex-col gap-6">
-				{campaign.status === "paused" && campaign.pauseReason && (
-					<TextPauseReason reason={campaign.pauseReason} code={campaign.pauseCode} canUpgrade={!readOnly} />
+				{campaign.status === "paused" && campaign.pauseCode === "rate_limited" ? (
+					<NoticeWarmup
+						title="Paused: Gmail asked to slow down"
+						tracks={pace?.sender ? [getAddressTrack(pace.sender)] : []}
+						why={BACKOFF_WHY}
+						help={{ article: "warm-up", section: "gmail" }}
+						className="animate-enter"
+					>
+						{!pace?.sender && <p className="text-pretty">{campaign.pauseReason}</p>}
+					</NoticeWarmup>
+				) : (
+					campaign.status === "paused" &&
+					campaign.pauseReason && <TextPauseReason reason={campaign.pauseReason} code={campaign.pauseCode} canUpgrade={!readOnly} />
 				)}
 				{["sending", "paused"].includes(campaign.status) && !(reviewCode && !stats.recipients) && (
 					<div className="flex flex-col gap-2 animate-enter">
@@ -174,24 +190,27 @@ export default function CampaignReport({
 								style={{ width: `${progress * 100}%` }}
 							/>
 						</div>
-						{campaign.status === "sending" && campaign.firstSend?.held > 0 && !campaign.firstSend.checkedAt && (
-							<p className="text-xs text-pretty text-muted-foreground">
-								{formatNumber(campaign.firstSend.slice)} contacts who never got an email from you go first. The other{" "}
-								{formatNumber(campaign.firstSend.held)} follow {FIRST_SEND.waitMinutes / 60} hours after them if their bounces and
-								complaints stay low. If they don&apos;t, the rest waits for you to resume, and if they&apos;re far over, your account is
-								blocked. <LinkHelp article="sending" section="first-send" />
-							</p>
-						)}
-						{campaign.status === "sending" && campaign.sendingUntil && campaign.spreadHours > 0 && (
-							<p className="flex gap-1.5 text-xs text-pretty text-muted-foreground">
-								<IconWarmup className="size-3.5 translate-y-px" />
-								<span>
-									It goes out gradually while your sends warm up: {formatTimeLeft(hoursUntil(campaign.sendingUntil))} to go.{" "}
-									<LinkHelp article="warm-up" />
-								</span>
-							</p>
-						)}
 					</div>
+				)}
+				{campaign.status === "sending" && (isGradual || isInSteps) && (
+					<NoticeWarmup
+						title={isGradual ? `Going out gradually: ${formatTimeLeft(hoursUntil(campaign.sendingUntil))} to go` : "Going out in steps"}
+						tracks={isGradual && paceTrack ? [paceTrack] : []}
+						steps={
+							isInSteps
+								? getFirstSendSteps({
+										slice: campaign.firstSend.slice,
+										held: campaign.firstSend.held,
+										after: campaign.firstSend.checkAt
+											? `in about ${formatCount(hoursUntil(campaign.firstSend.checkAt), "hour")}`
+											: undefined,
+									})
+								: []
+						}
+						why={isGradual ? WARMUP_WHY : FIRST_SEND_WHY}
+						help={isGradual ? { article: "warm-up" } : { article: "sending", section: "first-send" }}
+						className="animate-enter"
+					/>
 				)}
 
 				{children}
@@ -380,14 +399,7 @@ function TextPauseReason({ reason, code, canUpgrade }) {
 	}
 	return (
 		<p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-500/10 px-4 py-3 text-sm animate-enter">
-			<span className="text-pretty">
-				Paused: {reason}
-				{code === "rate_limited" && (
-					<>
-						. <LinkHelp article="warm-up" section="gmail" />
-					</>
-				)}
-			</span>
+			<span className="text-pretty">Paused: {reason}</span>
 			{canUpgrade && isPlanLimitCode(code) && (
 				<Link href="/billing" className="font-medium underline underline-offset-4">
 					Upgrade

@@ -137,16 +137,24 @@ export default function WarmupPage() {
 			</p>
 
 			<h2 id="dashboard">Where you see it</h2>
+			<p>
+				Wherever your sending warms up or slows down, the dashboard shows the same box, with a flame: what&apos;s happening, the day
+				each warm-up is on, what goes out now and what comes next.
+			</p>
 			<ul>
 				<li>
-					The <LinkApp href="/">overview</LinkApp> shows your day in the warm-up and how many emails go out at once right now.
+					The <LinkApp href="/">overview</LinkApp> shows your account&apos;s warm-up and the open newsletter&apos;s address&apos;s,
+					while they last.
 				</li>
 				<li>
-					The send step says when an issue will be spread, and over how many hours or days, while your account or the
-					newsletter&apos;s address warms up. A send at full speed only shows your day in the warm-up. When an issue reaches
-					contacts you never emailed, the same notice says a slice of them goes first.
+					The send step says when an issue will be spread, over how many hours or days, and which warm-up sets that pace. A send at
+					full speed only shows your account&apos;s day. When an issue reaches contacts you never emailed, the box lists its steps: the
+					slice that goes first, then the rest.
 				</li>
-				<li>A campaign that is going out gradually says about how long it has left, and a paused one says why.</li>
+				<li>
+					A <LinkApp href="/campaigns">campaign</LinkApp> going out gradually says how long it has left and where its warm-up is, and
+					one Gmail paused says when it starts again.
+				</li>
 			</ul>
 			<p>
 				A scheduled issue follows the same pace from its send time. Paused and resumed, a send keeps its pace, and each step of a send

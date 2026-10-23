@@ -51,12 +51,12 @@ export default async function CampaignPage({ params }) {
 			findCampaignLinks(campaign),
 			cookies(),
 		]);
-		// Only a next step needs them, for what its dialog says.
+		// For a next step's dialog, and the warm-up a send going out is in.
 		const [volumes, newContacts, senderVolumes] =
-			remainingCount > 0
+			remainingCount > 0 || ["sending", "paused"].includes(campaign.status)
 				? await Promise.all([
 						getSendVolumes(account),
-						countNewContacts(account, newsletter._id, await findCampaignSegmentFilter(campaign)),
+						remainingCount > 0 ? countNewContacts(account, newsletter._id, await findCampaignSegmentFilter(campaign)) : 0,
 						loadSenderVolumes(account, newsletter),
 					])
 				: [];

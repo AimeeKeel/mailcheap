@@ -96,30 +96,52 @@ test("the pace notice titles a send only when it's spread over hours, and links 
 
 	const quick = render({ proven: 1_000, recent: 0, warmup: warmup(3) }, 100);
 	assert.doesNotMatch(quick, /Sends now|Goes out over/, "a send at full speed goes out when the step above says");
-	assert.match(quick, /Your account is warming up: day 3 of 30\./);
+	assert.match(quick, /Your account is warming up/);
+	assert.match(quick, /Day 3 of 30/);
+	assert.match(quick, /Up to 2,206 emails go out at once\./, "where it is");
+	assert.match(quick, /Next: a send with few bounces and complaints lets the next be twice as big, a day later\./, "what comes next");
+	assert.match(quick, /protects your reputation/, "and why");
 	assert.match(quick, /href="\/help\/warm-up"[^>]*>Learn more</);
-	assert.match(quick, /role="progressbar"/);
+	assert.match(quick, /role="progressbar"[^>]*aria-valuenow="3"/);
 
 	const spread = render({ proven: 0, recent: 0, warmup: warmup(1) }, 1_000);
 	assert.match(spread, /Goes out over 14 hours while your account warms up/);
-	assert.match(spread, /Day 1 of 30\. For now, up to 200 emails go out at once\./);
+	assert.match(spread, /Day 1 of 30/);
+	assert.match(spread, /Up to 200 emails go out at once\./);
 	assert.match(spread, />Learn more</);
 
 	const first = render({ proven: 0, recent: 0, warmup: { days: 30, day: 0, hasStarted: false, progress: 0, endsAt: null } }, 100);
-	assert.match(first, /This first campaign starts your account&#x27;s 30-day warm-up\./);
-	assert.doesNotMatch(first, /role="progressbar"/);
+	assert.match(first, /This first campaign starts your account&#x27;s warm-up/);
+	assert.match(first, /Starts with your first campaign: up to 200 emails at once\./);
+	assert.match(first, /30 days/);
+	assert.match(first, /role="progressbar"[^>]*aria-valuenow="0"/);
 
 	assert.equal(render({ proven: 1_000, recent: 0, warmup: null }, 100), "", "past the warm-up, a send at full speed says nothing");
-	assert.match(render({ proven: 1_000, recent: 0, warmup: null }, 50_000), /Goes out over \d+ hours while your account warms up to sends this size/);
+	const large = render({ proven: 1_000, recent: 0, warmup: null }, 50_000);
+	assert.match(large, /Goes out over \d+ hours while your account warms up to sends this size/);
+	assert.match(large, /For now, up to 5,000 emails go out at once\./);
 
-	const newAddress = { day: 1, intoDayMs: 0, waitMs: 0, firstDay: 1_000, inFlight: 0 };
+	const newAddress = { day: 1, intoDayMs: 0, waitMs: 0, firstDay: 1_000, inFlight: 0, hasStarted: false, domain: "news.example.org" };
 	const fromNewAddress = render({ proven: 10_000, recent: 0, warmup: null, sender: newAddress }, 15_000);
 	assert.match(fromNewAddress, /Goes out over about 4 days while this newsletter&#x27;s address warms up/);
-	assert.match(fromNewAddress, /for its first 7 days, this newsletter sends up to 1,000 emails today and twice as many each day after\./);
+	assert.match(fromNewAddress, /news\.example\.org/);
+	assert.match(fromNewAddress, /s2\/favicons\?domain=news\.example\.org/, "the domain has its favicon");
+	assert.match(fromNewAddress, /7 days/);
+	assert.match(fromNewAddress, /Starts with its next campaign: 1,000 emails the first day\. <span[^>]*>Next: twice as many each day after\./);
 	assert.match(fromNewAddress, /href="\/help\/warm-up#new-address"/);
 	assert.equal(render({ proven: 10_000, recent: 0, warmup: null, sender: newAddress }, 150), "", "200 go at once from a new address");
-	const backingOff = render({ proven: 10_000, recent: 0, warmup: null, sender: { ...newAddress, waitMs: 6 * 3_600_000, firstDay: 3_000 } }, 1_000);
-	assert.match(backingOff, /Gmail asked this newsletter to slow down, so its emails start again in 6 hours: 3,000 that day, twice as many each day after\./);
+
+	const secondDay = render({ proven: 10_000, recent: 0, warmup: null, sender: { ...newAddress, day: 2, intoDayMs: 3_600_000, hasStarted: true } }, 15_000);
+	assert.match(secondDay, /Day 2 of 7/);
+	assert.match(secondDay, /2,000 emails today\./);
+	assert.match(secondDay, /Next: 4,000 tomorrow, full speed in 6 days\./);
+	assert.equal(secondDay.match(/bg-orange-500/g)?.length, 2, "a step lit for each day reached");
+
+	const backingOff = render(
+		{ proven: 10_000, recent: 0, warmup: null, sender: { ...newAddress, hasStarted: true, waitMs: 6 * 3_600_000, firstDay: 3_000 } },
+		1_000
+	);
+	assert.match(backingOff, /Starts again in 6 hours: 3,000 emails that day\./);
 });
 
 test("a first slice is part of the pace notice, never a notice of its own", () => {
@@ -128,12 +150,18 @@ test("a first slice is part of the pace notice, never a notice of its own", () =
 
 	const warming = render({ proven: 0, recent: 0, warmup: { days: 30, day: 6, hasStarted: true, progress: 0.2, endsAt: "2026-11-15T00:00:00.000Z" } }, 1_000, 1_000);
 	assert.match(warming, /Goes out over 17 hours while your account warms up/, "the slice's 3-hour check is in the hours");
-	assert.match(warming, /Day 6 of 30\..*1,000 contacts never got an email from you, so a slice of them goes first and the rest 3 hours later/);
+	assert.match(warming, /Day 6 of 30.*200 contacts who never got an email from you go first\..*The other 800 follow 3 hours later, if few bounce or complain\./);
 	assert.equal(learnMore(warming), 1);
 	assert.match(warming, /href="\/help\/warm-up"/);
 
+	const fullSpeed = render({ proven: 10_000, recent: 0, warmup: null }, 1_000, 1_000);
+	assert.match(fullSpeed, /Goes out in steps/, "past the warm-up, the slice still says what comes next");
+	assert.match(fullSpeed, /The other 800 follow 3 hours later/);
+	assert.match(fullSpeed, /href="\/help\/sending#first-send"/);
+	assert.doesNotMatch(fullSpeed, /role="progressbar"/);
+
 	const selfHosted = render(null, 1_000, 1_000);
-	assert.match(selfHosted, /^<div[^>]*><div[^>]*><div[^>]*><p>1,000 contacts never got an email from you/, "no icon or title without a warm-up");
+	assert.match(selfHosted, /^<p[^>]*>1,000 contacts never got an email from you/, "no icon or title without a warm-up");
 	assert.match(selfHosted, /href="\/help\/sending#first-send"/);
 	assert.doesNotMatch(selfHosted, /warm|role="progressbar"/);
 

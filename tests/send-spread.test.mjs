@@ -11,6 +11,7 @@ import {
 	getProvenEmails,
 	getSendHours,
 	getSenderDayEmails,
+	getSenderDaysLeft,
 	getSenderHours,
 	getSenderMs,
 	getSenderPace,
@@ -131,8 +132,23 @@ test("a new domain's first week: 1,000 emails its first day, twice as many each 
 	const now = new Date("2026-10-23T12:00:00Z");
 	const at = (hours) => new Date(now.getTime() + hours * HOUR_MS);
 	const fresh = getSenderPace({}, { now, env: CLOUD });
-	assert.deepEqual(fresh, { day: 1, intoDayMs: 0, waitMs: 0, firstDay: 1000, inFlight: 0 }, "a domain that never sent starts with this send");
-	assert.deepEqual(getSenderPace({ startedAt: at(-30) }, { now, env: CLOUD }), { day: 2, intoDayMs: 6 * HOUR_MS, waitMs: 0, firstDay: 1000, inFlight: 0 });
+	assert.deepEqual(
+		fresh,
+		{ day: 1, intoDayMs: 0, waitMs: 0, firstDay: 1000, inFlight: 0, hasStarted: false, domain: null },
+		"a domain that never sent starts with this send"
+	);
+	assert.deepEqual(getSenderPace({ startedAt: at(-30), domain: "news.example.org" }, { now, env: CLOUD }), {
+		day: 2,
+		intoDayMs: 6 * HOUR_MS,
+		waitMs: 0,
+		firstDay: 1000,
+		inFlight: 0,
+		hasStarted: true,
+		domain: "news.example.org",
+	});
+	assert.equal(getSenderDaysLeft(fresh), 7);
+	assert.equal(getSenderDaysLeft(getSenderPace({ startedAt: at(-30) }, { now, env: CLOUD })), 6, "the rest of its second day, and 5 more");
+	assert.equal(getSenderDaysLeft(getSenderPace({ startedAt: at(6) }, { now, env: CLOUD })), 8, "6 hours of waiting, then its 7 days");
 	assert.equal(getSenderPace({ startedAt: at(-7 * 24) }, { now, env: CLOUD }), null, "past its week");
 	assert.equal(getSenderPace({}, { now, env: { MAILCHEAP_CLOUD: "" } }), null, "a self-hosted server sends at full speed");
 	const restart = getSenderPace({ startedAt: at(6), firstDay: 6000 }, { now, env: CLOUD });
