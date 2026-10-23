@@ -39,14 +39,14 @@ export default function SendingPage() {
 					<p>
 						Some habits tend to send email to spam: a subject in capital letters, a row of exclamation marks, phrases like
 						&ldquo;100% free&rdquo; or &ldquo;act now&rdquo;, a subject starting with Re: when it isn&apos;t a reply, or a link
-						shortener like bit.ly. When your issue has one, the review step shows a tip under the checklist: the words it&apos;s
-						about, highlighted, what to change, and a button to edit them. Most issues get none. A web-only issue goes to no
-						inbox, so it gets none either.
+						shortener like bit.ly. When you send or schedule an issue that has one, MailCheap shows you the tips first: the words
+						they&apos;re about, highlighted, what to change, and a button to edit them. Change them, or send or schedule it as it
+						is. Most issues get none and go straight out. A web-only issue goes to no inbox, so it gets none either.
 					</p>
 					<p>
-						Tips never stop a send: change what you like, or send it as it is. They come from the{" "}
-						<Link href={getHelpHref("sending", "content-check")}>content check</Link>, which reads the issue as you open the review
-						or send step. A send of the same content doesn&apos;t read it again, so it doesn&apos;t wait.
+						Tips come from the <Link href={getHelpHref("sending", "content-check")}>content check</Link>, which reads each version
+						of an issue once, as you send or schedule it: a scheduled issue you didn&apos;t change isn&apos;t read again when it
+						goes out. Until you change the issue, the review step shows its tips under the checklist too.
 					</p>
 				</>
 			)}
@@ -122,7 +122,7 @@ export default function SendingPage() {
 					<h2 id="content-check">The content check</h2>
 					<p>
 						Before an issue goes out, an automated check reads its subject and content for phishing, malware, scams and explicit
-						content: as you open the review or send step, and as it goes out if it changed since. It never reads your contacts.
+						content: as you send or schedule it, and again as it goes out if it changed since. It never reads your contacts.
 						Almost every issue goes straight out.
 					</p>
 					<p>

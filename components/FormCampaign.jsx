@@ -54,7 +54,6 @@ import { readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
 import { SEGMENT_DELETED } from "@/lib/segments";
 import { toast } from "@/lib/toast";
-import { useCampaignTips } from "@/lib/use-campaign-tips";
 import { useCollapsedSidebar } from "@/lib/use-collapsed-sidebar";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { usePaywall } from "@/lib/use-paywall";
@@ -87,7 +86,7 @@ export default function FormCampaign({
 	emailsLeft,
 	pace,
 	newContacts,
-	isTipsEnabled = false,
+	tips: storedTips = [],
 }) {
 	const isHtml = campaign.format === "html";
 	const [step, setStep] = useState("write");
@@ -104,6 +103,9 @@ export default function FormCampaign({
 	});
 	const save = useCallback((snapshot) => saveCampaign(campaign._id, { ...snapshot, format }), [campaign._id, format]);
 	const { isDirty, isSaving, savedAt, error, flush } = useAutosave(values, save);
+	// The content check's tips for the draft as it is: the page's, or those a send or a schedule stopped for. A change
+	// hides them, and the next send or schedule checks again.
+	const [knownTips, setKnownTips] = useState(() => ({ values, list: storedTips }));
 	useCollapsedSidebar();
 	const [isTesting, startTesting] = useTransition();
 	const [isWorking, startWorking] = useTransition();
@@ -170,13 +172,10 @@ export default function FormCampaign({
 		hasPlan,
 		isWebOnly,
 		onBeforeSend: persist,
+		onTips: (list) => setKnownTips({ values, list }),
 	});
-	// A web-only issue goes to no inbox. Without a plan nothing is checked.
-	const campaignTips = useCampaignTips(campaign._id, values, {
-		isEnabled: isTipsEnabled && hasPlan && !isWebOnly && !isUploading,
-		save: flush,
-	});
-	const tips = isWebOnly ? [] : campaignTips.tips;
+	// A web-only issue goes to no inbox.
+	const tips = knownTips.values === values && !isWebOnly ? knownTips.list : [];
 	// The account's doing rather than the email's, so above the review and send steps instead of in the checklist; the
 	// send step adds the plan's emails a send now would go over. Without a plan, Send and Schedule open the paywall
 	// first, and the checks wait until there's one.
@@ -216,13 +215,11 @@ export default function FormCampaign({
 		});
 	}
 
-	// Each step keeps its own scroll, so going back to the draft lands where the writing was. Leaving the draft checks it
-	// for tips, which the review step shows.
+	// Each step keeps its own scroll, so going back to the draft lands where the writing was.
 	function goToStep(next) {
 		if (next === step) return;
 		scrollsRef.current[step] = window.scrollY;
 		if (next === "send") sending.prepare();
-		if (next !== "write") campaignTips.check();
 		flushSync(() => setStep(next));
 		window.scrollTo({ top: scrollsRef.current[next] ?? 0 });
 	}
@@ -485,6 +482,7 @@ export default function FormCampaign({
 						isChangingPublishTo={isChangingPublishTo}
 						websiteHref={getCheckFix({ id: "website" }, { newsletterId: newsletter._id })?.href}
 						domainNudge={domainNudge}
+						onEdit={editField}
 					/>
 				</section>
 			</div>

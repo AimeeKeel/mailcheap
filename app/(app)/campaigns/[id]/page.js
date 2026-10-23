@@ -11,7 +11,7 @@ import { getCampaignActivity, getCampaignComparison } from "@/lib/campaign-repor
 import { countNewContacts, countRemainingContacts, getSendVolumes, sendTimesPipeline } from "@/lib/campaign-queries";
 import { getSharedDomain, isSendingEnabled } from "@/lib/config";
 import { getFieldOptions } from "@/lib/contact-fields";
-import { isContentReviewEnabled } from "@/lib/content-review";
+import { getStoredTips } from "@/lib/content-review";
 import { getPostalAddress } from "@/lib/postal-address";
 import { countAudience, countSegmentCards, findCampaignSegmentFilter, listLiveSegments } from "@/lib/segment-queries";
 import { compileSegment, describeSegment } from "@/lib/segments";
@@ -83,13 +83,14 @@ export default async function CampaignPage({ params }) {
 	const segments = await listLiveSegments(account, newsletter._id);
 	const segment = campaign.segmentId ? segments.find(({ _id }) => _id.equals(campaign.segmentId)) : null;
 	const isSegmentDeleted = Boolean(campaign.segmentId && !segment);
-	const [audience, everyone, sender, sendTimes, volumes, domains] = await Promise.all([
+	const [audience, everyone, sender, sendTimes, volumes, domains, tips] = await Promise.all([
 		isSegmentDeleted ? { contacts: 0, neverMailed: 0 } : countAudience(account, newsletter._id, segment && compileSegment(segment)),
 		campaign.segmentId ? countSegmentCards(account, newsletter._id, []) : null,
 		loadSender(account, newsletter),
 		getSendTimes(campaign),
 		getSendVolumes(account),
 		findAccountDomains(account._id),
+		getStoredTips({ campaign, newsletter }),
 	]);
 	const senderVolumes = sender.identity ? await getSenderVolumes(account, newsletter, sender.identity) : null;
 	const sharedDomain = getSharedDomain();
@@ -121,7 +122,7 @@ export default async function CampaignPage({ params }) {
 			emailsLeft={plan.emailsLeft}
 			pace={getPace(account, { ...volumes, sender: senderVolumes })}
 			newContacts={audience.neverMailed}
-			isTipsEnabled={isContentReviewEnabled()}
+			tips={tips}
 		/>
 	);
 }

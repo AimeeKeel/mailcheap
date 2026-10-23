@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarClock, ChevronsUpDown, Globe, Layers, Loader2, Mail, Plus, Send, X } from "lucide-react";
 import { setCampaignSegment } from "@/app/(app)/campaigns/actions";
 import CardSettings from "@/components/CardSettings";
+import { ListTips } from "@/components/CardTips";
 import DialogSegment from "@/components/DialogSegment";
 import InputCampaignSlug from "@/components/InputCampaignSlug";
 import ListCleanupPreview from "@/components/ListCleanupPreview";
@@ -32,6 +33,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getTipFix } from "@/lib/campaign-steps";
 import { formatCount, formatNumber, formatSendTime } from "@/lib/format";
 import { withoutMergeTags } from "@/lib/merge-tags";
 import { PUBLISH_OPTIONS } from "@/lib/publish-to";
@@ -44,6 +46,7 @@ import { cn } from "@/lib/utils";
 // newsletter's segments narrows it, then now or at a time, and how fast it goes out. Its button is in the editor's bar,
 // and lib/use-send-campaign.js holds what it does, with its count of contacts. everyoneCount: all the newsletter's
 // active contacts, what a segment's count is out of. A web-only issue has no audience or pace: it goes on the website.
+// onEdit(field, words): a tip's fix, from the dialog a send or a schedule stopped in.
 export default function PanelSend({
 	sending,
 	campaign,
@@ -60,12 +63,14 @@ export default function PanelSend({
 	isChangingPublishTo,
 	websiteHref,
 	domainNudge = null,
+	onEdit,
 }) {
 	const isClient = useIsClient();
 	const [segmentId, setSegmentId] = useState(campaign.segmentId ?? null);
 	const [isCreatingSegment, setIsCreatingSegment] = useState(false);
 	const [isChangingSegment, startChangingSegment] = useTransition();
 	const isOpeningDialogRef = useRef(false);
+	const isEditingTipRef = useRef(false);
 	const segment = segments.find(({ id }) => id === segmentId) ?? null;
 	const scheduledAt = campaign.status === "scheduled" ? campaign.scheduledAt : null;
 	// The browser's time zone, which the server doesn't know.
@@ -113,6 +118,19 @@ export default function PanelSend({
 	function keepDialogFocus(event) {
 		if (!isOpeningDialogRef.current) return;
 		isOpeningDialogRef.current = false;
+		event.preventDefault();
+	}
+
+	// The field a tip's fix moves the focus to keeps it as the dialog closes.
+	function editTip(fix) {
+		isEditingTipRef.current = true;
+		sending.setIsConfirmOpen(false);
+		onEdit(fix.field, fix.words);
+	}
+
+	function keepEditFocus(event) {
+		if (!isEditingTipRef.current) return;
+		isEditingTipRef.current = false;
 		event.preventDefault();
 	}
 
@@ -262,34 +280,40 @@ export default function PanelSend({
 			/>
 
 			<Dialog open={sending.isConfirmOpen} onOpenChange={sending.setIsConfirmOpen}>
-				<DialogContent className="sm:max-w-sm">
-					<DialogHeader>
-						{isEmail ? (
-							<>
-								<DialogTitle className="tabular-nums">Send to {formatCount(sending.sendRecipients, "contact")}?</DialogTitle>
-								<DialogDescription>
-									{scheduledTime ? `It goes out now instead of ${scheduledTime}.` : "Most engaged contacts receive it first."}
-									{sending.sendRecipients < sending.issueAudience && " Send it to more later from its page."}
-									{publishTo === "email" && " It won't be on your website."}
-								</DialogDescription>
-							</>
-						) : (
-							<>
-								<DialogTitle>Publish on your website?</DialogTitle>
-								<DialogDescription>
-									{scheduledTime ? `It goes live now instead of ${scheduledTime}.` : "It goes live right away."} No email goes out.
-								</DialogDescription>
-							</>
-						)}
-					</DialogHeader>
-					<DialogFooter>
-						<DialogClose asChild>
-							<Button variant="outline">Cancel</Button>
-						</DialogClose>
-						<Button onClick={sending.send} disabled={sending.isPending} className="min-w-20">
-							{sending.isPending ? <Loader2 className="animate-spin" /> : isEmail ? "Send" : "Publish"}
-						</Button>
-					</DialogFooter>
+				<DialogContent className={sending.tips ? "sm:max-w-md" : "sm:max-w-sm"} onCloseAutoFocus={keepEditFocus}>
+					{sending.tips ? (
+						<ContentTips tips={sending.tips} isPending={sending.isPending} onGoAhead={sending.goAhead} onEdit={editTip} />
+					) : (
+						<>
+							<DialogHeader>
+								{isEmail ? (
+									<>
+										<DialogTitle className="tabular-nums">Send to {formatCount(sending.sendRecipients, "contact")}?</DialogTitle>
+										<DialogDescription>
+											{scheduledTime ? `It goes out now instead of ${scheduledTime}.` : "Most engaged contacts receive it first."}
+											{sending.sendRecipients < sending.issueAudience && " Send it to more later from its page."}
+											{publishTo === "email" && " It won't be on your website."}
+										</DialogDescription>
+									</>
+								) : (
+									<>
+										<DialogTitle>Publish on your website?</DialogTitle>
+										<DialogDescription>
+											{scheduledTime ? `It goes live now instead of ${scheduledTime}.` : "It goes live right away."} No email goes out.
+										</DialogDescription>
+									</>
+								)}
+							</DialogHeader>
+							<DialogFooter>
+								<DialogClose asChild>
+									<Button variant="outline">Cancel</Button>
+								</DialogClose>
+								<Button onClick={() => sending.send()} disabled={sending.isPending} className="min-w-20">
+									{sending.isPending ? <Loader2 className="animate-spin" /> : isEmail ? "Send" : "Publish"}
+								</Button>
+							</DialogFooter>
+						</>
+					)}
 				</DialogContent>
 			</Dialog>
 		</div>
@@ -352,6 +376,42 @@ function MenuAudience({ segments, segmentId, label, isDeleted, onSegmentChange, 
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
+	);
+}
+
+// What stopped a send or a schedule: the content check's tips, each with its fix, and the way to go ahead as it is.
+function ContentTips({ tips, isPending, onGoAhead, onEdit }) {
+	const isSend = tips.choice === "now";
+
+	return (
+		<>
+			<DialogHeader>
+				<DialogTitle>{formatCount(tips.list.length, "tip")} for more opens</DialogTitle>
+				<DialogDescription>
+					Spam filters tend to catch these. Change them first, or {isSend ? "send" : "schedule"} it as it is.
+				</DialogDescription>
+			</DialogHeader>
+			<ListTips
+				tips={tips.list}
+				renderFix={(tip) => {
+					const fix = getTipFix(tip);
+					return (
+						<Button variant="outline" size="sm" onClick={() => onEdit(fix)}>
+							{fix.label}
+						</Button>
+					);
+				}}
+				className="-mx-4 border-t border-border/60 pt-1.5"
+			/>
+			<DialogFooter>
+				<DialogClose asChild>
+					<Button variant="outline">Cancel</Button>
+				</DialogClose>
+				<Button onClick={onGoAhead} disabled={isPending} className="min-w-28">
+					{isPending ? <Loader2 className="animate-spin" /> : isSend ? "Send as is" : "Schedule as is"}
+				</Button>
+			</DialogFooter>
+		</>
 	);
 }
 

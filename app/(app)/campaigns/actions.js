@@ -71,12 +71,6 @@ export async function findPreviewContacts(newsletterId, query) {
 	};
 }
 
-// The review step's tips, for the draft as saved: most drafts get none, and a failure only means none.
-export async function getCampaignTips(id) {
-	const { output, failure } = await runDashboardAction("get_campaign_tips", { id: String(id) });
-	return failure ? toFormError(failure) : { tips: output.tips };
-}
-
 export async function sendTestCampaign(id) {
 	const { failure } = await runDashboardAction("send_test_email", { id: String(id) });
 	revalidatePath(`/campaigns/${id}`);
@@ -84,20 +78,28 @@ export async function sendTestCampaign(id) {
 }
 
 // held: paused as it starts, which only the content check does (lib/content-review.js), so nothing went out yet.
-export async function sendCampaign(id, { audienceLimit } = {}) {
-	const { output, failure } = await runDashboardAction("send_campaign", { id: String(id), audienceLimit: readCount(audienceLimit) });
+// checkTips: stop first when the check has tips (tips), so nothing went out either.
+export async function sendCampaign(id, { audienceLimit, checkTips = false } = {}) {
+	const { output, failure } = await runDashboardAction("send_campaign", {
+		id: String(id),
+		audienceLimit: readCount(audienceLimit),
+		checkTips: checkTips === true,
+	});
+	if (output?.tips) return { ok: true, tips: output.tips };
 	refresh(id);
 	if (failure) return toFormError(failure);
 	return output?.status === "paused" ? { ok: true, held: true } : { ok: true };
 }
 
-export async function scheduleCampaign(id, { scheduledAt, audienceLimit } = {}) {
-	const { failure } = await runDashboardAction("schedule_campaign", {
+export async function scheduleCampaign(id, { scheduledAt, audienceLimit, checkTips = false } = {}) {
+	const { output, failure } = await runDashboardAction("schedule_campaign", {
 		id: String(id),
 		scheduledAt: String(scheduledAt ?? ""),
 		audienceLimit: readCount(audienceLimit),
+		checkTips: checkTips === true,
 	});
 	if (failure) return toFormError(failure);
+	if (output.tips) return { ok: true, tips: output.tips };
 	refresh(id);
 	return { ok: true };
 }
