@@ -21,14 +21,24 @@ import { published } from "./stubs/qstash.mjs";
 
 const HOUR_MS = 3_600_000;
 const TELEGRAM = { TELEGRAM_BOT_TOKEN: "123456:test-bot-token-never-logged", TELEGRAM_CHAT_ID: "424242" };
+// Gmail's words as PostShiba's deferrals carry them, its 4.7.28 kept apart in status. With a domain this long, the link
+// is past the 300 characters a reason keeps.
 const GMAIL_LIMIT =
-	"421-4.7.28 [192.0.2.10 15] Gmail has detected an unusual rate of unsolicited mail originating from your SPF domain [rp.slow.example.org 1]. To protect our users from spam, mail sent from your SPF domain has been temporarily rate limited. For more information, go to https://support.google.com/mail/?p=UnsolicitedRateLimitError to review our Bulk Email Senders Guidelines. - gsmtp";
+	"Gmail has detected an unusual rate of mail originating from your SPF domain [rp.why-readers-do-that.example.org      35]. To protect our users from spam, mail sent from your domain has been temporarily rate limited. For more information, go to  https://support.google.com/mail/?p=UnsolicitedRateLimitError to review our Bulk Email Senders Guidelines. abc123 - gsmtp";
 
 const near = (actual, expected, why, tolerance = 60_000) => assert.ok(Math.abs(actual - expected) < tolerance, `${why ?? ""} ${actual} vs ${expected}`);
 
 test("only Gmail rate limiting a deferral backs a newsletter off, from PostShiba or SES", () => {
-	const deferred = (reason) => getEventPlan(normalizePostshibaEvent({ event: "deferred", email: "reader@example.org", reason, sg_message_id: "abc" }));
-	assert.match(deferred(GMAIL_LIMIT).rateLimit, /4\.7\.28/);
+	const deferred = (reason, fields = {}) =>
+		getEventPlan(normalizePostshibaEvent({ event: "deferred", email: "reader@example.org", reason, sg_message_id: "abc", ...fields }));
+	assert.match(deferred(GMAIL_LIMIT, { status: "4.7.28", bounce_classification: "Reputation" }).rateLimit, /^4\.7\.28 Reputation, Gmail has detected/);
+	assert.ok(deferred("Gmail has detected an unusual rate of mail originating from your SPF domain. - gsmtp").rateLimit, "Gmail's words alone");
+	assert.ok(deferred("Mail from your domain has been temporarily rate limited.", { status: "4.7.28" }).rateLimit, "Gmail's code alone");
+	assert.equal(
+		deferred("Our system has detected an unusual rate of mail and is temporarily deferring", { status: "4.7.0" }).rateLimit,
+		null,
+		"Proton Mail's look-alike isn't Gmail"
+	);
 	assert.equal(deferred("421 4.7.0 Try again later, closing connection. - gsmtp").rateLimit, null);
 	assert.equal(deferred("452 4.2.2 The recipient's inbox is out of storage space. - gsmtp").rateLimit, null);
 	const refused = normalizePostshibaEvent({ event: "bounce", type: "blocked", email: "reader@example.org", reason: GMAIL_LIMIT });
@@ -38,7 +48,7 @@ test("only Gmail rate limiting a deferral backs a newsletter off, from PostShiba
 		mail: { messageId: "ses-1", destination: ["reader@example.org"] },
 		deliveryDelay: { delayType: "General", delayedRecipients: [{ emailAddress: "reader@example.org", diagnosticCode: `smtp; ${GMAIL_LIMIT}` }] },
 	});
-	assert.match(getEventPlan(ses).rateLimit, /unusual rate of unsolicited mail/);
+	assert.match(getEventPlan(ses).rateLimit, /Gmail has detected an unusual rate/);
 });
 
 describe("a domain Gmail rate limits", () => {
@@ -51,9 +61,9 @@ describe("a domain Gmail rate limits", () => {
 		return user;
 	}
 
-	// A newsletter's campaign going out to contacts mailed before. isWarm: from a domain past its first week, so only
-	// the account paces it.
-	async function sending(user, slug, contacts, { fromEmail, isWarm = true } = {}) {
+	// A newsletter's campaign going out to contacts mailed before, at Gmail unless readersAt says where. isWarm: from a
+	// domain past its first week, so only the account paces it.
+	async function sending(user, slug, contacts, { fromEmail, isWarm = true, readersAt = "gmail.com" } = {}) {
 		const fields = { name: slug, slug, postalAddress: "1 Main St", ...(fromEmail && { fromEmail }) };
 		const url = await as(user, () => catchRedirect(m.newsletters.saveNewsletter(null, form(fields))));
 		const send = { user, accountId: user.accountId, newsletterId: url.split("/").at(-1) };
@@ -62,7 +72,7 @@ describe("a domain Gmail rate limits", () => {
 			Array.from({ length: contacts }, (_, index) => ({
 				accountId: user.accountId,
 				newsletterId: send.newsletterId,
-				email: `reader${index}@${slug}.example.org`,
+				email: `mailcheap-test-${slug}-${index}@${readersAt}`,
 				status: "active",
 				lastSentAt: new Date(Date.now() - 3 * 86_400_000),
 			}))
@@ -250,6 +260,15 @@ describe("a domain Gmail rate limits", () => {
 		await defer(other, GMAIL_LIMIT);
 		await m.Campaign.updateOne({ accountId: other.accountId, _id: other.campaignId }, { $set: { status: "canceled" } });
 		assert.deepEqual(await resume(jobsTo(published.slice(otherFrom), "resume-send")[0]), { skipped: "campaign is canceled" });
+	});
+
+	test("another mail server saying Gmail's words, to stall a newsletter, changes nothing", async () => {
+		const send = await sending(await account("not-gmail@example.com"), "not-gmail", 400, { readersAt: "example.org" });
+		await runBatches(send.batches.slice(0, 2));
+		const from = published.length;
+		await defer(send, GMAIL_LIMIT);
+		assert.equal((await campaignOf(send)).status, "sending");
+		assert.equal(published.length, from);
 	});
 
 	test("a self-hosted server sends at full speed, so Gmail's limit only shows in the events", async () => {
