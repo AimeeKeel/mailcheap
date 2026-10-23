@@ -22,8 +22,9 @@ import { askToSignOut } from "@/lib/sign-out";
 import { cn } from "@/lib/utils";
 
 // The bottom of the sidebar and of the mobile menu: who's signed in and whether the account sends, with what
-// concerns the whole account rather than one newsletter. status: getSendingStatus (lib/account-state.js).
-export default function MenuUser({ name, email, image, gravatarHash, status, hasBilling }) {
+// concerns the whole account rather than one newsletter. status: getSendingStatus (lib/account-state.js). items: the
+// MenuItems site extension's, under Billing.
+export default function MenuUser({ name, email, image, gravatarHash, status, hasBilling, items = null }) {
 	const [isSigningOut, startSigningOut] = useTransition();
 	const displayName = name?.trim() || email;
 
@@ -70,6 +71,7 @@ export default function MenuUser({ name, email, image, gravatarHash, status, has
 						</Link>
 					</DropdownMenuItem>
 				)}
+				{items}
 				<DropdownMenuItem asChild>
 					<a href="/help" target="_blank" rel="noopener">
 						<CircleHelp />
