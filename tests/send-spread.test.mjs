@@ -304,6 +304,31 @@ describe("sends earn their pace", () => {
 		assert.equal((await domainOf(stayed, identity)).startedAt.getTime(), longAgo.getTime());
 	});
 
+	test("a domain started over ahead of its next send starts then, from its own first day, whatever it sent before", async () => {
+		const user = await setup("restarted-domain@example.com", 5000, { isMailed: true, isNewDomain: true });
+		const { identity } = await m.sender.loadSender({ _id: user.accountId }, await newsletterOf(user));
+		await m.Message.create({
+			accountId: user.accountId,
+			newsletterId: user.newsletterId,
+			kind: "campaign",
+			email: "earlier-reader@example.org",
+			status: "delivered",
+			sentAt: new Date(Date.now() - 30 * 24 * HOUR_MS),
+		});
+		await m.SenderDomain.create({ accountId: user.accountId, domain: identity, firstDay: 3000 });
+		const campaignId = await draft(user);
+		const start = Date.now();
+		await send(user, campaignId);
+		assert.equal(
+			(await campaignOf(user, campaignId)).spreadHours,
+			31,
+			"its first campaign email a month ago would leave it at full speed: 3,000 the first day, the rest of 6,000 the second"
+		);
+		const domain = await domainOf(user, identity);
+		assert.ok(Math.abs(domain.startedAt.getTime() - start) < 60_000, "from this send");
+		assert.equal(domain.firstDay, 3000);
+	});
+
 	test("a small send goes out at once on day 1, and starts the 30-day warm-up", async () => {
 		const user = await setup("small-first@example.com", 2, { isNew: true });
 		const start = Date.now();
