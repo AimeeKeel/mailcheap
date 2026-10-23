@@ -111,6 +111,15 @@ test("the pace notice titles a send only when it's spread over hours, and links 
 
 	assert.equal(render({ proven: 1_000, recent: 0, warmup: null }, 100), "", "past the warm-up, a send at full speed says nothing");
 	assert.match(render({ proven: 1_000, recent: 0, warmup: null }, 50_000), /Goes out over \d+ hours while your account warms up to sends this size/);
+
+	const newAddress = { day: 1, intoDayMs: 0, waitMs: 0, firstDay: 1_000, inFlight: 0 };
+	const fromNewAddress = render({ proven: 10_000, recent: 0, warmup: null, sender: newAddress }, 15_000);
+	assert.match(fromNewAddress, /Goes out over about 4 days while this newsletter&#x27;s address warms up/);
+	assert.match(fromNewAddress, /for its first 7 days, this newsletter sends up to 1,000 emails today and twice as many each day after\./);
+	assert.match(fromNewAddress, /href="\/help\/warm-up#new-address"/);
+	assert.equal(render({ proven: 10_000, recent: 0, warmup: null, sender: newAddress }, 150), "", "200 go at once from a new address");
+	const backingOff = render({ proven: 10_000, recent: 0, warmup: null, sender: { ...newAddress, waitMs: 6 * 3_600_000, firstDay: 3_000 } }, 1_000);
+	assert.match(backingOff, /Gmail asked this newsletter to slow down, so its emails start again in 6 hours: 3,000 that day, twice as many each day after\./);
 });
 
 test("a first slice is part of the pace notice, never a notice of its own", () => {

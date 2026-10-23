@@ -31,6 +31,7 @@ import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
 import { describePublishTo, isOnWebsite, readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
 import { TIMELINE_HOURS, findPeak, hoursToHalf, reachedOf } from "@/lib/report-stats";
+import { formatPaceTime } from "@/lib/send-spread";
 import { getIssueWebUrl } from "@/lib/sending-rules";
 import { timeZoneLabel } from "@/lib/time-zone";
 import { cn } from "@/lib/utils";
@@ -185,8 +186,8 @@ export default function CampaignReport({
 							<p className="flex gap-1.5 text-xs text-pretty text-muted-foreground">
 								<IconWarmup className="size-3.5 translate-y-px" />
 								<span>
-									It goes out over hours while your account warms up{pace?.warmup ? "" : " to sends this size"}: about{" "}
-									{formatCount(hoursUntil(campaign.sendingUntil), "hour")} to go. <LinkHelp article="warm-up" />
+									It goes out gradually while your sends warm up: {formatTimeLeft(hoursUntil(campaign.sendingUntil))} to go.{" "}
+									<LinkHelp article="warm-up" />
 								</span>
 							</p>
 						)}
@@ -379,7 +380,14 @@ function TextPauseReason({ reason, code, canUpgrade }) {
 	}
 	return (
 		<p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-500/10 px-4 py-3 text-sm animate-enter">
-			<span className="text-pretty">Paused: {reason}</span>
+			<span className="text-pretty">
+				Paused: {reason}
+				{code === "rate_limited" && (
+					<>
+						. <LinkHelp article="warm-up" section="gmail" />
+					</>
+				)}
+			</span>
 			{canUpgrade && isPlanLimitCode(code) && (
 				<Link href="/billing" className="font-medium underline underline-offset-4">
 					Upgrade
@@ -417,4 +425,8 @@ function formatSpan(hours) {
 // Whole hours left, at least one: the last batch's time is approximate.
 function hoursUntil(date) {
 	return Math.max(1, Math.ceil((new Date(date).getTime() - Date.now()) / 3_600_000));
+}
+
+function formatTimeLeft(hours) {
+	return hours >= 48 ? formatPaceTime(hours) : `about ${formatCount(hours, "hour")}`;
 }

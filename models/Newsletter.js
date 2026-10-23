@@ -46,6 +46,8 @@ const newsletterSchema = new mongoose.Schema(
 			checkedAt: { type: Date },
 			verifiedAt: { type: Date },
 		},
+		// The domain it last sent a campaign from, whose warm-up its sends follow (models/SenderDomain.js).
+		sendingDomain: { type: String, lowercase: true, trim: true },
 		description: { type: String, trim: true },
 		socialLinks: [{ type: String, trim: true }],
 		// The archive's author page; the author's name is fromName.

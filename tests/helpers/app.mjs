@@ -221,6 +221,20 @@ export async function activate(user, { plan = "starter", interval = "month", ...
 
 // A campaign the account sent before, which proves its volume (lib/send-spread.js) once it's a day old and under the
 // pause level.
+// A newsletter whose domain has sent for longer than its warm-up (lib/sender-warmup.js): its sends go at the account's
+// pace alone.
+export async function endSenderWarmup(user, newsletterId = user.newsletterId) {
+	const Newsletter = (await import("../../models/Newsletter.js")).default;
+	const SenderDomain = (await import("../../models/SenderDomain.js")).default;
+	const { getSendingDomain } = await import("../../lib/sender-rules.js");
+	const { SENDER_WARMUP } = await import("../../lib/config.js");
+	const newsletter = await Newsletter.findOne({ accountId: user.accountId, _id: newsletterId }).lean();
+	const domain = getSendingDomain(newsletter);
+	const startedAt = new Date(Date.now() - (SENDER_WARMUP.days + 1) * 86_400_000);
+	await SenderDomain.updateOne({ accountId: user.accountId, domain }, { $set: { startedAt, firstDay: SENDER_WARMUP.firstDay } }, { upsert: true });
+	await Newsletter.updateOne({ accountId: user.accountId, _id: newsletterId }, { $set: { sendingDomain: domain } });
+}
+
 export async function proveVolume(user, sent, { bounced = 0, hoursAgo = 48 } = {}) {
 	const Campaign = (await import("../../models/Campaign.js")).default;
 	const at = new Date(Date.now() - hoursAgo * 3_600_000);

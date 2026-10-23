@@ -20,6 +20,7 @@ import { getPace } from "@/lib/send-spread";
 import { serialize } from "@/lib/serialize";
 import { findAccountDomains, loadSender } from "@/lib/sender";
 import { getOwnDomainNudge, isOnSharedDomain, isOwnDomainNudgeShown } from "@/lib/sender-rules";
+import { getSenderVolumes } from "@/lib/sender-warmup";
 import { siteExtensions } from "@/lib/site-extensions";
 import { TIME_ZONE_COOKIE, resolveTimeZone } from "@/lib/time-zone";
 import { countEmailsInFlight, getUsage } from "@/lib/usage";
@@ -51,11 +52,12 @@ export default async function CampaignPage({ params }) {
 			cookies(),
 		]);
 		// Only a next step needs them, for what its dialog says.
-		const [volumes, newContacts] =
+		const [volumes, newContacts, senderVolumes] =
 			remainingCount > 0
 				? await Promise.all([
 						getSendVolumes(account),
 						countNewContacts(account, newsletter._id, await findCampaignSegmentFilter(campaign)),
+						loadSenderVolumes(account, newsletter),
 					])
 				: [];
 		return (
@@ -71,7 +73,7 @@ export default async function CampaignPage({ params }) {
 				remainingCount={remainingCount}
 				emailsLeft={plan.emailsLeft}
 				isBlocked={isBlocked(account)}
-				pace={getPace(account, volumes)}
+				pace={getPace(account, { ...volumes, sender: senderVolumes })}
 				newContacts={newContacts}
 			/>
 		);
@@ -89,6 +91,7 @@ export default async function CampaignPage({ params }) {
 		getSendVolumes(account),
 		findAccountDomains(account._id),
 	]);
+	const senderVolumes = sender.identity ? await getSenderVolumes(account, newsletter, sender.identity) : null;
 	const sharedDomain = getSharedDomain();
 	const domainNudge = getOwnDomainNudge({ fromEmail: newsletter.fromEmail, domains, sharedDomain });
 	// Without a plan there's no shared address yet, and adding a domain waits for one.
@@ -116,7 +119,7 @@ export default async function CampaignPage({ params }) {
 			archiveUrlBase={newsletter.archiveEnabled ? getArchiveUrls(newsletter).absolutePost("") : null}
 			planProblem={plan.problem}
 			emailsLeft={plan.emailsLeft}
-			pace={getPace(account, volumes)}
+			pace={getPace(account, { ...volumes, sender: senderVolumes })}
 			newContacts={audience.neverMailed}
 			isTipsEnabled={isContentReviewEnabled()}
 		/>
@@ -139,6 +142,12 @@ async function getPlanState(account) {
 				? "This month's emails are used up"
 				: null);
 	return { emailsLeft, problem };
+}
+
+// Its domain's warm-up, for the next step's dialog: none while the newsletter can't send.
+async function loadSenderVolumes(account, newsletter) {
+	const sender = await loadSender(account, newsletter);
+	return sender.identity ? getSenderVolumes(account, newsletter, sender.identity) : null;
 }
 
 // A newsletter's first issue borrows the times the account's other newsletters go out.

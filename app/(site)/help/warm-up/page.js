@@ -1,19 +1,23 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
-import { FIRST_SEND, WARMUP } from "@/lib/config";
+import { BACKOFF, FIRST_SEND, SENDER_WARMUP, WARMUP, getSharedDomain } from "@/lib/config";
 import { formatCount, formatNumber } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
-import { getAllowance, getPaceHours } from "@/lib/send-spread";
+import { getAllowance, getPaceHours, getSenderDayEmails } from "@/lib/send-spread";
 
 export const metadata = getHelpPageMetadata("warm-up");
 
-// A new account's first issue to contacts it never emailed, paced the way the send step says it.
+// A new account's first issue to contacts it never emailed, from a newsletter whose address never sent, paced the way
+// the send step says it.
 const FIRST_ISSUES = [WARMUP.quickEmails, 1_000, 5_000, 20_000];
-const NEW_ACCOUNT = { proven: 0, recent: 0, warmup: { day: 1 } };
+const NEW_ADDRESS = { day: 1, intoDayMs: 0, waitMs: 0, firstDay: SENDER_WARMUP.firstDay, inFlight: 0 };
+const NEW_ACCOUNT = { proven: 0, recent: 0, warmup: { day: 1 }, sender: NEW_ADDRESS };
+const ADDRESS_DAYS = Array.from({ length: 4 }, (_, index) => getSenderDayEmails(NEW_ADDRESS, index + 1));
 
 export default function WarmupPage() {
 	const afterClean = Math.floor(getAllowance({ proven: 1_000, day: 2 }) / 100) * 100;
+	const sharedDomain = getSharedDomain();
 
 	return (
 		<ArticleHelp slug="warm-up">
@@ -27,6 +31,10 @@ export default function WarmupPage() {
 				So for the {WARMUP.days} days after its first campaign, your account sends gradually: each send goes out at full speed up to
 				what your account has shown it can send cleanly, and a bigger one is spread over a few hours. If a list has a problem, it shows
 				in the first hours instead of in every inbox.
+			</p>
+			<p>
+				Inboxes also judge each sending address on its own, so a newsletter&apos;s address warms up too, for its first{" "}
+				{formatCount(SENDER_WARMUP.days, "day")}. <Link href="#new-address">A new address&apos;s first week</Link>
 			</p>
 
 			<h2 id="pace">How a send&apos;s pace is set</h2>
@@ -54,7 +62,7 @@ export default function WarmupPage() {
 			</ul>
 			<p>
 				For example, a day after a clean send to 1,000 contacts, a send of up to about {formatNumber(afterClean)} goes out at once. A
-				new account&apos;s first issue, to contacts it never emailed, goes out over:
+				new account&apos;s first issue, to contacts it never emailed and from a newsletter address that never sent, goes out over:
 			</p>
 			<table>
 				<thead>
@@ -69,7 +77,9 @@ export default function WarmupPage() {
 						return (
 							<tr key={emails}>
 								<td>{formatCount(emails, "contact")}</td>
-								<td>{hours ? `About ${formatCount(hours, "hour")}` : "At once"}</td>
+								<td>
+									{!hours ? "At once" : hours < 48 ? `About ${formatCount(hours, "hour")}` : `About ${formatCount(Math.round(hours / 24), "day")}`}
+								</td>
 							</tr>
 						);
 					})}
@@ -80,16 +90,63 @@ export default function WarmupPage() {
 				<Link href={getHelpHref("sending", "first-send")}>First sends in steps</Link>
 			</p>
 
+			<h2 id="new-address">A new address&apos;s first week</h2>
+			<p>
+				Gmail and the other inboxes keep a history for each address that sends: your own domain
+				{sharedDomain && (
+					<>
+						, or the address made from a newsletter&apos;s slug, like <code>your-newsletter.{sharedDomain}</code>
+					</>
+				)}
+				. An address they&apos;ve never seen that sends thousands of emails in a day gets held back, whatever the account behind it.
+				So for {formatCount(SENDER_WARMUP.days, "day")} from its first campaign email, a newsletter&apos;s address sends:
+			</p>
+			<ul>
+				<li>
+					<strong>{formatNumber(ADDRESS_DAYS[0])} emails on its first day</strong>, then twice as many each day:{" "}
+					{ADDRESS_DAYS.slice(1).map(formatNumber).join(", ")} and so on.
+				</li>
+				<li>
+					<strong>Each day&apos;s emails spread over the day.</strong> The first {formatNumber(WARMUP.quickEmails)} of a send go
+					at once, and a bigger send carries on over the next days.
+				</li>
+				<li>
+					<strong>One week per domain</strong>: newsletters sending from the same domain share it, so their emails add up.
+				</li>
+				<li>
+					<strong>Again from day one when it moves</strong>: a newsletter that switches to your own domain, or to another one,
+					starts its new address&apos;s first week.
+				</li>
+			</ul>
+			<p>
+				This comes on top of your account&apos;s warm-up: a send goes at the slower of the two paces, and the send step says which
+				one sets it.
+			</p>
+
+			<h2 id="gmail">When Gmail asks to slow down</h2>
+			<p>
+				Sometimes Gmail still finds an address&apos;s volume unusual. It then holds back its emails and asks the sender to slow
+				down. Sending on would make it worse, so MailCheap pauses the sends from that address for{" "}
+				{formatCount(BACKOFF.hours, "hour")} and emails you. Then they go on by themselves, the address warming up again from half
+				the emails it sent in the day before, twice as many each day after. Resuming earlier, or moving to another address, still
+				waits for those hours.
+			</p>
+			<p>
+				If it keeps happening, the contacts probably didn&apos;t expect your emails: check where they came from before you send
+				again. <Link href={getHelpHref("deliverability")}>Bounces, complaints and pauses</Link>
+			</p>
+
 			<h2 id="dashboard">Where you see it</h2>
 			<ul>
 				<li>
 					The <LinkApp href="/">overview</LinkApp> shows your day in the warm-up and how many emails go out at once right now.
 				</li>
 				<li>
-					The send step says when an issue will be spread, and over how many hours. A send at full speed only shows your day in the
-					warm-up. When an issue reaches contacts you never emailed, the same notice says a slice of them goes first.
+					The send step says when an issue will be spread, and over how many hours or days, while your account or the
+					newsletter&apos;s address warms up. A send at full speed only shows your day in the warm-up. When an issue reaches
+					contacts you never emailed, the same notice says a slice of them goes first.
 				</li>
-				<li>A campaign that is going out over hours says about how long it has left.</li>
+				<li>A campaign that is going out gradually says about how long it has left, and a paused one says why.</li>
 			</ul>
 			<p>
 				A scheduled issue follows the same pace from its send time. Paused and resumed, a send keeps its pace, and each step of a send

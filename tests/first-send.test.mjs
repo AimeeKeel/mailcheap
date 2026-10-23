@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { getFirstSendProblem, getFirstSendSlice } from "../lib/first-send.js";
-import { activate, as, catchRedirect, form, jsonRequest, platformEmails, proveVolume, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, as, catchRedirect, endSenderWarmup, form, jsonRequest, platformEmails, proveVolume, signIn, startTestApp } from "./helpers/app.mjs";
 import { published } from "./stubs/qstash.mjs";
 
 test("the first slice is 5% of never-mailed contacts, between 200 and 2,000", () => {
@@ -49,8 +49,10 @@ describe("first sends in steps", () => {
 		const slug = email.split("@")[0];
 		const url = await as(user, () => catchRedirect(m.newsletters.saveNewsletter(null, form({ name: slug, slug, postalAddress: "1 Main St" }))));
 		user.newsletterId = url.split("/").at(-1);
-		// Sends this size are proven, so only the first-send steps hold contacts back (tests/send-spread.test.mjs paces them).
+		// Sends this size are proven, from a domain past its warm-up, so only the first-send steps hold contacts back
+		// (tests/send-spread.test.mjs paces them).
 		await proveVolume(user, 1000);
+		await endSenderWarmup(user);
 		const contact = (index, lastSentAt) => ({
 			accountId: user.accountId,
 			newsletterId: user.newsletterId,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import {
+	formatPaceTime,
 	getAllowance,
 	getBatchStarts,
 	getGrowth,
@@ -9,11 +10,16 @@ import {
 	getPaceRoom,
 	getProvenEmails,
 	getSendHours,
+	getSenderDayEmails,
+	getSenderHours,
+	getSenderMs,
+	getSenderPace,
 	getSpreadEnd,
 	getWarmup,
 	getWarmupDay,
+	isSenderPaced,
 } from "../lib/send-spread.js";
-import { activate, as, catchRedirect, form, jsonRequest, platformEmails, proveVolume, signIn, startTestApp } from "./helpers/app.mjs";
+import { activate, as, catchRedirect, endSenderWarmup, form, jsonRequest, platformEmails, proveVolume, signIn, startTestApp } from "./helpers/app.mjs";
 import { published } from "./stubs/qstash.mjs";
 
 const HOUR_MS = 3_600_000;
@@ -119,18 +125,76 @@ test("batches start evenly over the spread, the first right away and the last at
 	assert.deepEqual(getBatchStarts(0, 8 * HOUR_MS, now), []);
 });
 
+const near = (actual, expected, why) => assert.ok(Math.abs(actual - expected) < 1000, `${why ?? ""} ${actual} vs ${expected}`);
+
+test("a new domain's first week: 1,000 emails its first day, twice as many each day after, each day's spread over it", () => {
+	const now = new Date("2026-10-23T12:00:00Z");
+	const at = (hours) => new Date(now.getTime() + hours * HOUR_MS);
+	const fresh = getSenderPace({}, { now, env: CLOUD });
+	assert.deepEqual(fresh, { day: 1, intoDayMs: 0, waitMs: 0, firstDay: 1000, inFlight: 0 }, "a domain that never sent starts with this send");
+	assert.deepEqual(getSenderPace({ startedAt: at(-30) }, { now, env: CLOUD }), { day: 2, intoDayMs: 6 * HOUR_MS, waitMs: 0, firstDay: 1000, inFlight: 0 });
+	assert.equal(getSenderPace({ startedAt: at(-7 * 24) }, { now, env: CLOUD }), null, "past its week");
+	assert.equal(getSenderPace({}, { now, env: { MAILCHEAP_CLOUD: "" } }), null, "a self-hosted server sends at full speed");
+	const restart = getSenderPace({ startedAt: at(6), firstDay: 6000 }, { now, env: CLOUD });
+	assert.deepEqual([restart.day, restart.waitMs, restart.firstDay], [1, 6 * HOUR_MS, 6000], "a back-off's warm-up, starting in 6 hours");
+
+	assert.deepEqual([1, 2, 3, 7].map((day) => getSenderDayEmails(fresh, day)), [1000, 2000, 4000, 64_000]);
+	assert.equal(getSenderMs(fresh, 200), 0, "the first 200 at once");
+	near(getSenderMs(fresh, 700), 12 * HOUR_MS, "500 more: half of the first day's 1,000");
+	near(getSenderMs(fresh, 1200), 24 * HOUR_MS);
+	near(getSenderMs(fresh, 2200), 36 * HOUR_MS, "then 2,000 over the second day");
+	near(getSenderMs({ ...fresh, inFlight: 500 }, 200), 12 * HOUR_MS, "after what the newsletter's other sends still have to send");
+	near(getSenderMs(getSenderPace({ startedAt: at(-18) }, { now, env: CLOUD }), 1200), 15 * HOUR_MS, "250 in its first day's last 6 hours, then 750 of its second day's 2,000");
+	assert.equal(getSenderMs(restart, 0), 6 * HOUR_MS, "nothing before a back-off's warm-up starts");
+	assert.equal(getSenderMs(fresh, 1_000_000), 7 * 24 * HOUR_MS, "past its week, the rest at once");
+	assert.equal(getSenderMs(null, 1_000_000), 0, "a domain past its week");
+	assert.equal(getSenderHours(fresh, 15_000), 96, "15,000 over 4 days");
+	assert.equal(getSenderHours(fresh, 200), 0);
+});
+
+test("batches never start before a new domain may send them, and the slower pace wins", () => {
+	const now = Date.parse("2026-10-23T12:00:00Z");
+	const seconds = (hours) => Math.floor((now + hours * HOUR_MS) / 1000);
+	const fresh = getSenderPace({}, { now: new Date(now), env: CLOUD });
+	assert.deepEqual(
+		getBatchStarts(8, 0, now, fresh),
+		[null, null, null, null, null, seconds(1.2), seconds(2.4), seconds(3.6)],
+		"200 at once, then 50 every 1.2 hours: 1,000 a day"
+	);
+	assert.deepEqual(getBatchStarts(3, 8 * HOUR_MS, now, fresh), [null, seconds(4), seconds(8)], "the account's spread, when it's slower");
+	assert.equal(getBatchStarts(8, 2 * HOUR_MS, now, fresh).at(-1), seconds(3.6), "the domain's, when it is");
+});
+
+test("the dashboard says when a new domain, more than the account, sets the pace, in days past 2", () => {
+	const fresh = getSenderPace({}, { now: new Date(), env: CLOUD });
+	const trusted = { proven: 10_000, recent: 0, warmup: null };
+	assert.equal(getPaceHours({ ...trusted, sender: fresh }, { emails: 200 }), 0, "200 at once");
+	assert.equal(getPaceHours({ ...trusted, sender: fresh }, { emails: 1200 }), 23);
+	assert.equal(getPaceHours({ ...trusted, sender: null }, { emails: 1200 }), 0, "a domain past its week");
+	assert.equal(isSenderPaced({ ...trusted, sender: fresh }, 1200), true);
+	assert.equal(isSenderPaced({ ...trusted, sender: null }, 1200), false);
+	const newAccount = { proven: 0, recent: 0, warmup: { day: 1 } };
+	assert.equal(getPaceHours({ ...newAccount, sender: fresh }, { emails: 10_000 }), 81, "the domain's 81 hours over the account's 27");
+	assert.equal(isSenderPaced({ ...newAccount, sender: fresh }, 300), false, "the account's 7 hours over the domain's 2");
+	assert.equal(getPace({}, { sender: {}, env: CLOUD }).sender.day, 1);
+	assert.equal(getPace({}, { env: CLOUD }).sender, null, "a page that doesn't say which newsletter");
+	assert.deepEqual([formatPaceTime(27), formatPaceTime(47), formatPaceTime(81)], ["27 hours", "47 hours", "about 3 days"]);
+});
+
 describe("sends earn their pace", () => {
 	let app;
 	let m;
 
-	// isNew: before its first campaign. Otherwise past its warm-up, as signIn leaves it.
-	async function setup(email, contacts, { isMailed = false, isNew = false, emails = 100_000 } = {}) {
+	// isNew: before its first campaign. Otherwise past its warm-up, as signIn leaves it. isNewDomain: a newsletter whose
+	// domain never sent; otherwise its domain is past its own warm-up, so only the account's paces the send.
+	async function setup(email, contacts, { isMailed = false, isNew = false, isNewDomain = false, emails = 100_000 } = {}) {
 		const user = await signIn(email);
 		await activate(user, { limitOverrides: { emailsPerMonth: emails, subscribers: 100_000 } });
 		if (isNew) await m.Account.updateOne({ _id: user.accountId }, { $unset: { spreadUntil: 1 } });
 		const slug = email.split("@")[0];
 		const url = await as(user, () => catchRedirect(m.newsletters.saveNewsletter(null, form({ name: slug, slug, postalAddress: "1 Main St" }))));
 		user.newsletterId = url.split("/").at(-1);
+		if (!isNewDomain) await endSenderWarmup(user);
 		await m.Contact.insertMany(
 			Array.from({ length: contacts }, (_, index) => ({
 				accountId: user.accountId,
@@ -186,10 +250,59 @@ describe("sends earn their pace", () => {
 			Campaign: (await import("../models/Campaign.js")).default,
 			Contact: (await import("../models/Contact.js")).default,
 			Message: (await import("../models/Message.js")).default,
+			Newsletter: (await import("../models/Newsletter.js")).default,
+			SenderDomain: (await import("../models/SenderDomain.js")).default,
+			sender: await import("../lib/sender.js"),
 		};
 	});
 
 	after(() => app?.stop());
+
+	const newsletterOf = (user) => m.Newsletter.findOne({ accountId: user.accountId, _id: user.newsletterId }).lean();
+	const domainOf = (user, domain) => m.SenderDomain.findOne({ accountId: user.accountId, domain }).lean();
+
+	test("a newsletter's domain that never sent paces its first send itself: 1,000 emails the first day, twice as many each day after", async () => {
+		const user = await setup("new-domain@example.com", 5000, { isMailed: true, isNewDomain: true });
+		const campaignId = await draft(user);
+		const start = Date.now();
+		const { batches, checks } = await send(user, campaignId);
+		assert.equal(checks.length, 0, "everyone was mailed before");
+		const sending = await campaignOf(user, campaignId);
+		assert.equal(sending.spreadHours, 59, "slower than the account's 23 hours");
+		assert.ok(Math.abs(sending.sendingUntil.getTime() - (start + 59 * HOUR_MS)) < 120_000);
+		const hours = startHours(batches, start);
+		assert.equal(batches.length, 100);
+		assert.ok(Math.abs(hours[24] - 24) < 0.02, "the 1,201st email waits for the second day");
+		assert.ok(Math.abs(hours[64] - 48) < 0.02, "and the 3,201st for the third");
+		assert.ok(Math.abs(hours.at(-1) - 59) < 0.02);
+		const { sendingDomain } = await newsletterOf(user);
+		assert.ok(sendingDomain);
+		assert.ok(Math.abs((await domainOf(user, sendingDomain)).startedAt.getTime() - start) < 60_000, "its week starts with this send");
+
+		const next = await send(user, await draft(user));
+		assert.ok(next.batches[0].notBefore * 1000 > start + 58 * HOUR_MS, "a second send waits for the first one's emails");
+	});
+
+	test("a newsletter that moves to another domain starts the new one's first week; one that stays keeps its own", async () => {
+		const longAgo = new Date(Date.now() - 30 * 24 * HOUR_MS);
+		const moved = await setup("moved-domain@example.com", 1200, { isMailed: true, isNewDomain: true });
+		await m.Newsletter.updateOne({ accountId: moved.accountId, _id: moved.newsletterId }, { $set: { sendingDomain: "old-domain.example.org" } });
+		await m.SenderDomain.create({ accountId: moved.accountId, domain: "old-domain.example.org", startedAt: longAgo, firstDay: 1000 });
+		const campaignId = await draft(moved);
+		await send(moved, campaignId);
+		assert.equal((await campaignOf(moved, campaignId)).spreadHours, 23, "1,200 from a new address, over the account's 15 hours");
+		const { sendingDomain } = await newsletterOf(moved);
+		assert.notEqual(sendingDomain, "old-domain.example.org");
+		assert.ok((await domainOf(moved, sendingDomain)).startedAt > longAgo);
+
+		const stayed = await setup("kept-domain@example.com", 1200, { isMailed: true, isNewDomain: true });
+		const { identity } = await m.sender.loadSender({ _id: stayed.accountId }, await newsletterOf(stayed));
+		await m.SenderDomain.create({ accountId: stayed.accountId, domain: identity, startedAt: longAgo, firstDay: 1000 });
+		const kept = await draft(stayed);
+		await send(stayed, kept);
+		assert.equal((await campaignOf(stayed, kept)).spreadHours, 15, "the account's pace alone");
+		assert.equal((await domainOf(stayed, identity)).startedAt.getTime(), longAgo.getTime());
+	});
 
 	test("a small send goes out at once on day 1, and starts the 30-day warm-up", async () => {
 		const user = await setup("small-first@example.com", 2, { isNew: true });
