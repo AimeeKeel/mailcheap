@@ -71,6 +71,12 @@ export async function findPreviewContacts(newsletterId, query) {
 	};
 }
 
+// The review step's tips, for the draft as saved: most drafts get none, and a failure only means none.
+export async function getCampaignTips(id) {
+	const { output, failure } = await runDashboardAction("get_campaign_tips", { id: String(id) });
+	return failure ? toFormError(failure) : { tips: output.tips };
+}
+
 export async function sendTestCampaign(id) {
 	const { failure } = await runDashboardAction("send_test_email", { id: String(id) });
 	revalidatePath(`/campaigns/${id}`);

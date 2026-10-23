@@ -73,13 +73,15 @@ export default async function AdminCampaignPage({ params }) {
 			>
 				<ListDetails {...found} newsletter={newsletter} timeZone={timeZone} />
 			</CampaignReport>
-			{campaign.review && (
+			{campaign.review ? (
 				<CardContentReview
 					campaignId={String(campaign._id)}
 					review={serialize(campaign.review)}
 					isPending={campaign.status === "paused" && campaign.pauseCode === REVIEW_PAUSE_CODE}
 					ownerEmail={found.ownerEmail}
 				/>
+			) : (
+				campaign.draftReview && <CardContentReview campaignId={String(campaign._id)} review={serialize(campaign.draftReview)} isDraft />
 			)}
 			<section style={{ "--stagger": 7 }} className="mt-6 flex flex-col gap-3 animate-enter">
 				<h2 className="text-sm font-medium text-muted-foreground">Email</h2>

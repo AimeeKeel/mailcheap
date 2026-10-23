@@ -14,9 +14,10 @@ import { formatRelative } from "@/lib/format";
 import { toast } from "@/lib/toast";
 
 // What the automated content check found (lib/content-review.js), for admins only, and the decision on what it holds: an
-// issue (campaignId), or a newsletter's own welcome or confirmation email (newsletterId and kind).
-export default function CardContentReview({ campaignId, newsletterId, kind, review, isPending, ownerEmail, stagger = 6 }) {
-	const status = getStatus(review, isPending);
+// issue (campaignId), or a newsletter's own welcome or confirmation email (newsletterId and kind). isDraft: an issue's
+// check at its review step, before any send, which holds nothing yet.
+export default function CardContentReview({ campaignId, newsletterId, kind, review, isPending = false, ownerEmail, isDraft = false, stagger = 6 }) {
+	const status = getStatus(review, isPending, isDraft);
 	const target = campaignId ? getCampaignTarget(campaignId) : getSignupEmailTarget(newsletterId, kind);
 	const rows = [
 		review.categories?.length > 0 && { label: "Found", value: review.categories.map((name) => name.replaceAll("_", " ")).join(", ") },
@@ -42,6 +43,20 @@ export default function CardContentReview({ campaignId, newsletterId, kind, revi
 				.map(([name, score]) => `${name} ${score.toFixed(2)}`)
 				.join(" · "),
 		},
+		// What its owner saw at the review step: nothing of content it would hold.
+		review.tips?.length > 0 &&
+			review.outcome !== "block" && {
+				label: "Tips",
+				value: (
+					<ul className="flex flex-col gap-1">
+						{review.tips.map(({ quote, tip }) => (
+							<li key={quote} className="text-pretty">
+								&ldquo;{quote}&rdquo; <span className="text-muted-foreground">{tip}</span>
+							</li>
+						))}
+					</ul>
+				),
+			},
 		review.decision && {
 			label: review.decision === "approved" ? "Approved" : "Rejected",
 			value: `${review.decidedBy ?? "An admin"}, ${formatRelative(review.decidedAt)}${review.note ? ` · "${review.note}"` : ""}`,
@@ -52,7 +67,7 @@ export default function CardContentReview({ campaignId, newsletterId, kind, revi
 	return (
 		<section style={{ "--stagger": stagger }} className="mt-6 flex flex-col gap-3 animate-enter">
 			<div className="flex items-center justify-between gap-3">
-				<h2 className="text-sm font-medium text-muted-foreground">Content check</h2>
+				<h2 className="text-sm font-medium text-muted-foreground">{isDraft ? "Content check at the review step" : "Content check"}</h2>
 				<BadgeStatus status={status.tone} label={status.label} />
 			</div>
 			<dl className="divide-y divide-border rounded-xl bg-card text-sm shadow-border">
@@ -178,8 +193,9 @@ function FormReject({ target, ownerEmail, onDone }) {
 }
 
 // The badge's tone by a status it knows (components/BadgeStatus.jsx), with this check's own words.
-function getStatus(review, isPending) {
+function getStatus(review, isPending, isDraft) {
 	if (isPending) return { tone: "pending", label: "Waiting for you" };
+	if (isDraft && review.outcome === "block") return { tone: "paused", label: "Would be held" };
 	if (review.decision === "approved") return { tone: "success", label: "Approved" };
 	if (review.decision === "rejected") return { tone: "blocked", label: "Rejected" };
 	if (review.outcome === "flag") return { tone: "paused", label: "Flagged" };

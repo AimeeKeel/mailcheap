@@ -22,6 +22,7 @@ import { duplicateCampaign, saveCampaign, sendTestCampaign, setCampaignPublishTo
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
 import CardSettings from "@/components/CardSettings";
+import CardTips from "@/components/CardTips";
 import DialogDiscardCampaign from "@/components/DialogDiscardCampaign";
 import DialogPreviewEmail from "@/components/DialogPreviewEmail";
 import EditorRich from "@/components/EditorRich";
@@ -43,8 +44,9 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { getCheckFix } from "@/lib/campaign-steps";
+import { getCheckFix, getTipFix } from "@/lib/campaign-steps";
 import { toPreviewFrame } from "@/lib/email-preview";
+import { formatCount } from "@/lib/format";
 import { markdownToHtml } from "@/lib/markdown";
 import { fieldTag, firstNameTag } from "@/lib/merge-tags";
 import { getPresendChecks } from "@/lib/presend-checks";
@@ -52,6 +54,7 @@ import { readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
 import { SEGMENT_DELETED } from "@/lib/segments";
 import { toast } from "@/lib/toast";
+import { useCampaignTips } from "@/lib/use-campaign-tips";
 import { useCollapsedSidebar } from "@/lib/use-collapsed-sidebar";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { usePaywall } from "@/lib/use-paywall";
@@ -84,6 +87,7 @@ export default function FormCampaign({
 	emailsLeft,
 	pace,
 	newContacts,
+	isTipsEnabled = false,
 }) {
 	const isHtml = campaign.format === "html";
 	const [step, setStep] = useState("write");
@@ -167,6 +171,12 @@ export default function FormCampaign({
 		isWebOnly,
 		onBeforeSend: persist,
 	});
+	// A web-only issue goes to no inbox. Without a plan nothing is checked.
+	const campaignTips = useCampaignTips(campaign._id, values, {
+		isEnabled: isTipsEnabled && hasPlan && !isWebOnly && !isUploading,
+		save: flush,
+	});
+	const tips = isWebOnly ? [] : campaignTips.tips;
 	// The account's doing rather than the email's, so above the review and send steps instead of in the checklist; the
 	// send step adds the plan's emails a send now would go over. Without a plan, Send and Schedule open the paywall
 	// first, and the checks wait until there's one.
@@ -206,16 +216,19 @@ export default function FormCampaign({
 		});
 	}
 
-	// Each step keeps its own scroll, so going back to the draft lands where the writing was.
+	// Each step keeps its own scroll, so going back to the draft lands where the writing was. Leaving the draft checks it
+	// for tips, which the review step shows.
 	function goToStep(next) {
 		if (next === step) return;
 		scrollsRef.current[step] = window.scrollY;
 		if (next === "send") sending.prepare();
+		if (next !== "write") campaignTips.check();
 		flushSync(() => setStep(next));
 		window.scrollTo({ top: scrollsRef.current[next] ?? 0 });
 	}
 
-	function editField(field) {
+	// words: a tip's, selected where the field has them as they are, so typing replaces them.
+	function editField(field, words) {
 		goToStep("write");
 		const target =
 			field === "subject"
@@ -225,6 +238,8 @@ export default function FormCampaign({
 					: rootRef.current?.querySelector('[aria-label="Content"]');
 		target?.focus({ preventScroll: true });
 		target?.scrollIntoView({ block: "center" });
+		const start = words && typeof target?.value === "string" ? target.value.toLowerCase().indexOf(words.toLowerCase()) : -1;
+		if (start >= 0) target.setSelectionRange(start, start + words.length);
 	}
 
 	// opener: what gets the focus back once the preview closes.
@@ -431,6 +446,10 @@ export default function FormCampaign({
 							)
 						}
 					/>
+					{tips.length > 0 && <CardTips tips={tips} renderFix={(tip) => <ButtonFix fix={getTipFix(tip)} onEdit={editField} />} />}
+					<p role="status" className="sr-only">
+						{tips.length > 0 ? `${formatCount(tips.length, "tip")} for more opens` : ""}
+					</p>
 					<CardSettings title="Test and preview" stagger={1}>
 						<ButtonRow
 							icon={FlaskConical}
@@ -718,7 +737,7 @@ function ButtonFix({ fix, onEdit, onTest, isTesting, isTestDisabled }) {
 		);
 	}
 	return (
-		<Button variant="outline" size="sm" onClick={() => onEdit(fix.field)}>
+		<Button variant="outline" size="sm" onClick={() => onEdit(fix.field, fix.words)}>
 			{fix.label}
 		</Button>
 	);

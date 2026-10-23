@@ -62,6 +62,8 @@ const campaignSchema = new mongoose.Schema(
 		webViews: { type: Number, default: 0 },
 		// The content check before a send, of the content it read.
 		review: { type: contentReviewSchema, select: false },
+		// The same check at the review step, before any send: a send of the content it read uses it as its own.
+		draftReview: { type: contentReviewSchema, select: false },
 		stats: {
 			recipients: counter,
 			sent: counter,

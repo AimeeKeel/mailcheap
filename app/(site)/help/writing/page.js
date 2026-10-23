@@ -14,8 +14,14 @@ export default function WritingPage() {
 			<p>
 				Start a draft from the <LinkApp href="/campaigns">Campaigns page</LinkApp>. A campaign goes through three steps, shown at the
 				top: Write, where you type the
-				subject, the preview text and the issue; Review, a checklist of what to fix before it can go out; and Send, where you pick who
-				gets it and when. Everything saves as you type, and a check shows each time it&apos;s saved. While you edit, the{" "}
+				subject, the preview text and the issue; Review, a checklist of what to fix before it can go out
+				{isCloud() && (
+					<>
+						, with <Link href={getHelpHref("sending", "tips")}>tips for more opens</Link> when there are some
+					</>
+				)}
+				; and Send, where you pick who gets it and when. Everything saves as you type, and a check shows each time it&apos;s
+				saved. While you edit, the{" "}
 				<Link href={getHelpHref("getting-started", "sidebar")}>sidebar</Link> folds down to its icons to leave the issue more room.
 			</p>
 			<p>

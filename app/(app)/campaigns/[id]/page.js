@@ -11,6 +11,7 @@ import { getCampaignActivity, getCampaignComparison } from "@/lib/campaign-repor
 import { countNewContacts, countRemainingContacts, getSendVolumes, sendTimesPipeline } from "@/lib/campaign-queries";
 import { getSharedDomain, isSendingEnabled } from "@/lib/config";
 import { getFieldOptions } from "@/lib/contact-fields";
+import { isContentReviewEnabled } from "@/lib/content-review";
 import { getPostalAddress } from "@/lib/postal-address";
 import { countAudience, countSegmentCards, findCampaignSegmentFilter, listLiveSegments } from "@/lib/segment-queries";
 import { compileSegment, describeSegment } from "@/lib/segments";
@@ -117,6 +118,7 @@ export default async function CampaignPage({ params }) {
 			emailsLeft={plan.emailsLeft}
 			pace={getPace(account, volumes)}
 			newContacts={audience.neverMailed}
+			isTipsEnabled={isContentReviewEnabled()}
 		/>
 	);
 }
