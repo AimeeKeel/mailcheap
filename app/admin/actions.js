@@ -3,7 +3,7 @@
 import { isValidObjectId } from "mongoose";
 import { revalidatePath } from "next/cache";
 import { blockAccount, unblockAccount } from "@/lib/account-blocks";
-import { setLimitOverrides, setSendSpread } from "@/lib/accounts";
+import { setLimitOverrides } from "@/lib/accounts";
 import { dismissAlertType, dismissAttention, getAttentionDetails } from "@/lib/admin-alerts";
 import { requireAdmin } from "@/lib/auth";
 import { grantFreePlan, revokeFreePlan } from "@/lib/billing";
@@ -130,15 +130,6 @@ export async function unblockAccountAction(accountId) {
 		return { error: `Still blocked, the tenant wasn't resumed: ${error.message}` };
 	}
 	console.info(`[admin] ${admin.email} unblocked account ${accountId}`);
-	revalidatePath("/admin");
-	return { ok: true };
-}
-
-export async function setSpread(accountId, isOn) {
-	const admin = await requireAdmin();
-	if (!isValidObjectId(accountId)) return { error: "Account not found" };
-	if (!(await setSendSpread(accountId, isOn === true))) return { error: "Account not found" };
-	console.info(`[admin] ${admin.email} turned ${isOn === true ? "on" : "off"} the warm-up for account ${accountId}`);
 	revalidatePath("/admin");
 	return { ok: true };
 }

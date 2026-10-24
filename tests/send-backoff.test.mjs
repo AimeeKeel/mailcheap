@@ -11,6 +11,7 @@ import {
 	endSenderWarmup,
 	form,
 	jsonRequest,
+	mockRdap,
 	platformEmails,
 	signIn,
 	startTestApp,
@@ -137,7 +138,7 @@ describe("a domain Gmail rate limits", () => {
 
 	after(() => app?.stop());
 
-	test("its sends pause for 6 hours, the owner and the admins hear of it, then they go on with the domain warming up from half its day", async () => {
+	test("its sends pause for 6 hours, the owner and the admins hear of it, then Gmail gets half its day, spread over 3 doubling days", async () => {
 		const send = await setup("rate-limited@example.com", 1000);
 		await runBatches(send.batches.slice(0, 8));
 		const before = { emails: platformEmails.length, telegram: telegramMessages.length, jobs: published.length };
@@ -148,8 +149,8 @@ describe("a domain Gmail rate limits", () => {
 		assert.deepEqual([paused.status, paused.pauseCode], ["paused", "rate_limited"]);
 		assert.match(paused.pauseReason, /^Gmail asked to slow down, so this newsletter's sends wait 6 hours/);
 		const domain = await domainOf(send);
-		near(domain.startedAt.getTime(), limitedAt + 6 * HOUR_MS, "its warm-up starts over when its sends go on");
-		assert.equal(domain.firstDay, 200, "half of the 400 it sent in the last day");
+		near(domain.startedAt.getTime(), limitedAt + 6 * HOUR_MS, "its days start when its sends go on");
+		assert.deepEqual([domain.firstDay, domain.days], [200, 3], "half of the 400 Gmail emails it sent in the last day, for 3 days");
 		const jobs = published.slice(before.jobs);
 		assert.deepEqual(jobs.map(({ url }) => new URL(url).pathname), ["/api/jobs/resume-send"]);
 		near(jobs[0].notBefore * 1000, limitedAt + 6 * HOUR_MS);
@@ -178,10 +179,11 @@ describe("a domain Gmail rate limits", () => {
 			batches.every(({ notBefore }) => notBefore * 1000 >= limitedAt + 6 * HOUR_MS - 60_000),
 			"nothing goes before the 6 hours"
 		);
+		near(batches[1].notBefore * 1000, limitedAt + 12 * HOUR_MS, "spread over the day: the 51st a quarter into it", 120_000);
 		near(
 			batches.at(-1).notBefore * 1000,
-			limitedAt + (6 + 24 + 9) * HOUR_MS,
-			"200 at once, the next 200 over its first day, the last 150 into its second day's 400",
+			limitedAt + (6 + 24 + 21) * HOUR_MS,
+			"200 over its first day, the last 350 into its second day's 400",
 			120_000
 		);
 
@@ -224,16 +226,23 @@ describe("a domain Gmail rate limits", () => {
 		assert.ok(batches.every(({ notBefore }) => notBefore * 1000 >= limitedAt + 6 * HOUR_MS - 60_000), "nothing before the back-off ends");
 		const moved = await domainOf(send, "moved-in-backoff.example.org");
 		near(moved.startedAt.getTime(), limitedAt + 6 * HOUR_MS);
-		assert.equal(moved.firstDay, 200, "the back-off's emails, under a new domain's 1,000");
+		assert.deepEqual([moved.firstDay, moved.days], [200, 3], "the back-off's emails and days, under a new domain's 2,000");
 	});
 
-	test("newsletters on one domain share its warm-up and its back-off", async () => {
+	test("newsletters on one new domain share its first day with Gmail and its back-off", async () => {
 		const user = await account("two-lists@example.com");
 		await addVerifiedDomain(user, "two-lists.example.org");
-		const first = await sending(user, "first-list", 400, { fromEmail: "first@two-lists.example.org", isWarm: false });
-		const second = await sending(user, "second-list", 400, { fromEmail: "second@two-lists.example.org", isWarm: false });
-		assert.ok(second.batches[0].notBefore * 1000 > Date.now() + 4 * HOUR_MS, "the second waits for the first one's emails from the same domain");
-		assert.equal(await m.SenderDomain.countDocuments({ accountId: user.accountId }), 1, "one warm-up for the domain");
+		mockRdap((domain) => (domain === "two-lists.example.org" ? new Date(Date.now() - 3 * 86_400_000) : null));
+		const first = await sending(user, "first-list", 1200, { fromEmail: "first@two-lists.example.org", isWarm: false });
+		const second = await sending(user, "second-list", 1200, { fromEmail: "second@two-lists.example.org", isWarm: false });
+		mockRdap(null);
+		assert.ok(first.batches.every(({ notBefore }) => notBefore === undefined), "1,200 of the day's 2,000");
+		assert.deepEqual(
+			[second.batches.filter(({ notBefore }) => notBefore === undefined).length, second.batches.filter(({ notBefore }) => notBefore).length],
+			[16, 8],
+			"the second gets the other 800 today, after the first one's emails, and its last 400 the next day"
+		);
+		assert.equal(await m.SenderDomain.countDocuments({ accountId: user.accountId }), 1, "one first day for the domain");
 
 		await runBatches(first.batches.slice(0, 4));
 		await defer(first, GMAIL_LIMIT);

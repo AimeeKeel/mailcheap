@@ -57,6 +57,8 @@ export default function PanelSend({
 	isSegmentDeleted,
 	pace,
 	newContacts,
+	gmailShare = 0,
+	isSharedSender = false,
 	archiveUrlBase,
 	publishTo,
 	onPublishToChange,
@@ -268,7 +270,9 @@ export default function PanelSend({
 							</div>
 						</div>
 					)}
-					{isEmail && <NoticePace pace={pace} emails={paceEmails} newContacts={newContacts} />}
+					{isEmail && (
+						<NoticePace pace={pace} emails={paceEmails} newContacts={newContacts} gmailShare={gmailShare} isSharedSender={isSharedSender} />
+					)}
 				</div>
 			</CardSettings>
 

@@ -53,6 +53,8 @@ test("every link into the help center opens one of its articles, at a section th
 		const source = await readSource(file);
 		for (const [, slug, section] of source.matchAll(/<LinkHelp\s+article="([^"]+)"(?:\s+section="([^"]+)")?/g)) links.push({ file, slug, section });
 		for (const [, slug, section] of source.matchAll(/getHelpHref\("([^"]+)"(?:, "([^"]+)")?\)/g)) links.push({ file, slug, section });
+		// A notice's help, handed to LinkHelp as { article, section }.
+		for (const [, slug, section] of source.matchAll(/\{ article: "([^"]+)"(?:, section: "([^"]+)")? \}/g)) links.push({ file, slug, section });
 	}
 	assert.ok(links.some(({ file }) => file === "components/NoticePace.jsx"), "the pace notice links to its articles");
 	assert.ok(links.some(({ file, slug, section }) => file === "components/LinkHelpFields.jsx" && slug === "contacts" && section === "fields"));
@@ -90,81 +92,65 @@ test("the help center never names an email provider", async () => {
 	for (const file of files) assert.doesNotMatch(await readSource(file), PROVIDERS, file);
 });
 
-test("the pace notice titles a send only when it's spread over hours, and links to the warm-up article", () => {
-	const render = (pace, emails) => renderToStaticMarkup(createElement(NoticePace, { pace, emails }));
-	const warmup = (day) => ({ days: 30, day, hasStarted: true, progress: day / 30, endsAt: "2026-11-15T00:00:00.000Z" });
-
-	const quick = render({ proven: 1_000, recent: 0, warmup: warmup(3) }, 100);
-	assert.doesNotMatch(quick, /Sends now|Goes out over/, "a send at full speed goes out when the step above says");
-	assert.match(quick, /Your account is warming up/);
-	assert.match(quick, /Day 3 of 30/);
-	assert.match(quick, /Up to 2,206 emails go out at once\./, "where it is");
-	assert.match(quick, /Next: a send with few bounces and complaints lets the next be twice as big, a day later\./, "what comes next");
-	assert.match(quick, /protects your reputation/, "and why");
-	assert.match(quick, /href="\/help\/warm-up"[^>]*>Learn more</);
-	assert.match(quick, /role="progressbar"[^>]*aria-valuenow="3"/);
-
-	const spread = render({ proven: 0, recent: 0, warmup: warmup(1) }, 1_000);
-	assert.match(spread, /Goes out over 14 hours while your account warms up/);
-	assert.match(spread, /Day 1 of 30/);
-	assert.match(spread, /Up to 200 emails go out at once\./);
-	assert.match(spread, />Learn more</);
-
-	const first = render({ proven: 0, recent: 0, warmup: { days: 30, day: 0, hasStarted: false, progress: 0, endsAt: null } }, 100);
-	assert.match(first, /This first campaign starts your account&#x27;s warm-up/);
-	assert.match(first, /Starts with your first campaign: up to 200 emails at once\./);
-	assert.match(first, /30 days/);
-	assert.match(first, /role="progressbar"[^>]*aria-valuenow="0"/);
-
-	assert.equal(render({ proven: 1_000, recent: 0, warmup: null }, 100), "", "past the warm-up, a send at full speed says nothing");
-	const large = render({ proven: 1_000, recent: 0, warmup: null }, 50_000);
-	assert.match(large, /Goes out over \d+ hours while your account warms up to sends this size/);
-	assert.match(large, /For now, up to 5,000 emails go out at once\./);
-
-	const newAddress = { day: 1, intoDayMs: 0, waitMs: 0, firstDay: 1_000, inFlight: 0, hasStarted: false, domain: "news.example.org" };
-	const fromNewAddress = render({ proven: 10_000, recent: 0, warmup: null, sender: newAddress }, 15_000);
-	assert.match(fromNewAddress, /Goes out over about 4 days while this newsletter&#x27;s address warms up/);
-	assert.match(fromNewAddress, /news\.example\.org/);
-	assert.match(fromNewAddress, /s2\/favicons\?domain=news\.example\.org/, "the domain has its favicon");
-	assert.match(fromNewAddress, /7 days/);
-	assert.match(fromNewAddress, /Starts with its next campaign: 1,000 emails the first day\. <span[^>]*>Next: twice as many each day after\./);
-	assert.match(fromNewAddress, /href="\/help\/warm-up#new-address"/);
-	assert.equal(render({ proven: 10_000, recent: 0, warmup: null, sender: newAddress }, 150), "", "200 go at once from a new address");
-
-	const secondDay = render({ proven: 10_000, recent: 0, warmup: null, sender: { ...newAddress, day: 2, intoDayMs: 3_600_000, hasStarted: true } }, 15_000);
-	assert.match(secondDay, /Day 2 of 7/);
-	assert.match(secondDay, /2,000 emails today\./);
-	assert.match(secondDay, /Next: 4,000 tomorrow, full speed in 6 days\./);
-	assert.equal(secondDay.match(/bg-orange-500/g)?.length, 2, "a step lit for each day reached");
-
-	const backingOff = render(
-		{ proven: 10_000, recent: 0, warmup: null, sender: { ...newAddress, hasStarted: true, waitMs: 6 * 3_600_000, firstDay: 3_000 } },
-		1_000
-	);
-	assert.match(backingOff, /Starts again in 6 hours: 3,000 emails that day\./);
-});
-
-test("a first slice is part of the pace notice, never a notice of its own", () => {
-	const render = (pace, emails, newContacts) => renderToStaticMarkup(createElement(NoticePace, { pace, emails, newContacts }));
+test("the pace notice shows only when a send won't go out at once: its steps, with their numbers, and why", () => {
+	const render = (props) => renderToStaticMarkup(createElement(NoticePace, props));
 	const learnMore = (html) => html.match(/>Learn more</g)?.length ?? 0;
 
-	const warming = render({ proven: 0, recent: 0, warmup: { days: 30, day: 6, hasStarted: true, progress: 0.2, endsAt: "2026-11-15T00:00:00.000Z" } }, 1_000, 1_000);
-	assert.match(warming, /Goes out over 17 hours while your account warms up/, "the slice's 3-hour check is in the hours");
-	assert.match(warming, /Day 6 of 30.*200 contacts who never got an email from you go first\..*The other 800 follow 3 hours later, if few bounce or complain\./);
-	assert.equal(learnMore(warming), 1);
-	assert.match(warming, /href="\/help\/warm-up"/);
+	assert.equal(render({ pace: { sender: null }, emails: 9335, newContacts: 0 }), "", "everyone emailed before, from a domain Gmail knows");
+	assert.equal(render({ pace: { sender: null }, emails: 1000, newContacts: 200 }), "", "no more new contacts than the first step's minimum");
 
-	const fullSpeed = render({ proven: 10_000, recent: 0, warmup: null }, 1_000, 1_000);
-	assert.match(fullSpeed, /Goes out in steps/, "past the warm-up, the slice still says what comes next");
-	assert.match(fullSpeed, /The other 800 follow 3 hours later/);
-	assert.match(fullSpeed, /href="\/help\/sending#first-send"/);
-	assert.doesNotMatch(fullSpeed, /role="progressbar"/);
+	const steps = render({ pace: { sender: null }, emails: 9335, newContacts: 9335 });
+	assert.match(steps, /Goes out in 3 steps/);
+	assert.match(steps, /200 first \(2%\)/);
+	assert.match(steps, /467 more \(5%\), 30 minutes later/);
+	assert.match(steps, /The other 8,668, 30 minutes after that/);
+	assert.match(steps, /Bounces come back within minutes/, "and why");
+	assert.equal(learnMore(steps), 1);
+	assert.match(steps, /href="\/help\/sending#first-send"/);
+	assert.doesNotMatch(steps, /Gmail/, "nothing about Gmail when it holds nothing back");
 
-	const selfHosted = render(null, 1_000, 1_000);
-	assert.match(selfHosted, /^<p[^>]*>1,000 contacts never got an email from you/, "no icon or title without a warm-up");
-	assert.match(selfHosted, /href="\/help\/sending#first-send"/);
-	assert.doesNotMatch(selfHosted, /warm|role="progressbar"/);
+	const selfHosted = render({ pace: null, emails: 1000, newContacts: 1000 });
+	assert.match(selfHosted, /Goes out in 3 steps/, "a self-hosted server sends in steps too");
+	assert.doesNotMatch(selfHosted, /Gmail/);
+});
 
-	assert.equal(render(null, 1_000, 200), "", "the smallest slice goes at once");
-	assert.equal(render(null, 150, 5_000), "", "a send capped under the smallest slice has none");
+test("from a new domain, the notice says how many Gmail readers get a send today and how many tomorrow, and how to skip it", () => {
+	const render = (props) => renderToStaticMarkup(createElement(NoticePace, props));
+	const fresh = {
+		day: 1,
+		intoDayMs: 0,
+		waitMs: 0,
+		firstDay: 2000,
+		days: 1,
+		isGradual: false,
+		sentToday: 0,
+		inFlight: 0,
+		hasStarted: false,
+		domain: "made-simple.example.org",
+	};
+
+	const shared = render({ pace: { sender: fresh }, emails: 9335, newContacts: 9335, gmailShare: 6103 / 9335, isSharedSender: true });
+	assert.match(shared, /Goes out in 3 steps/);
+	assert.match(shared, /made-simple\.example\.org/);
+	assert.match(shared, /s2\/favicons\?domain=made-simple\.example\.org/, "the domain has its favicon");
+	assert.match(shared, /2,000 of your 6,103 Gmail readers today\./);
+	assert.match(shared, /Next: the other 4,103 tomorrow\./);
+	assert.match(shared, /Gmail is careful with the first emails from a new domain/);
+	assert.match(shared, /href="\/domains"[^>]*>Add a domain</);
+	assert.doesNotMatch(shared, /new account|you&#x27;re new/i, "about the domain, never the customer");
+
+	const own = render({ pace: { sender: fresh }, emails: 6000, newContacts: 0, gmailShare: 0.5 });
+	assert.match(own, /Some Gmail readers get it tomorrow/);
+	assert.match(own, /2,000 of your 3,000 Gmail readers today\./);
+	assert.match(own, /href="\/help\/warm-up#new-domain"/);
+	assert.doesNotMatch(own, /Add a domain/, "it's already a domain of their own");
+
+	assert.equal(render({ pace: { sender: fresh }, emails: 3000, newContacts: 0, gmailShare: 0.5 }), "", "1,500 Gmail readers fit its first day");
+
+	const restart = { ...fresh, firstDay: 300, days: 3, isGradual: true, waitMs: 4 * 3_600_000, hasStarted: true };
+	const backingOff = render({ pace: { sender: restart }, emails: 1000, gmailShare: 1 });
+	assert.match(backingOff, /Gmail gets it more slowly for now/);
+	assert.match(backingOff, /Gmail gets it again in 4 hours: 300 of your Gmail readers that day\./);
+	assert.match(backingOff, /Next: the other 700 over the next 2 days\./);
+	assert.match(backingOff, /href="\/help\/warm-up#gmail"/);
 });

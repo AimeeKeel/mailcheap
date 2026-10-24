@@ -16,12 +16,11 @@ import { getCampaignActivity, getCampaignComparison } from "@/lib/campaign-repor
 import { isCloud } from "@/lib/config";
 import { REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
 import { toPreviewHtml } from "@/lib/email-preview";
-import { formatDate, formatDateTime, formatNumber, formatRelative } from "@/lib/format";
+import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { getAccountPlan, isOnFreePlan } from "@/lib/plans";
 import { getPostalAddress } from "@/lib/postal-address";
 import { describePublishTo, isOnWebsite, sendsEmail } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
-import { getWarmup } from "@/lib/send-spread";
 import { serialize } from "@/lib/serialize";
 import { siteExtensions } from "@/lib/site-extensions";
 import { TIME_ZONE_COOKIE, resolveTimeZone } from "@/lib/time-zone";
@@ -199,10 +198,9 @@ function describePlan(account) {
 	return `${plan.name} · ${account.interval === "year" ? "yearly" : "monthly"}`;
 }
 
-// A blocked account first, then a warm-up; nothing for an account that sends normally.
+// A blocked account first; nothing for an account that sends normally.
 function getAccountNote(account) {
 	if (isBlocked(account)) return `Blocked by ${describeBlocker(account.pausedBy)}${account.pauseReason ? `: ${account.pauseReason}` : ""}`;
-	if (getWarmup(account)) return account.spreadUntil ? `Warming up until ${formatDate(account.spreadUntil)}` : "Warms up from its first campaign";
 	const sending = getSendingStatus(account);
 	return sending.tone === "green" ? null : sending.label;
 }

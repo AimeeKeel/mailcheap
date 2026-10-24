@@ -32,9 +32,12 @@ const campaignSchema = new mongoose.Schema(
 		// Only this segment's active contacts get it, its conditions read at each send (lib/segments.js). Without one,
 		// every active contact does.
 		segmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Segment" },
-		// Contacts never mailed before go out in steps: a first slice, a check, then the rest (lib/first-send.js), over
-		// restHours in a spread send.
+		// Contacts never mailed before go out in steps (lib/first-send.js): how many each step sends, the last the rest,
+		// the step out so far, the first's size, how many still wait, when the next check is, and when the last one passed.
+		// Sends from before had a single slice, and restHours in a spread send.
 		firstSend: {
+			steps: { type: [Number], default: undefined },
+			step: { type: Number },
 			slice: { type: Number },
 			held: { type: Number },
 			checkAt: { type: Date },
@@ -44,12 +47,12 @@ const campaignSchema = new mongoose.Schema(
 		source: { type: String, default: "dashboard" },
 		scheduledAt: { type: Date },
 		startedAt: { type: Date },
-		// A send spread over hours (lib/send-spread.js): about when its last batch goes out, and the hours its size gave
-		// it next to the account's proven volume, kept for its resumes. Each next step gets its own.
+		// A send that doesn't go out at once: about when its last email goes, its first-send steps' checks or a new
+		// domain's later day for Gmail included (lib/sending.js). spreadHours: the hours sends from before were spread over.
 		sendingUntil: { type: Date },
 		spreadHours: { type: Number },
 		sentAt: { type: Date },
-		// When its latest step finished going out: a day later, it counts toward the account's proven volume.
+		// When its latest step finished going out.
 		finishedAt: { type: Date },
 		testSentAt: { type: Date },
 		archiveSlug: { type: String, trim: true, lowercase: true },

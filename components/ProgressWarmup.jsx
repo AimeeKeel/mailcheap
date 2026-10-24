@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 
-// A warm-up's progress (lib/warmup-status.js): a bar for the account's 30 days, a step per day for an address's first
-// week. value: its day, 0 before it starts. progress: how far along, when it's finer than its day.
-export default function ProgressWarmup({ value, max, progress = value / max, isStepped = false, label = "Warm-up", className }) {
+// A send's progress through its pace (lib/warmup-status.js): a step per first-send step, or per day a domain holds Gmail's
+// readers back. value: the step or day reached, 0 before it starts. progress: how far along, for a bar without steps.
+export default function ProgressWarmup({ value, max, progress = value / max, isStepped = false, label = "Progress", className }) {
 	return (
 		<div
 			role="progressbar"

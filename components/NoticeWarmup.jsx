@@ -4,18 +4,12 @@ import LinkHelp from "@/components/LinkHelp";
 import ProgressWarmup from "@/components/ProgressWarmup";
 import { cn } from "@/lib/utils";
 
-// Every place the dashboard says sending warms up or slows down, in one look: what's happening, where each warm-up stands
-// and what comes next (tracks, from lib/warmup-status.js), the steps of a send that goes in steps, and why, with a link
-// to read more. variant "card": among the cards of a page, like the overview.
-export default function NoticeWarmup({ title, meta, tracks = [], steps = [], why, help, variant = "inline", className, children }) {
+// Every place the dashboard says a send goes slower than at once, in one look: what's happening, the steps of a first send
+// (lib/warmup-status.js getStepItems: done, current, next) with a bar of them once it's going out (progress), how
+// Gmail's readers are held back on a new domain (tracks), and why, with a link to read more.
+export default function NoticeWarmup({ title, meta, progress, steps = [], tracks = [], why, help, className, children }) {
 	return (
-		<div
-			className={cn(
-				"flex flex-col gap-3 text-sm",
-				variant === "card" ? "rounded-2xl bg-card p-5 shadow-border sm:p-6" : "rounded-xl bg-muted/60 p-3.5",
-				className
-			)}
-		>
+		<div className={cn("flex flex-col gap-3 rounded-xl bg-muted/60 p-3.5 text-sm", className)}>
 			<div className="flex items-start justify-between gap-3">
 				<p className="flex gap-2 font-medium text-balance">
 					<IconWarmup className="mt-0.5 text-orange-500" />
@@ -23,9 +17,7 @@ export default function NoticeWarmup({ title, meta, tracks = [], steps = [], why
 				</p>
 				{meta && <span className="shrink-0 text-muted-foreground tabular-nums">{meta}</span>}
 			</div>
-			{tracks.map((track) => (
-				<TrackWarmup key={track.label} track={track} />
-			))}
+			{progress && <ProgressWarmup value={progress.value} max={progress.max} isStepped label={progress.label} />}
 			{steps.length > 0 && (
 				<ol className="flex flex-col gap-1.5">
 					{steps.map((step, index) => (
@@ -33,16 +25,21 @@ export default function NoticeWarmup({ title, meta, tracks = [], steps = [], why
 							<span
 								className={cn(
 									"grid size-5 shrink-0 place-items-center rounded-full text-xs font-medium",
-									step.isCurrent ? "bg-orange-500 text-white" : "bg-foreground/10 text-muted-foreground"
+									step.state === "done" && "bg-orange-500 text-white",
+									step.state === "current" && "bg-background text-orange-600 ring-1 ring-orange-500 ring-inset dark:text-orange-400",
+									step.state === "next" && "bg-foreground/10 text-muted-foreground"
 								)}
 							>
 								{index + 1}
 							</span>
-							<span className={step.isCurrent ? undefined : "text-muted-foreground"}>{step.text}</span>
+							<span className={step.state === "current" ? undefined : "text-muted-foreground"}>{step.text}</span>
 						</li>
 					))}
 				</ol>
 			)}
+			{tracks.map((track) => (
+				<TrackWarmup key={track.label} track={track} />
+			))}
 			{children}
 			{why && (
 				<p className="text-xs text-pretty text-muted-foreground">
@@ -68,10 +65,11 @@ function TrackWarmup({ track }) {
 				max={track.days}
 				progress={track.progress}
 				isStepped={track.isStepped}
-				label={`${track.label}: warm-up`}
+				label={`${track.label}: Gmail's days`}
 			/>
 			<p className="text-pretty tabular-nums">
-				{track.now} <span className="text-muted-foreground">Next: {track.next}</span>
+				{track.now}
+				{track.next && <span className="text-muted-foreground"> Next: {track.next}</span>}
 			</p>
 		</div>
 	);

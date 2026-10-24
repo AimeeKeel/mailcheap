@@ -86,6 +86,7 @@ export default function FormCampaign({
 	emailsLeft,
 	pace,
 	newContacts,
+	gmailShare = 0,
 	tips: storedTips = [],
 }) {
 	const isHtml = campaign.format === "html";
@@ -476,6 +477,8 @@ export default function FormCampaign({
 						isSegmentDeleted={isSegmentDeleted}
 						pace={pace}
 						newContacts={newContacts}
+						gmailShare={gmailShare}
+						isSharedSender={isSharedSender}
 						archiveUrlBase={archiveUrlBase}
 						publishTo={publishTo}
 						onPublishToChange={changePublishTo}

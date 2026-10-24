@@ -3,14 +3,20 @@ import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
 import { FIRST_SEND, LIMITS, isCloud } from "@/lib/config";
 import { CLASSIFIER_CHECKS } from "@/lib/content-review-codes";
-import { formatNumber, formatPercent } from "@/lib/format";
+import { getFirstSendSteps } from "@/lib/first-send";
+import { formatCount, formatNumber, formatPercent } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { COMPARED_ISSUES, TIMELINE_HOURS } from "@/lib/report-stats";
 
 export const metadata = getHelpPageMetadata("sending");
 
+// A list imported from another platform, for the steps' example.
+const EXAMPLE_LIST = 9_335;
+
 export default function SendingPage() {
 	const { pause } = LIMITS;
+	const [firstStep, secondStep] = FIRST_SEND.steps;
+	const exampleSteps = getFirstSendSteps(EXAMPLE_LIST);
 
 	return (
 		<ArticleHelp slug="sending">
@@ -88,23 +94,40 @@ export default function SendingPage() {
 			</p>
 			{isCloud() && (
 				<p>
-					How fast an issue goes out depends on what your account has proven it can send. During your account&apos;s first 30 days,
-					bigger sends go out over a few hours. <Link href={getHelpHref("warm-up")}>Warm-up and sending pace</Link>
+					Most issues go out at once. From a new domain, Gmail&apos;s readers can get the issue the next day.{" "}
+					<Link href={getHelpHref("warm-up")}>Sending pace</Link>
 				</p>
 			)}
 
 			<h2 id="first-send">First sends in steps</h2>
 			<p>
-				The first time an issue goes to contacts who never got an email from you, usually right after an import, they don&apos;t all
-				get it at once. With more than {formatNumber(FIRST_SEND.minSlice)} of them, a slice goes first: {formatPercent(FIRST_SEND.share)}{" "}
-				of them, between {formatNumber(FIRST_SEND.minSlice)} and {formatNumber(FIRST_SEND.maxSlice)}. The rest follows{" "}
-				{FIRST_SEND.waitMinutes / 60} hours later, once the slice&apos;s bounces and spam complaints are in. The send step says when
-				an issue goes out this way, with how many of its contacts never got an email from you.
+				The first time an issue goes to contacts who never got an email from you, usually right after an import, it goes to them in
+				steps. With more than {formatNumber(firstStep.min)} of them:
+			</p>
+			<ol>
+				<li>
+					<strong>{formatPercent(firstStep.share)} of them go first</strong>, between {formatNumber(firstStep.min)} and{" "}
+					{formatNumber(firstStep.max)}, picked at random.
+				</li>
+				<li>
+					<strong>{formatPercent(secondStep.share)} more go {formatCount(FIRST_SEND.waitMinutes, "minute")} later</strong>, between{" "}
+					{formatNumber(secondStep.min)} and {formatNumber(secondStep.max)}, if the first ones&apos; bounces and spam complaints are
+					low.
+				</li>
+				<li>
+					<strong>The rest go {formatCount(FIRST_SEND.waitMinutes, "minute")} after that</strong>, if they still are.
+				</li>
+			</ol>
+			<p>
+				Most bounces come back within minutes, so a list with bad addresses shows itself after a few hundred emails, before it
+				reaches everyone. For {formatNumber(EXAMPLE_LIST)} new contacts, that&apos;s {exampleSteps.map(formatNumber).join(", then ")},
+				about an hour from the first email to the last step. Contacts you emailed before go out with the first step. The send step
+				shows the steps, with their numbers, and the campaign&apos;s page shows which one is going out.
 			</p>
 			<p>
-				If the slice gets more than {formatPercent(pause.bounceRate)} hard bounces (at least {pause.minBounces}) or{" "}
-				{formatPercent(pause.complaintRate)} complaints (at least {pause.minComplaints}), the rest waits for you to resume it. Far over those rates, your account is blocked. A list with bad addresses shows itself in
-				the slice, before it reaches everyone. Contacts you emailed before go out normally.
+				If the new contacts so far get more than {formatPercent(pause.bounceRate)} hard bounces (at least {pause.minBounces}) or{" "}
+				{formatPercent(pause.complaintRate)} complaints (at least {pause.minComplaints}), the rest waits for you to resume it. Far
+				over those rates, your account is blocked.
 			</p>
 
 			<h2 id="pause">Pausing a send</h2>

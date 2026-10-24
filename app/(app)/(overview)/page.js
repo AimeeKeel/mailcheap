@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ChevronRight, Newspaper, Plus } from "lucide-react";
 import BannerUsage from "@/components/BannerUsage";
 import CardUsage from "@/components/CardUsage";
-import CardWarmup from "@/components/CardWarmup";
 import ChartSends from "@/components/ChartSends";
 import ChartSubscribers from "@/components/ChartSubscribers";
 import CookieTimezone from "@/components/CookieTimezone";
@@ -19,7 +18,7 @@ import TableCampaigns from "@/components/TableCampaigns";
 import { Button } from "@/components/ui/button";
 import { hasActiveSubscription } from "@/lib/account-state";
 import { requireAccount } from "@/lib/auth";
-import { getSendVolumes, listNewsletterCampaigns } from "@/lib/campaign-queries";
+import { listNewsletterCampaigns } from "@/lib/campaign-queries";
 import { getSharedDomain } from "@/lib/config";
 import { formatNumber, formatSigned } from "@/lib/format";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
@@ -27,10 +26,8 @@ import { getEmailStats, getHourlySends, getSubscriberHistory } from "@/lib/overv
 import { PERIOD_DAYS } from "@/lib/overview-series";
 import { getAccountPlan } from "@/lib/plans";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
-import { getPace, getWarmup } from "@/lib/send-spread";
 import { findAccountDomains } from "@/lib/sender";
-import { getOwnDomainNudge, getSendingDomain, isOwnDomainNudgeShown } from "@/lib/sender-rules";
-import { getSenderWarmup } from "@/lib/sender-warmup";
+import { getOwnDomainNudge, isOwnDomainNudgeShown } from "@/lib/sender-rules";
 import { TIME_ZONE_COOKIE, resolveTimeZone, timeZoneLabel } from "@/lib/time-zone";
 import { getUsage, hasWelcomeEmailsOn } from "@/lib/usage";
 import { cn } from "@/lib/utils";
@@ -51,7 +48,6 @@ export default async function OverviewPage({ searchParams }) {
 	const selectedId = selected?._id.toString();
 	const accountId = account._id;
 	const hasPlan = hasActiveSubscription(account);
-	const pace = hasPlan ? await getWarmupPace(account, selected) : null;
 	const isWelcomePaused = usage.welcomeEmailsPaused && (await hasWelcomeEmailsOn(accountId));
 	// With a plan only: until then there's no shared address, and adding a domain waits for one.
 	const domainNudge =
@@ -68,11 +64,6 @@ export default async function OverviewPage({ searchParams }) {
 			<HeaderPage title="Overview" />
 
 			<div className="flex flex-col gap-8">
-				{pace && (
-					<section style={{ "--stagger": 1 }} className="animate-enter">
-						<CardWarmup pace={pace} />
-					</section>
-				)}
 				{isOwnDomainNudgeShown(domainNudge, selected) && (
 					<NoticeOwnDomain
 						variant="card"
@@ -127,17 +118,6 @@ export default async function OverviewPage({ searchParams }) {
 			</div>
 		</>
 	);
-}
-
-// The account's warm-up and the open newsletter's address's, for the card that shows where they stand: null past both.
-async function getWarmupPace(account, newsletter) {
-	const domain = newsletter && (newsletter.sendingDomain ?? getSendingDomain(newsletter));
-	const [volumes, sender] = await Promise.all([
-		getWarmup(account) ? getSendVolumes(account) : null,
-		domain ? getSenderWarmup(account, newsletter, domain) : null,
-	]);
-	const pace = getPace(account, { ...volumes, sender: sender && { startedAt: sender.startedAt, firstDay: sender.firstDay, domain } });
-	return pace?.warmup || pace?.sender ? pace : null;
 }
 
 async function StatsEmail({ accountId, newsletterId }) {

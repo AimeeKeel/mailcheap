@@ -26,6 +26,8 @@ const messageSchema = new mongoose.Schema(
 		status: { type: String, enum: MESSAGE_STATUSES, default: "queued" },
 		// The contact had never received an email from this account (lib/first-send.js).
 		firstSend: { type: Boolean },
+		// A Gmail reader a new domain sends on a later day: not before then (lib/sending.js markSendAfter).
+		sendAfter: { type: Date },
 		// The email provider's id for it, when the send returns one; else the first event fills it in.
 		providerMessageId: { type: String },
 		error: { type: String },

@@ -38,7 +38,7 @@ MailCheap is a newsletter app: write an issue, send it to your list, publish it 
 - **A website for each newsletter**, on a free subdomain on MailCheap Cloud (`<slug>.mailcheap.ai`), or on your server: every issue gets a page search engines can find, with a signup form, an author page, share images and a sitemap.
 - **Sending from your own domain**, with the DKIM, return path and DMARC records to add and a check for each. On MailCheap Cloud, a newsletter without a domain sends from its own shared address, `hello@<slug>.mailcheap.ai`.
 - **Deliverability protections**, built in:
-  - warm-up: contacts the account never emailed go out as a 5% slice first, and the rest 3 hours later if the slice's bounces and complaints stay low. On MailCheap Cloud, an account's sends also speed up as it proves clean volume;
+  - sending pace: contacts the account never emailed go out in steps, a random 2% first, then 5% more, then the rest, 30 minutes apart while their bounces and complaints stay low. On MailCheap Cloud, a domain new to Gmail also sends to its first 2,000 Gmail readers on its first day and to the others the next day;
   - list cleanup, on by default: readers who ignored several issues get one "do you still want this?" email, then stop getting issues;
   - contact cleaning: imports leave out invalid, misspelled (gmial.com), spam trap, role, throwaway and duplicate addresses, domains that can't receive email, and anyone who unsubscribed, bounced or complained before;
   - one never-email list for the whole server: an address the email provider says doesn't exist (for 180 days) or that turned out to be a spam trap (for good) is left out of every account's imports, signups and sends, and only a keyed hash of it is kept;

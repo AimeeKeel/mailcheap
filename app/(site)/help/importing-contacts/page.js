@@ -127,8 +127,8 @@ export default function ImportingContactsPage() {
 
 			<h2 id="after">After the import</h2>
 			<p>
-				The first time you send to contacts who never got an email from you, a slice of them goes first and the rest follows{" "}
-				{FIRST_SEND.waitMinutes / 60} hours later if the slice looks clean.{" "}
+				The first time you send to contacts who never got an email from you, they get it in steps {FIRST_SEND.waitMinutes} minutes
+				apart, each one only if the ones before bounced little.{" "}
 				<Link href={getHelpHref("sending", "first-send")}>First sends in steps</Link>
 			</p>
 			{isCloud() && (

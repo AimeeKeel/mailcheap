@@ -3,7 +3,7 @@ import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
 import { TRIAL_CONTACTS } from "@/lib/actions/contacts";
 import { isGoogleEnabled } from "@/lib/auth";
-import { WARMUP, getSharedDomain, isCloud } from "@/lib/config";
+import { getSharedDomain, isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 
 export const metadata = getHelpPageMetadata("getting-started");
@@ -81,13 +81,6 @@ export default function GettingStartedPage() {
 					schedule issues for you. <Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
 				</li>
 			</ol>
-			{isCloud() && (
-				<p>
-					Your first campaign also starts your account&apos;s {WARMUP.days}-day warm-up, when bigger sends go out over a few hours.{" "}
-					<Link href={getHelpHref("warm-up")}>Warm-up and sending pace</Link>
-				</p>
-			)}
-
 			<h2 id="sidebar">The sidebar</h2>
 			<p>
 				The sidebar lists your newsletter&apos;s pages, then your account&apos;s, like the <LinkApp href="/domains">Domains page</LinkApp>.

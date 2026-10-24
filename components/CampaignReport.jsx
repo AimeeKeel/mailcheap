@@ -35,7 +35,7 @@ import { formatPaceTime } from "@/lib/send-spread";
 import { getIssueWebUrl } from "@/lib/sending-rules";
 import { timeZoneLabel } from "@/lib/time-zone";
 import { cn } from "@/lib/utils";
-import { BACKOFF_WHY, FIRST_SEND_WHY, WARMUP_WHY, getAddressTrack, getFirstSendSteps, getPaceTrack } from "@/lib/warmup-status";
+import { BACKOFF_WHY, GMAIL_WHY, STEPS_WHY, getGmailLaterTrack, getGmailTrack, getStepItems } from "@/lib/warmup-status";
 
 // readOnly: an admin looking at a customer's campaign (app/admin/campaigns/[id]): its numbers without its owner's
 // actions, and children above them. contactFields: the account's, for the preview to fill in.
@@ -53,6 +53,9 @@ export default function CampaignReport({
 	isBlocked = false,
 	pace = null,
 	newContacts = 0,
+	gmail = null,
+	gmailShare = 0,
+	isSharedSender = false,
 	readOnly = false,
 	backHref = "/campaigns",
 	children,
@@ -75,10 +78,15 @@ export default function CampaignReport({
 			: null;
 	const reached = reachedOf(stats);
 	const progress = stats.recipients ? Math.min(stats.sent / stats.recipients, 1) : 0;
-	// A send going out over hours, and one whose contacts never emailed wait for its first slice's check.
-	const isGradual = Boolean(campaign.sendingUntil) && campaign.spreadHours > 0;
-	const isInSteps = campaign.firstSend?.held > 0 && !campaign.firstSend.checkedAt;
-	const paceTrack = getPaceTrack(pace);
+	// Going out: its contacts never emailed in steps (a send from before had one slice), its Gmail readers a new domain
+	// sends a later day, or a send from before steps spread over hours.
+	const { firstSend } = campaign;
+	const stepSizes = firstSend?.steps ?? (firstSend?.slice ? [firstSend.slice, firstSend.held ?? 0] : null);
+	const step = firstSend?.step ?? 1;
+	const isInSteps = campaign.status === "sending" && Boolean(stepSizes) && !firstSend.checkedAt;
+	const gmailLater = campaign.status === "sending" && gmail?.later > 0 ? getGmailLaterTrack({ domain: newsletter.sendingDomain, ...gmail }) : null;
+	const isSpread = campaign.status === "sending" && !isInSteps && Boolean(campaign.sendingUntil) && campaign.spreadHours > 0;
+	const backoffTrack = gmail ? getGmailTrack(pace?.sender ?? null, gmail.waiting) : null;
 	const { html } = renderEmail({
 		format: campaign.format,
 		markdown: campaign.markdown,
@@ -119,6 +127,8 @@ export default function CampaignReport({
 									isCleanupEnabled={Boolean(newsletter.cleanup?.enabled)}
 									pace={pace}
 									newContacts={newContacts}
+									gmailShare={gmailShare}
+									isSharedSender={isSharedSender}
 								/>
 							</GatePlan>
 						)}
@@ -165,12 +175,12 @@ export default function CampaignReport({
 				{campaign.status === "paused" && campaign.pauseCode === "rate_limited" ? (
 					<NoticeWarmup
 						title="Paused: Gmail asked to slow down"
-						tracks={pace?.sender ? [getAddressTrack(pace.sender)] : []}
+						tracks={backoffTrack ? [backoffTrack] : []}
 						why={BACKOFF_WHY}
 						help={{ article: "warm-up", section: "gmail" }}
 						className="animate-enter"
 					>
-						{!pace?.sender && <p className="text-pretty">{campaign.pauseReason}</p>}
+						{!backoffTrack && <p className="text-pretty">{campaign.pauseReason}</p>}
 					</NoticeWarmup>
 				) : (
 					campaign.status === "paused" &&
@@ -192,23 +202,20 @@ export default function CampaignReport({
 						</div>
 					</div>
 				)}
-				{campaign.status === "sending" && (isGradual || isInSteps) && (
+				{(isInSteps || gmailLater || isSpread) && (
 					<NoticeWarmup
-						title={isGradual ? `Going out gradually: ${formatTimeLeft(hoursUntil(campaign.sendingUntil))} to go` : "Going out in steps"}
-						tracks={isGradual && paceTrack ? [paceTrack] : []}
-						steps={
+						title={
 							isInSteps
-								? getFirstSendSteps({
-										slice: campaign.firstSend.slice,
-										held: campaign.firstSend.held,
-										after: campaign.firstSend.checkAt
-											? `in about ${formatCount(hoursUntil(campaign.firstSend.checkAt), "hour")}`
-											: undefined,
-									})
-								: []
+								? `Going out in steps: ${step} of ${stepSizes.length}`
+								: gmailLater
+									? "Some Gmail readers get it tomorrow"
+									: `Going out gradually: ${formatTimeLeft(hoursUntil(campaign.sendingUntil))} to go`
 						}
-						why={isGradual ? WARMUP_WHY : FIRST_SEND_WHY}
-						help={isGradual ? { article: "warm-up" } : { article: "sending", section: "first-send" }}
+						progress={isInSteps ? { value: step, max: stepSizes.length, label: "Steps" } : null}
+						steps={isInSteps ? getStepItems(stepSizes, { step, nextAt: firstSend.checkAt }) : []}
+						tracks={gmailLater ? [gmailLater] : []}
+						why={isInSteps ? STEPS_WHY : gmailLater ? GMAIL_WHY : null}
+						help={isInSteps ? { article: "sending", section: "first-send" } : gmailLater ? { article: "warm-up", section: "new-domain" } : null}
 						className="animate-enter"
 					/>
 				)}

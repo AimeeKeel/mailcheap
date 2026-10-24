@@ -83,9 +83,6 @@ const accountSchema = new mongoose.Schema(
 			bounceRate: { type: Number },
 			complaintRate: { type: Number },
 		},
-		// The end of the account's 30-day warm-up, set by its first campaign: until then, a send can grow less over what
-		// the account proved before it's paced (lib/send-spread.js). An admin can end it early or start it again.
-		spreadUntil: { type: Date },
 		// What the account answered at /welcome (lib/onboarding.js): listSize picks the plan the paywall shows first.
 		// The overview's get-started list (lib/get-started.js) stays hidden once it's dismissed or finished.
 		onboarding: {
