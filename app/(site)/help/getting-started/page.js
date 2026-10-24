@@ -18,6 +18,8 @@ export default function GettingStartedPage() {
 				{isGoogleEnabled() ? "Sign in with Google, or with your email address: " : "Sign in with your email address: "}
 				MailCheap emails you a code to type in. Each code works once, for 5 minutes, so there&apos;s no password to remember.
 				{!isCloud() && " On this server, only the addresses its admin allowed can sign in."}
+				{isCloud() &&
+					" Codes only go to addresses that can receive email: a misspelled one like gmail.co gets the right spelling back, and throwaway inboxes can't open an account."}
 			</p>
 
 			<h2 id="setup">Set up your newsletter</h2>
