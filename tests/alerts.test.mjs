@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { after, afterEach, before, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { ADMIN_ALERTS, isTelegramAlert } from "../lib/alert-rules.js";
+import { ADMIN_ALERTS, isDashboardAlert, isTelegramAlert } from "../lib/alert-rules.js";
 import { getTeamStatusAlerts } from "../lib/email-provider/postshiba-rules.js";
 import { escapeTelegramHtml, formatTelegramAlert, isTelegramConfigured } from "../lib/telegram.js";
 import { activate, answerTelegram, as, catchRedirect, form, platformEmails, signIn, startTestApp, telegramMessages, withEnv } from "./helpers/app.mjs";
@@ -85,6 +85,7 @@ before(async () => {
 	fake.install();
 	m = {
 		alerts: await import("../lib/alerts.js"),
+		adminStats: await import("../lib/admin-stats.js"),
 		blocks: await import("../lib/account-blocks.js"),
 		dnsBroker: await import("../lib/dns-broker.js"),
 		qstashRoute: await import("../lib/qstash-route.js"),
@@ -125,6 +126,9 @@ describe("which alerts reach Telegram", () => {
 		assert.equal(isTelegramAlert({ accountId: ACCOUNT_ID, key: "account-blocked" }), false, "the owner's copy of a block");
 		assert.equal(isTelegramAlert({ accountId: ACCOUNT_ID, key: "complaints" }), false, "a complaint goes to its account's owner only");
 		assert.equal(isTelegramAlert({ accountId: null, key: "something-new:1" }), false, "an unknown kind is only a record");
+		const refused = { accountId: null, key: `credential-refused:${ACCOUNT_ID}` };
+		assert.deepEqual([isTelegramAlert(refused), isDashboardAlert(refused)], [false, true], "one account's login refused only shows on the admin page");
+		assert.equal(isDashboardAlert({ accountId: null, key: "send-refused:credential_refused" }), false, "the provider refusing several accounts' does reach them");
 	});
 
 	test("every admin alert in the code has its kind in lib/alert-rules.js", async () => {
@@ -232,6 +236,32 @@ describe("delivery", () => {
 			await sentAgo(6 * HOUR + 60_000);
 			await m.alerts.sendAlert(alert);
 			assert.equal(telegramMessages.length - before.telegram, 2, "again after them");
+		});
+	});
+
+	test("an alert only for the admin page shows in Needs a look each time, and is neither emailed nor sent to Telegram", async () => {
+		await withEnv(TELEGRAM, async () => {
+			const key = `credential-refused:${ACCOUNT_ID}`;
+			const alert = {
+				accountId: null,
+				key,
+				title: "PostShiba refused an account's login",
+				detail: `Account ${ACCOUNT_ID}: PostShiba refused the account's SMTP credential (401).`,
+				action: "Its campaign tries again in a few minutes, and pauses on a third refusal within the hour.",
+			};
+			const before = { telegram: telegramMessages.length, emails: platformEmails.length };
+			await m.alerts.sendAlert(alert);
+			await m.alerts.sendAlert(alert);
+			assert.equal(telegramMessages.length, before.telegram);
+			assert.deepEqual(toAdmins(platformEmails.slice(before.emails)), []);
+
+			const stored = await m.Alert.findOne({ accountId: null, key }).lean();
+			assert.equal(stored.lastSentAt, undefined, "never emailed");
+			assert.equal(stored.count, 2);
+			assert.deepEqual(stored.occurrences.map(({ emailed, telegram }) => ({ emailed, telegram })), Array(2).fill({ emailed: false, telegram: false }));
+			const listed = (await m.adminStats.listAttention()).alerts.find(({ id }) => id === String(stored._id));
+			assert.deepEqual([listed?.title, listed?.timesThisWeek], ["Email provider refused an account's login", 2]);
+			assert.equal(await m.alerts.countRecentAlerts("credential-refused", 60), 1, "one account");
 		});
 	});
 

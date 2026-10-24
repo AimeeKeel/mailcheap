@@ -5,13 +5,15 @@ import mongoose from "mongoose";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { decryptSecret } from "../lib/credentials.js";
-import { activate, as, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, withEnv } from "./helpers/app.mjs";
+import { activate, as, catchRedirect, form, jsonRequest, platformEmails, signIn, startTestApp, telegramMessages, withEnv } from "./helpers/app.mjs";
 import { POSTSHIBA, POSTSHIBA_ENV, createFakePostshiba } from "./helpers/postshiba.mjs";
 import { txts } from "./stubs/dns-check.mjs";
 import { published } from "./stubs/qstash.mjs";
 import { dnsRecords } from "./stubs/dns-broker.mjs";
 
 // PostShiba as the provider, through the real actions and jobs, with PostShiba answered in memory.
+const TELEGRAM = { TELEGRAM_BOT_TOKEN: "123456:test-bot-token-never-logged", TELEGRAM_CHAT_ID: "424242" };
+const REFUSED_LOGIN = { path: /^\/inject$/, status: 401, body: { error: "authentication failed" } };
 let app;
 let fake;
 let m;
@@ -122,6 +124,7 @@ before(async () => {
 		providers: await import("../lib/email-provider/index.js"),
 		postshibaAdapter: await import("../lib/email-provider/postshiba.js"),
 		Account: (await import("../models/Account.js")).default,
+		Alert: (await import("../models/Alert.js")).default,
 		Campaign: (await import("../models/Campaign.js")).default,
 		Contact: (await import("../models/Contact.js")).default,
 		Domain: (await import("../models/Domain.js")).default,
@@ -538,6 +541,63 @@ describe("PostShiba sending", () => {
 		const toAdmins = platformEmails.slice(emailsBefore).filter(({ to }) => to.includes("admin@example.com"));
 		assert.deepEqual(toAdmins.map(({ subject }) => subject), ["[MailCheap] PostShiba refuses MailCheap's sends"], "the campaign and the test are the same problem");
 		assert.match(toAdmins[0].text, new RegExp(`Account ${user.accountId}: PostShiba hasn't approved production sending yet \\(kyc_required\\)\\.\\nReaders' emails are refused until PostShiba approves the team\\.`));
+	});
+
+	test("PostShiba refusing an account's login once puts the batch back 10 minutes later, and only the admin page hears of it", async () => {
+		const user = await customer("ps-refused@example.com", "ps-refused");
+		await importContacts(user, ["blip@example.org"]);
+		const id = await draft(user, "Blip");
+		await withEnv(TELEGRAM, async () => {
+			const before = { emails: platformEmails.length, telegram: telegramMessages.length };
+			fake.fail(REFUSED_LOGIN);
+			assert.deepEqual(await as(user, () => m.campaigns.sendCampaign(id, {})), { ok: true });
+			const response = await runNextJob();
+			assert.equal((await response.json()).republished, true);
+			assert.ok(published.at(-1).notBefore >= Math.floor(Date.now() / 1000) + 590, "10 minutes later");
+			assert.equal((await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean()).status, "sending", "not paused");
+			assert.deepEqual(platformEmails.slice(before.emails), [], "neither its owner nor the admins are emailed");
+			assert.equal(telegramMessages.length, before.telegram);
+			const alert = await m.Alert.findOne({ accountId: null, key: `credential-refused:${user.accountId}` }).lean();
+			assert.equal(alert.occurrences.at(-1).detail, `Account ${user.accountId}: PostShiba refused the account's SMTP credential (401).`);
+
+			await runJobs();
+			assert.equal((await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean()).status, "sent", "it went out on the next try");
+		});
+	});
+
+	test("refused three times within the hour, a campaign pauses for its owner, and a second account refused within the hour alerts the admins", async () => {
+		await m.Alert.updateMany({ key: /^credential-refused:/ }, { $set: { lastSeenAt: new Date(Date.now() - 2 * 3_600_000) } });
+		const user = await customer("ps-refused-again@example.com", "ps-refused-again");
+		const other = await customer("ps-refused-too@example.com", "ps-refused-too");
+		await importContacts(user, ["again@example.org"]);
+		await importContacts(other, ["too@example.org"]);
+		const id = await draft(user, "Again");
+		const otherId = await draft(other, "Too");
+		await withEnv(TELEGRAM, async () => {
+			const before = { emails: platformEmails.length, telegram: telegramMessages.length };
+			fake.fail({ ...REFUSED_LOGIN, times: 3 });
+			await as(user, () => m.campaigns.sendCampaign(id, {}));
+			await runJobs();
+			const campaign = await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean();
+			assert.deepEqual([campaign.status, campaign.pauseReason], ["paused", "PostShiba refused the account's SMTP credential (401)"]);
+			assert.equal(await m.Message.countDocuments({ accountId: user.accountId, campaignId: id, status: "queued" }), 1, "waits for the resume");
+			const told = platformEmails.slice(before.emails).map(({ to, subject }) => [to.join(), subject]);
+			assert.deepEqual(told, [["ps-refused-again@example.com", "[MailCheap] Campaign paused"]], "its owner, not the admins");
+			assert.equal(telegramMessages.length, before.telegram);
+
+			fake.fail(REFUSED_LOGIN);
+			await as(other, () => m.campaigns.sendCampaign(otherId, {}));
+			await runNextJob();
+			const toAdmins = platformEmails.slice(before.emails).filter(({ to }) => to.includes("admin@example.com"));
+			assert.deepEqual(toAdmins.map(({ subject }) => subject), ["[MailCheap] PostShiba refuses MailCheap's sends"]);
+			assert.match(toAdmins[0].text, new RegExp(`It refused the logins of 2 accounts within the hour, account ${other.accountId} last`));
+			assert.deepEqual(
+				telegramMessages.slice(before.telegram).map(({ text }) => text.split("\n")[0]),
+				["<b>MailCheap</b> · PostShiba refuses MailCheap's sends"]
+			);
+			await runJobs();
+			assert.equal((await m.Campaign.findOne({ accountId: other.accountId, _id: otherId }).lean()).status, "sent");
+		});
 	});
 
 	test("a welcome email PostShiba throttles is retried later with the same Idempotency-Key", async () => {
