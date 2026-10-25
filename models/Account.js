@@ -84,7 +84,8 @@ const accountSchema = new mongoose.Schema(
 			complaintRate: { type: Number },
 		},
 		// What the account answered at /welcome (lib/onboarding.js): listSize picks the plan the paywall shows first.
-		// The overview's get-started list (lib/get-started.js) stays hidden once it's dismissed or finished.
+		// checklistDismissedAt and checklistFinishedAt are from before each newsletter had its own get-started panel
+		// (lib/get-started.js): nothing sets them now, and the panel stays hidden for the newsletters the account had then.
 		onboarding: {
 			listSize: { type: String, trim: true },
 			listSource: { type: String, trim: true },

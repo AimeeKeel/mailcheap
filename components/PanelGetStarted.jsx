@@ -4,22 +4,24 @@ import ButtonNewCampaign from "@/components/ButtonNewCampaign";
 import IconBrand, { AGENTS } from "@/components/IconBrand";
 import ShellGetStarted from "@/components/ShellGetStarted";
 import { Button } from "@/components/ui/button";
-import { getGetStartedSteps } from "@/lib/get-started";
+import { getGetStartedSteps, isGetStartedOpen } from "@/lib/get-started";
 import { ADD_DOMAIN_PATH } from "@/lib/newsletters";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
 import { cn } from "@/lib/utils";
 
-// The steps to a first send (lib/get-started.js), on every dashboard page. The first one left that isn't
-// optional says how to do it; the others link to where they're done.
+// The open newsletter's steps to a first send (lib/get-started.js), on every dashboard page. The first one left that
+// isn't optional says how to do it; the others link to where they're done. Keyed by newsletter: switching from one
+// whose panel was just closed or finished still opens the next one's.
 export default async function PanelGetStarted({ account }) {
 	const { selected } = await getSelectedNewsletter();
-	const { steps, draftId, isFinished } = await getGetStartedSteps(account, selected?._id);
-	const newsletterId = selected ? String(selected._id) : null;
+	if (!isGetStartedOpen(account, selected)) return null;
+	const newsletterId = String(selected._id);
+	const { steps, draftId, isFinished } = await getGetStartedSteps(account, selected._id);
 	const doneCount = steps.filter(({ isDone }) => isDone).length;
 	const nextId = steps.find(({ isDone, isOptional }) => !isDone && !isOptional)?.id;
 
 	return (
-		<ShellGetStarted done={doneCount} total={steps.length} isFinished={isFinished}>
+		<ShellGetStarted key={newsletterId} newsletterId={newsletterId} done={doneCount} total={steps.length} isFinished={isFinished}>
 			<header className="px-3 pt-2.5 pb-3">
 				<h2 id="get-started-title" className="pr-16 font-semibold tracking-tight">
 					Get started

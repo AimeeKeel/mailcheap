@@ -98,6 +98,12 @@ const newsletterSchema = new mongoose.Schema(
 		dismissedNudges: {
 			ownDomain: { type: String },
 		},
+		// Its get-started panel (lib/get-started.js), closed by its owner or finished: either hides it for good, on every
+		// device. The account's other newsletters keep theirs.
+		getStarted: {
+			dismissedAt: { type: Date },
+			finishedAt: { type: Date },
+		},
 		// Its look on its website and in its emails (lib/themes.js): a preset, and only what was changed on top of it.
 		theme: {
 			preset: { type: String, trim: true },

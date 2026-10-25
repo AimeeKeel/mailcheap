@@ -50,7 +50,10 @@ export default function GettingStartedPage() {
 
 			<h2 id="first-issue">Send your first issue</h2>
 			<p>
-				The <LinkApp href="/">overview page</LinkApp> lists these steps until they&apos;re done.
+				Until they&apos;re done, a list of these steps sits at the bottom right of the <LinkApp href="/">dashboard</LinkApp>, for the
+				newsletter that&apos;s open: its issues and subscribers count for it alone, while your domain and AI agent count for all your
+				newsletters. Close the list and it stays closed for that newsletter, on every device. Your other newsletters, and the ones you
+				add later, keep theirs.
 			</p>
 			<ol>
 				<li>

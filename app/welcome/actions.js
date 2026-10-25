@@ -53,12 +53,15 @@ export async function completeOnboarding(_state, formData) {
 	redirect("/");
 }
 
-// The dashboard's get-started panel, hidden on the account so it stays hidden on every device.
-export async function dismissGetStarted() {
+// The get-started panel of one of the account's newsletters, hidden on the newsletter so it stays hidden on every
+// device. Its other newsletters keep theirs.
+export async function dismissGetStarted(newsletterId) {
+	const id = String(newsletterId ?? "");
+	if (!isObjectIdString(id)) return { error: "Couldn't close it" };
 	const { account } = await requireAccount();
-	await Account.updateOne(
-		{ _id: account._id, "onboarding.checklistDismissedAt": null },
-		{ $set: { "onboarding.checklistDismissedAt": new Date() } }
+	await Newsletter.updateOne(
+		scoped(account, { _id: id, "getStarted.dismissedAt": null }),
+		{ $set: { "getStarted.dismissedAt": new Date() } }
 	);
 	revalidatePath("/", "layout");
 	return { ok: true };

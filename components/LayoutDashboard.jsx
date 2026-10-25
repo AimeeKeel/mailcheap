@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MenuItems, SiteAnalytics, SupportChat, WhatsNew } from "@/components/SiteExtensions";
 import { getSendingStatus, hasActiveSubscription, isBlocked } from "@/lib/account-state";
 import { isCloud } from "@/lib/config";
-import { isGetStartedOpen } from "@/lib/get-started";
 import { gravatarHash } from "@/lib/gravatar";
 import { getRecommendedPlanId } from "@/lib/onboarding";
 import { PLANS } from "@/lib/plans";
@@ -65,12 +64,14 @@ export default async function LayoutDashboard({ user, account, isAdmin, children
 					<div className="mx-auto w-full max-w-6xl px-4 py-6 has-[[data-campaign-steps]]:max-w-none md:px-10 md:py-10">{children}</div>
 				</main>
 			</div>
-			{isGetStartedOpen(account) && (
+			<Suspense fallback={null}>
+				<PanelGetStarted account={account} />
+			</Suspense>
+			{WhatsNew && (
 				<Suspense fallback={null}>
-					<PanelGetStarted account={account} />
+					<WhatsNew account={account} />
 				</Suspense>
 			)}
-			{WhatsNew && <WhatsNew account={account} />}
 			{SupportChat && (
 				<Suspense fallback={null}>
 					<SupportChat user={user} account={account} />
