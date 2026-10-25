@@ -119,10 +119,16 @@ export default function SendingPage() {
 				</li>
 			</ol>
 			<p>
-				Most bounces come back within minutes, so a list with bad addresses shows itself after a few hundred emails, before it
-				reaches everyone. For {formatNumber(EXAMPLE_LIST)} new contacts, that&apos;s {exampleSteps.map(formatNumber).join(", then ")},
-				about an hour from the first email to the last step. Contacts you emailed before go out with the first step. The send step
-				shows the steps, with their numbers, and the campaign&apos;s page shows which one is going out.
+				It&apos;s for your deliverability: inboxes like Gmail put more of your emails in spam when many of them bounce or get marked as
+				spam. Sending to a small part first checks that the addresses work and the readers want your emails, and most bounces come
+				back within minutes. A list with bad addresses, or people who didn&apos;t expect your emails, shows itself after a few
+				hundred emails, before it reaches everyone. For {formatNumber(EXAMPLE_LIST)} new contacts, that&apos;s{" "}
+				{exampleSteps.map(formatNumber).join(", then ")}, about an hour from the first email to the last step.
+			</p>
+			<p>
+				It&apos;s only the first time: once contacts got an issue from you, your next ones go to them at once. Contacts you emailed
+				before go out with the first step. The send step shows the steps, with their numbers, and the campaign&apos;s page shows
+				which one is going out.
 			</p>
 			<p>
 				If the new contacts so far get more than {formatPercent(pause.bounceRate)} hard bounces (at least {pause.minBounces}) or{" "}

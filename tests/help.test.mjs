@@ -100,17 +100,18 @@ test("the pace notice shows only when a send won't go out at once: its steps, wi
 	assert.equal(render({ pace: { sender: null }, emails: 1000, newContacts: 200 }), "", "no more new contacts than the first step's minimum");
 
 	const steps = render({ pace: { sender: null }, emails: 9335, newContacts: 9335 });
-	assert.match(steps, /Goes out in 3 steps/);
+	assert.match(steps, /9,335 new contacts get it in 3 steps/);
 	assert.match(steps, /200 first \(2%\)/);
 	assert.match(steps, /467 more \(5%\), 30 minutes later/);
 	assert.match(steps, /The other 8,668, 30 minutes after that/);
-	assert.match(steps, /Bounces come back within minutes/, "and why");
+	assert.match(steps, /To keep your emails out of spam/, "and why");
+	assert.match(steps, /It&#x27;s only the first time: your next issues go to them at once\./, "and when it stops");
 	assert.equal(learnMore(steps), 1);
 	assert.match(steps, /href="\/help\/sending#first-send"/);
 	assert.doesNotMatch(steps, /Gmail/, "nothing about Gmail when it holds nothing back");
 
 	const selfHosted = render({ pace: null, emails: 1000, newContacts: 1000 });
-	assert.match(selfHosted, /Goes out in 3 steps/, "a self-hosted server sends in steps too");
+	assert.match(selfHosted, /1,000 new contacts get it in 3 steps/, "a self-hosted server sends in steps too");
 	assert.doesNotMatch(selfHosted, /Gmail/);
 });
 
@@ -130,7 +131,9 @@ test("from a new domain, the notice says how many Gmail readers get a send today
 	};
 
 	const shared = render({ pace: { sender: fresh }, emails: 9335, newContacts: 9335, gmailShare: 6103 / 9335, isSharedSender: true });
-	assert.match(shared, /Goes out in 3 steps/);
+	assert.match(shared, /9,335 new contacts get it in 3 steps/);
+	assert.match(shared, /Some Gmail readers get it tomorrow/, "Gmail in a part of its own");
+	assert.equal(shared.match(/>Learn more</g)?.length, 2, "each part says why");
 	assert.match(shared, /made-simple\.example\.org/);
 	assert.match(shared, /s2\/favicons\?domain=made-simple\.example\.org/, "the domain has its favicon");
 	assert.match(shared, /2,000 of your 6,103 Gmail readers today\./);

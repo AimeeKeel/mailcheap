@@ -174,14 +174,17 @@ export default function CampaignReport({
 			<div className="flex flex-col gap-6">
 				{campaign.status === "paused" && campaign.pauseCode === "rate_limited" ? (
 					<NoticeWarmup
-						title="Paused: Gmail asked to slow down"
-						tracks={backoffTrack ? [backoffTrack] : []}
-						why={BACKOFF_WHY}
-						help={{ article: "warm-up", section: "gmail" }}
+						sections={[
+							{
+								title: "Paused: Gmail asked to slow down",
+								tracks: backoffTrack ? [backoffTrack] : [],
+								why: BACKOFF_WHY,
+								help: { article: "warm-up", section: "gmail" },
+								children: !backoffTrack && <p className="text-pretty">{campaign.pauseReason}</p>,
+							},
+						]}
 						className="animate-enter"
-					>
-						{!backoffTrack && <p className="text-pretty">{campaign.pauseReason}</p>}
-					</NoticeWarmup>
+					/>
 				) : (
 					campaign.status === "paused" &&
 					campaign.pauseReason && <TextPauseReason reason={campaign.pauseReason} code={campaign.pauseCode} canUpgrade={!readOnly} />
@@ -204,18 +207,22 @@ export default function CampaignReport({
 				)}
 				{(isInSteps || gmailLater || isSpread) && (
 					<NoticeWarmup
-						title={
-							isInSteps
-								? `Going out in steps: ${step} of ${stepSizes.length}`
-								: gmailLater
-									? "Some Gmail readers get it tomorrow"
-									: `Going out gradually: ${formatTimeLeft(hoursUntil(campaign.sendingUntil))} to go`
-						}
-						progress={isInSteps ? { value: step, max: stepSizes.length, label: "Steps" } : null}
-						steps={isInSteps ? getStepItems(stepSizes, { step, nextAt: firstSend.checkAt }) : []}
-						tracks={gmailLater ? [gmailLater] : []}
-						why={isInSteps ? STEPS_WHY : gmailLater ? GMAIL_WHY : null}
-						help={isInSteps ? { article: "sending", section: "first-send" } : gmailLater ? { article: "warm-up", section: "new-domain" } : null}
+						sections={[
+							isInSteps && {
+								title: `New contacts get it in steps: ${step} of ${stepSizes.length}`,
+								progress: { value: step, max: stepSizes.length, label: "Steps" },
+								steps: getStepItems(stepSizes, { step, nextAt: firstSend.checkAt }),
+								why: STEPS_WHY,
+								help: { article: "sending", section: "first-send" },
+							},
+							gmailLater && {
+								title: "Some Gmail readers get it tomorrow",
+								tracks: [gmailLater],
+								why: GMAIL_WHY,
+								help: { article: "warm-up", section: "new-domain" },
+							},
+							isSpread && !gmailLater && { title: `Going out gradually: ${formatTimeLeft(hoursUntil(campaign.sendingUntil))} to go` },
+						]}
 						className="animate-enter"
 					/>
 				)}

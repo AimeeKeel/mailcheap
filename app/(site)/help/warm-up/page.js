@@ -96,8 +96,8 @@ export default function WarmupPage() {
 
 			<h2 id="dashboard">Where you see it</h2>
 			<p>
-				Only when a send won&apos;t go out at once, the dashboard shows a box with a flame: the steps with their numbers, how many
-				Gmail readers get it today and how many the next day, and why.
+				Only when a send won&apos;t go out at once, the dashboard shows a box with a part for each reason: the steps with their
+				numbers, how many Gmail readers get it today and how many the next day, and why.
 			</p>
 			<ul>
 				<li>The send step shows it before you send or schedule an issue.</li>

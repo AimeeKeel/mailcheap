@@ -1,22 +1,27 @@
-import IconWarmup from "@/components/IconWarmup";
 import ImageFavicon from "@/components/ImageFavicon";
 import LinkHelp from "@/components/LinkHelp";
 import ProgressWarmup from "@/components/ProgressWarmup";
 import { cn } from "@/lib/utils";
 
-// Every place the dashboard says a send goes slower than at once, in one look: what's happening, the steps of a first send
-// (lib/warmup-status.js getStepItems: done, current, next) with a bar of them once it's going out (progress), how
-// Gmail's readers are held back on a new domain (tracks), and why, with a link to read more.
-export default function NoticeWarmup({ title, meta, progress, steps = [], tracks = [], why, help, className, children }) {
+// Every place the dashboard says a send goes slower than at once, in one card: a section for each reason (lib/
+// warmup-status.js), like a first send's steps and a new domain's Gmail readers, each with what happens, its steps
+// (done, current, next) and a bar of them once it's going out (progress), how Gmail's readers are held back (tracks),
+// and why, with a link to read more.
+export default function NoticeWarmup({ sections, className }) {
 	return (
-		<div className={cn("flex flex-col gap-3 rounded-xl bg-muted/60 p-3.5 text-sm", className)}>
-			<div className="flex items-start justify-between gap-3">
-				<p className="flex gap-2 font-medium text-balance">
-					<IconWarmup className="mt-0.5 text-orange-500" />
-					{title}
-				</p>
-				{meta && <span className="shrink-0 text-muted-foreground tabular-nums">{meta}</span>}
-			</div>
+		<div className={cn("flex flex-col rounded-xl bg-muted/60 text-sm", className)}>
+			{sections.filter(Boolean).map((section, index) => (
+				<SectionPace key={section.title} section={section} isFirst={index === 0} />
+			))}
+		</div>
+	);
+}
+
+function SectionPace({ section, isFirst }) {
+	const { title, progress, steps = [], tracks = [], why, help, children } = section;
+	return (
+		<div className={cn("flex flex-col gap-3 p-3.5", !isFirst && "border-t border-border/60")}>
+			<p className="font-medium text-balance">{title}</p>
 			{progress && <ProgressWarmup value={progress.value} max={progress.max} isStepped label={progress.label} />}
 			{steps.length > 0 && (
 				<ol className="flex flex-col gap-1.5">
@@ -38,19 +43,19 @@ export default function NoticeWarmup({ title, meta, progress, steps = [], tracks
 				</ol>
 			)}
 			{tracks.map((track) => (
-				<TrackWarmup key={track.label} track={track} />
+				<TrackPace key={track.label} track={track} />
 			))}
-			{children}
 			{why && (
 				<p className="text-xs text-pretty text-muted-foreground">
 					{why} {help && <LinkHelp article={help.article} section={help.section} />}
 				</p>
 			)}
+			{children}
 		</div>
 	);
 }
 
-function TrackWarmup({ track }) {
+function TrackPace({ track }) {
 	return (
 		<div className="flex flex-col gap-1.5">
 			<div className="flex items-center justify-between gap-3 text-xs">
