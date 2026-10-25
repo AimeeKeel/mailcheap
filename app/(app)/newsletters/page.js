@@ -14,18 +14,20 @@ import { getThemeSummary } from "@/lib/themes";
 export const metadata = { title: "Settings" };
 
 // The open newsletter's settings at a glance, a card for each section's page; /newsletters/<id> opens another one first.
-// Under them, until it's closed, the card that gets MailCheap's own emails into its owner's inbox.
+// Above them, until it's closed, the card that gets MailCheap's own emails into its owner's inbox.
 export default async function SettingsPage() {
 	const page = await getSettingsPage();
 	const { newsletter } = page;
 	const summary = getSettingsSummary(page);
 	const design = getDesignSummary(getThemeSummary(newsletter));
-	const sectionCount = SETTINGS_SECTIONS.length + (page.isCloud ? 3 : 2);
 
 	return (
 		<LayoutNarrow>
 			<RedirectSettingsField />
 			<HeaderPage title="Settings" />
+			{isInboxCheckShown(newsletter) && (
+				<NoticeInboxCheck key={String(newsletter._id)} newsletterId={String(newsletter._id)} stagger={1} className="mb-6" />
+			)}
 			<ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				{SETTINGS_SECTIONS.map(({ id, label }, index) => (
 					<li key={id}>
@@ -70,9 +72,6 @@ export default async function SettingsPage() {
 					</li>
 				)}
 			</ul>
-			{isInboxCheckShown(newsletter) && (
-				<NoticeInboxCheck key={String(newsletter._id)} newsletterId={String(newsletter._id)} stagger={sectionCount + 1} className="mt-6" />
-			)}
 		</LayoutNarrow>
 	);
 }

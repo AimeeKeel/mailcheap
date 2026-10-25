@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-// Under a newsletter's settings until it's closed (lib/inbox-check.js): an email from MailCheap to reply to, so its next
+// Above a newsletter's settings until it's closed (lib/inbox-check.js): an email from MailCheap to reply to, so its next
 // ones reach the inbox. Gray like the pace notice (NoticeWarmup), with its steps: a helper that goes away, not a setting.
 export default function NoticeInboxCheck({ newsletterId, stagger, className }) {
 	const titleId = useId();
