@@ -152,6 +152,10 @@
   input[type="radio"]:not(:disabled) {
     cursor: pointer;
   }
+  /* Search fields clear with MailCheap's own cross (components/InputSearch.jsx). */
+  input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+  }
   h1,
   h2,
   h3 {

@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import InputSearch from "@/components/InputSearch";
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatNumber } from "@/lib/format";
 
@@ -29,32 +28,26 @@ export default function FilterContacts({ tags = [] }) {
 		startTransition(() => router.replace(`${pathname}?${params}`, { scroll: false }));
 	}
 
-	function onQueryChange(event) {
-		const value = event.target.value;
+	function onQueryChange(value) {
 		setQuery(value);
 		clearTimeout(timeout.current);
-		timeout.current = setTimeout(() => navigate({ q: value.trim() }), 300);
+		const q = value.trim();
+		if (q) timeout.current = setTimeout(() => navigate({ q }), 300);
+		else navigate({ q });
 	}
 
 	useEffect(() => () => clearTimeout(timeout.current), []);
 
 	return (
 		<div className="flex min-w-0 flex-1 gap-2">
-			<div className="relative min-w-0 flex-1">
-				{isPending ? (
-					<Loader2 className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-				) : (
-					<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-				)}
-				<Input
-					type="search"
-					value={query}
-					onChange={onQueryChange}
-					placeholder="Search by email or domain"
-					aria-label="Search by email or domain"
-					className="h-9 pl-8"
-				/>
-			</div>
+			<InputSearch
+				value={query}
+				onChange={onQueryChange}
+				isPending={isPending}
+				placeholder="Search by email or domain"
+				aria-label="Search by email or domain"
+				className="flex-1"
+			/>
 			{(tags.length > 0 || tag) && (
 				<Select value={tag || ALL_TAGS} onValueChange={(value) => navigate({ tag: value === ALL_TAGS ? "" : value })}>
 					<SelectTrigger className="h-9 w-36 shrink-0 sm:w-44" aria-label="Tag">
