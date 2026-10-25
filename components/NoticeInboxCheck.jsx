@@ -45,7 +45,7 @@ export default function NoticeInboxCheck({ newsletterId, stagger, className }) {
 				<h2 id={titleId} className="font-medium text-balance">
 					Get MailCheap&apos;s emails in your inbox
 				</h2>
-				<ButtonClose onClick={close} className="-my-0.5 -mr-1" />
+				<ButtonClose variant="outline" onClick={close} className="-my-1 -mr-1" />
 			</div>
 			<ol className="flex flex-col gap-1.5">
 				<Step number={1} state={sentTo ? "done" : "current"}>
