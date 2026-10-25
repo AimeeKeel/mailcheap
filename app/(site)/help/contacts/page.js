@@ -16,9 +16,11 @@ export default function ContactsPage() {
 		<ArticleHelp slug="contacts">
 			<h2 id="statuses">Statuses</h2>
 			<p>
-				The <LinkApp href="/contacts">Contacts page</LinkApp> lists the open newsletter&apos;s contacts, newest signups first. Filter
-				them by status or by tag, or search by email address. Each one shows their Gravatar photo, or else the logo of their
-				email&apos;s domain, or their initial.
+				The <LinkApp href="/contacts">Contacts page</LinkApp> lists the open newsletter&apos;s contacts, newest signups first, each
+				with their Gravatar photo, or else the logo of their email&apos;s domain, or their initial. Filter them by status or by tag,
+				or search by any part of their email address: <code>@example.com</code> finds everyone at that domain, and a{" "}
+				<code>*</code> stands for any characters, as in <code>jane*@example.com</code>. Tag and Export follow the search, to tag or
+				download everyone it found.
 			</p>
 			<table>
 				<thead>

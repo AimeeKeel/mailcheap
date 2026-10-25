@@ -50,8 +50,8 @@ export default function FilterContacts({ tags = [] }) {
 					type="search"
 					value={query}
 					onChange={onQueryChange}
-					placeholder="Search by email"
-					aria-label="Search by email"
+					placeholder="Search by email or domain"
+					aria-label="Search by email or domain"
 					className="h-9 pl-8"
 				/>
 			</div>

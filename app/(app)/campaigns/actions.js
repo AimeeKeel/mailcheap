@@ -55,7 +55,7 @@ export async function setCampaignPublishTo(id, publishTo) {
 	return { ok: true };
 }
 
-// The preview's reader picker: the newsletter's active contacts whose address or first name starts with what's typed, the
+// The preview's reader picker: the newsletter's active contacts with what's typed in their address or first name, the
 // newest before anything is, each with its field values, which the preview fills in, and the hash its picture comes
 // from (AvatarContact).
 export async function findPreviewContacts(newsletterId, query) {

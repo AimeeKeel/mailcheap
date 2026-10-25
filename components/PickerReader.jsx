@@ -14,7 +14,7 @@ const SEARCH_DELAY_MS = 200;
 const FINE_POINTER = "(pointer: fine)";
 
 // Who the email preview shows the email to: the sample reader, or one of the newsletter's active contacts, the newest
-// first or found by the start of their address or first name. contact: null for the sample reader. The search field keeps
+// first or found by any part of their address or first name. contact: null for the sample reader. The search field keeps
 // the focus while the list is announced as its options. The list is dark in both themes, like the preview's controls
 // around it, and opaque, so the dimmed dashboard never shows through it.
 export default function PickerReader({ newsletterId, contact, onChange }) {

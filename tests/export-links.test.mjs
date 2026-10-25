@@ -43,12 +43,25 @@ test("a list or export filter keeps every condition, the segment's joining under
 	const filter = contactListFilter(ACCOUNT, { newsletterId: NEWSLETTER, status: "active", query: "jane", tag: "vip", segmentFilter });
 	assert.deepEqual(Object.keys(filter).sort(), ["$and", "accountId", "email", "newsletterId", "status", "tags"]);
 	assert.equal(String(filter.accountId), ACCOUNT);
-	assert.deepEqual([String(filter.newsletterId), filter.email, filter.tags, filter.status], [NEWSLETTER, { $regex: "^jane" }, "vip", "active"]);
+	assert.deepEqual([String(filter.newsletterId), filter.email, filter.tags, filter.status], [NEWSLETTER, { $regex: "jane" }, "vip", "active"]);
 	assert.deepEqual(filter.$and, [{ newsletterId: NEWSLETTER }, { lastOpenAt: null }], "the segment narrows, it replaces nothing");
 
 	const page = contactListFilter(ACCOUNT, { newsletterId: NEWSLETTER, segmentFilter: { $and: [{ source: "import" }] } });
 	assert.deepEqual(page.$and, [{ source: "import" }], "the contacts page's segment filter has no newsletter of its own");
 	assert.equal(contactListFilter(ACCOUNT, { newsletterId: NEWSLETTER }).$and, undefined, "no segment, no $and");
+});
+
+test("a search is text anywhere in the address, where * stands for any characters", () => {
+	const email = (query) => contactListFilter(ACCOUNT, { query }).email;
+	assert.deepEqual(email("*@Example.com*"), { $regex: "@example\\.com" }, "a * at either end adds nothing");
+	assert.deepEqual(
+		email("jane**@example.com"),
+		{ $regex: "^(?>.*?jane)(?>.*?@example\\.com)" },
+		"each part is found once, in order: a long address never backtracks"
+	);
+	assert.deepEqual(email("a.b*(x)|$"), { $regex: "^(?>.*?a\\.b)(?>.*?\\(x\\)\\|\\$)" }, "the rest is only ever text");
+	assert.equal(email("**"), undefined, "a * alone is everyone");
+	assert.equal(email(""), undefined);
 });
 
 test("links signed with another secret don't open", () => {
