@@ -14,10 +14,10 @@ export default function ProgressWarmup({ value, max, progress = value / max, isS
 		>
 			{isStepped ? (
 				Array.from({ length: max }, (_, index) => (
-					<span key={index} className={cn("h-1.5 flex-1 rounded-full", index < value ? "bg-orange-500" : "bg-foreground/10")} />
+					<span key={index} className={cn("h-1.5 flex-1 rounded-full", index < value ? "bg-foreground" : "bg-foreground/10")} />
 				))
 			) : (
-				<div className="h-full rounded-full bg-orange-500" style={{ width: `${Math.max(progress * 100, value ? 2 : 0)}%` }} />
+				<div className="h-full rounded-full bg-foreground" style={{ width: `${Math.max(progress * 100, value ? 2 : 0)}%` }} />
 			)}
 		</div>
 	);

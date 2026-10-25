@@ -30,8 +30,8 @@ function SectionPace({ section, isFirst }) {
 							<span
 								className={cn(
 									"grid size-5 shrink-0 place-items-center rounded-full text-xs font-medium",
-									step.state === "done" && "bg-orange-500 text-white",
-									step.state === "current" && "bg-background text-orange-600 ring-1 ring-orange-500 ring-inset dark:text-orange-400",
+									step.state === "done" && "bg-foreground text-background",
+									step.state === "current" && "bg-background text-foreground ring-1 ring-foreground ring-inset",
 									step.state === "next" && "bg-foreground/10 text-muted-foreground"
 								)}
 							>
