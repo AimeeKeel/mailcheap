@@ -1,10 +1,12 @@
-import { AtSign, BrushCleaning, CodeXml, Globe, Hand, MailCheck, Palette } from "lucide-react";
+import { AtSign, Bell, BrushCleaning, CodeXml, Globe, Hand, MailCheck, Palette } from "lucide-react";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import CardSettingsSection from "@/components/CardSettingsSection";
 import HeaderPage from "@/components/HeaderPage";
 import LayoutNarrow from "@/components/LayoutNarrow";
+import NoticeInboxCheck from "@/components/NoticeInboxCheck";
 import RedirectSettingsField from "@/components/RedirectSettingsField";
-import { DESIGN_SECTION, FORM_SECTION, SETTINGS_SECTIONS, getSectionPath } from "@/lib/newsletter-sections";
+import { isInboxCheckShown } from "@/lib/inbox-check";
+import { DESIGN_SECTION, FORM_SECTION, NOTIFICATIONS_SECTION, SETTINGS_SECTIONS, getSectionPath } from "@/lib/newsletter-sections";
 import { getSettingsPage } from "@/lib/settings-page";
 import { getDesignSummary, getSettingsSummary } from "@/lib/settings-summary";
 import { getThemeSummary } from "@/lib/themes";
@@ -12,11 +14,13 @@ import { getThemeSummary } from "@/lib/themes";
 export const metadata = { title: "Settings" };
 
 // The open newsletter's settings at a glance, a card for each section's page; /newsletters/<id> opens another one first.
+// Under them, until it's closed, the card that gets MailCheap's own emails into its owner's inbox.
 export default async function SettingsPage() {
 	const page = await getSettingsPage();
 	const { newsletter } = page;
 	const summary = getSettingsSummary(page);
 	const design = getDesignSummary(getThemeSummary(newsletter));
+	const sectionCount = SETTINGS_SECTIONS.length + (page.isCloud ? 3 : 2);
 
 	return (
 		<LayoutNarrow>
@@ -54,7 +58,21 @@ export default async function SettingsPage() {
 						stagger={SETTINGS_SECTIONS.length + 2}
 					/>
 				</li>
+				{page.isCloud && (
+					<li>
+						<CardSettingsSection
+							href={getSectionPath(NOTIFICATIONS_SECTION.id)}
+							icon={Bell}
+							label={NOTIFICATIONS_SECTION.label}
+							state={summary.notifications}
+							stagger={SETTINGS_SECTIONS.length + 3}
+						/>
+					</li>
+				)}
 			</ul>
+			{isInboxCheckShown(newsletter) && (
+				<NoticeInboxCheck key={String(newsletter._id)} newsletterId={String(newsletter._id)} stagger={sectionCount + 1} className="mt-6" />
+			)}
 		</LayoutNarrow>
 	);
 }

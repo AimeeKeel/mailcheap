@@ -77,6 +77,25 @@ export async function saveTheme(newsletterId, theme) {
 	return { ok: true, theme: output.theme };
 }
 
+// Notifications (CardSummaryEmail): each choice saves as it's made.
+export async function saveNotifications(newsletterId, notifications) {
+	const { output, failure } = await runDashboardAction("update_newsletter", { id: String(newsletterId ?? ""), notifications });
+	if (failure) return toFormError(failure);
+	revalidatePath(SETTINGS_PATH, "layout");
+	return { ok: true, notifications: output.notifications };
+}
+
+export async function previewSummaryEmail(newsletterId) {
+	const { output, failure } = await runDashboardAction("preview_summary_email", { newsletter: String(newsletterId ?? "") });
+	return failure ? toFormError(failure) : { html: output.html, subject: output.subject, previewText: output.previewText };
+}
+
+// The settings' inbox check card (NoticeInboxCheck): an email to the signed-in owner, to reply to.
+export async function sendInboxCheck() {
+	const { output, failure } = await runDashboardAction("send_inbox_check_email", {});
+	return failure ? toFormError(failure) : { sentTo: output.sentTo };
+}
+
 // The website's own domain (CardWebsiteDomain). Each answer reloads the page, which shows the records and their status.
 export async function setWebsiteDomain(newsletterId, host) {
 	const { output, failure } = await runDashboardAction("set_website_domain", { id: String(newsletterId ?? ""), host: String(host ?? "") });

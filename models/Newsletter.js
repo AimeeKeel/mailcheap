@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { accountScoped } from "../lib/account-scope.js";
 import { contentReviewSchema } from "../lib/content-review-schema.js";
+import { SUMMARY_FREQUENCIES } from "../lib/summary.js";
 
 const newsletterSchema = new mongoose.Schema(
 	{
@@ -94,9 +95,22 @@ const newsletterSchema = new mongoose.Schema(
 			placeholder: { type: String, trim: true },
 			allowedDomains: { type: [String], default: undefined },
 		},
-		// Dashboard helpers its owner closed: ownDomain, the step the own-domain helper suggested (lib/sender-rules.js).
+		// Dashboard helpers its owner closed: ownDomain, the step the own-domain helper suggested (lib/sender-rules.js), and
+		// inboxCheck, when the settings card about getting MailCheap's emails in their inbox went (lib/inbox-check.js).
 		dismissedNudges: {
 			ownDomain: { type: String },
+			inboxCheck: { type: Date },
+		},
+		// What MailCheap emails its owner about it, a choice for each kind: summary, how often its summary email comes
+		// (lib/summary.js), weekly while unset.
+		notifications: {
+			summary: { type: String, enum: SUMMARY_FREQUENCIES },
+		},
+		// The last summary email claimed, which a second delivery of its job doesn't send again (lib/summary-send.js).
+		// Apart from notifications, which a save of the settings replaces whole.
+		summarySent: {
+			key: { type: String },
+			at: { type: Date },
 		},
 		// Its get-started panel (lib/get-started.js), closed by its owner or finished: either hides it for good, on every
 		// device. The account's other newsletters keep theirs.

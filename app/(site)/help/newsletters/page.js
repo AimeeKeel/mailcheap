@@ -5,7 +5,9 @@ import { CLEANUP_LIMITS, getCleanupDefaults } from "@/lib/cleanup";
 import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { formatWindow } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
+import { INBOX_CHECK_LIMIT } from "@/lib/inbox-check";
 import { MAX_NEWSLETTERS_PER_ACCOUNT, SLUG_CHANGES } from "@/lib/newsletters";
+import { SUMMARY_BARS, SUMMARY_HOUR } from "@/lib/summary";
 
 export const metadata = getHelpPageMetadata("newsletters");
 
@@ -153,6 +155,40 @@ export default function NewslettersPage() {
 				<LinkApp href="/newsletters/design">Design page</LinkApp>, then change it as you like.{" "}
 				<Link href={getHelpHref("design")}>Design and themes</Link>
 			</p>
+
+			{isCloud() && (
+				<>
+					<h2 id="notifications" data-cloud>Notifications</h2>
+					<p>
+						What MailCheap emails you about the newsletter, set on its <LinkApp href="/newsletters/notifications">Notifications page</LinkApp>.
+						With a paid plan, that&apos;s a summary of its numbers every Monday at {SUMMARY_HOUR} AM, your time: who joined and who left
+						against the week before, your total, new subscribers over the last {SUMMARY_BARS.weekly} weeks, and your latest
+						issue&apos;s opens and clicks against your average, with its most clicked link.
+					</p>
+					<p>
+						Each newsletter has its own summary: pick Weekly, Daily for yesterday&apos;s numbers every morning, which skips the days
+						with no news, or Off. Preview there shows the next one. The link at the bottom of each summary changes it without signing
+						in, and your mail app&apos;s Unsubscribe button turns it off in one click. &quot;Your time&quot; is your browser&apos;s, the
+						last time you opened the dashboard. Summaries don&apos;t count toward your plan&apos;s emails.
+					</p>
+					<p>
+						Share this week opens a page with your newsletter&apos;s name and its own totals, never a subscriber, to post on X or
+						LinkedIn. <Link href="/docs/api#get-summary">Get a summary</Link> in the API returns the same numbers.
+					</p>
+
+					<h2 id="inbox-check" data-cloud>Getting MailCheap&apos;s emails in your inbox</h2>
+					<p>
+						MailCheap only emails you about your account, like a campaign that needs you or your summary, never for marketing. To
+						keep those out of spam, the bottom of the <LinkApp href="/newsletters">Settings page</LinkApp> has a card that sends you
+						an email from MailCheap: reply to it with anything, and your mail app files MailCheap&apos;s next emails in your inbox. If
+						it lands in spam, mark it as not spam too.
+					</p>
+					<p>
+						It goes to your account&apos;s address, {INBOX_CHECK_LIMIT.limit} times a day at most. Closing the card, or Done once
+						you&apos;ve replied, hides it for that newsletter.
+					</p>
+				</>
+			)}
 		</ArticleHelp>
 	);
 }

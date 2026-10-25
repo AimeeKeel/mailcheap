@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { scoped } from "@/lib/account-scope";
 import { runDashboardAction, toFormError } from "@/lib/actions/dashboard";
 import { requireAccount } from "@/lib/auth";
+import { SETTINGS_PATH } from "@/lib/newsletter-sections";
 import { LIST_SIZES, LIST_SOURCES, OTHER_LIST_SOURCE, findFreeSlug, needsOnboarding } from "@/lib/onboarding";
 import { OWN_DOMAIN_STEPS } from "@/lib/sender-rules";
 import { siteExtensions } from "@/lib/site-extensions";
@@ -75,5 +76,16 @@ export async function dismissOwnDomainNudge(newsletterId, step) {
 	if (!isObjectIdString(id) || !OWN_DOMAIN_STEPS.includes(step)) return { error: "Couldn't close it" };
 	const { account } = await requireAccount();
 	await Newsletter.updateOne(scoped(account, { _id: id }), { $set: { "dismissedNudges.ownDomain": step } });
+	return { ok: true };
+}
+
+// The settings' card about getting MailCheap's emails in the inbox (lib/inbox-check.js), closed for good for one of
+// the account's newsletters.
+export async function dismissInboxCheck(newsletterId) {
+	const id = String(newsletterId ?? "");
+	if (!isObjectIdString(id)) return { error: "Couldn't close it" };
+	const { account } = await requireAccount();
+	await Newsletter.updateOne(scoped(account, { _id: id, "dismissedNudges.inboxCheck": null }), { $set: { "dismissedNudges.inboxCheck": new Date() } });
+	revalidatePath(SETTINGS_PATH);
 	return { ok: true };
 }

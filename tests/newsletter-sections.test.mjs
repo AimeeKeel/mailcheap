@@ -122,7 +122,9 @@ test("links to a field of the one-page settings open its section's page, and set
 	assert.equal(getFieldPath("postal-address"), "/newsletters/sender#postal-address");
 	assert.equal(getFieldPath("unknown"), null);
 	assert.equal(getFieldPath(""), null);
-	for (const path of ["/newsletters/general", "/newsletters/website", "/newsletters/design"]) assert.equal(isSectionPagePath(path), true, path);
+	for (const path of ["/newsletters/general", "/newsletters/website", "/newsletters/design", "/newsletters/notifications"]) {
+		assert.equal(isSectionPagePath(path), true, path);
+	}
 	for (const path of ["/newsletters", "/newsletters/new", "/newsletters/6a1b2c3d4e5f60718293a4b5", "/newsletters/sender/x"]) {
 		assert.equal(isSectionPagePath(path), false, path);
 	}
@@ -149,6 +151,7 @@ test("the overview says where each section stands", () => {
 		cleanup: { text: "On · after 8 ignored issues", tone: "on" },
 		website: { text: "Live · field-notes.mailcheap.ai", tone: "on" },
 		form: { text: "Off", tone: "off" },
+		notifications: { text: "Weekly summary", tone: "on" },
 	});
 
 	const plain = { ...newsletter, requireConfirmation: false, welcome: { enabled: false }, cleanup: { enabled: false }, archiveEnabled: false };
@@ -178,6 +181,13 @@ test("the form for the owner's site says whether it's on, on which sites, and wh
 		tone: "warning",
 	});
 	assert.deepEqual(getSettingsSummary({ newsletter: withForm({ enabled: false }), ...context, hasPlan: false }).form, { text: "Off", tone: "off" });
+});
+
+test("notifications say how often the newsletter's own summary comes", () => {
+	const withSummary = (summary) => getSettingsSummary({ newsletter: { ...newsletter, notifications: { summary } }, ...context }).notifications;
+	assert.deepEqual(withSummary("daily"), { text: "Daily summary", tone: "on" });
+	assert.deepEqual(withSummary("weekly"), { text: "Weekly summary", tone: "on" });
+	assert.deepEqual(withSummary("off"), { text: "Summary off", tone: "off" });
 });
 
 test("the welcome email shows paused while the month's emails are used up", () => {
