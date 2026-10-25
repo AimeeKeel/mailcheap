@@ -120,7 +120,7 @@ export default function WritingPage() {
 			<p>
 				Send a test email, in the same menu, sends the email as saved to your account&apos;s address, with [Test] before the subject.
 				Nobody else gets it.{isCloud() && " It counts toward your plan's emails."} The review step reminds you when you haven&apos;t
-				sent one.
+				sent one. If it lands in spam: <Link href={getHelpHref("deliverability", "test-in-spam")}>When a test lands in spam</Link>
 			</p>
 
 			<h2 id="other">Duplicate, discard and HTML</h2>

@@ -839,11 +839,14 @@ function getFromHint({ isShared, isDomainUnverified, fromDomain, domains, onPick
 		);
 	}
 	if (isDomainUnverified) {
+		const hasDnsProblem = domains.some(({ domain, dnsProblems }) => domain === fromDomain && dnsProblems?.length > 0);
 		return (
 			<>
-				{fromDomain} isn&apos;t verified yet. Emails wait until its DNS records are in.{" "}
+				{hasDnsProblem
+					? `${fromDomain}'s DNS records need a fix. Nothing sends from it until then.`
+					: `${fromDomain} isn't verified yet. Emails wait until its DNS records are in.`}{" "}
 				<Link href={DOMAINS_PATH} className={INLINE_LINK}>
-					Finish on Domains
+					{hasDnsProblem ? "Fix on Domains" : "Finish on Domains"}
 				</Link>
 			</>
 		);

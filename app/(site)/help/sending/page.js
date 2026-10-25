@@ -29,7 +29,10 @@ export default function SendingPage() {
 				<li>
 					a postal address, set in the <LinkApp href="/newsletters/sender">newsletter&apos;s settings</LinkApp>;
 				</li>
-				<li>a from address the newsletter is allowed to send from.</li>
+				<li>
+					a from address the newsletter is allowed to send from, at a domain whose DNS records are all in place.{" "}
+					<Link href={getHelpHref("sender-addresses", "dns-checks")}>When a record changes</Link>
+				</li>
 			</ul>
 			<p>
 				It also warns about a subject over 70 characters, which inboxes cut off, a missing preview text and a missing test email.

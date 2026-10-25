@@ -63,9 +63,27 @@ export default function SenderAddressesPage() {
 			</ol>
 			<p>
 				Copy each host and value with its button. If your DNS provider asks for the full name instead of the host, the page shows it.
-				DNS changes can take up to a few hours: click Check to look again, and each record shows when it&apos;s found. Once
+				DNS changes can take up to a few hours: click Check now to look again, and each record shows when it&apos;s found. Once
 				they&apos;re all found, the records fold under DNS records, so sending from the domain comes first: click it to see
 				them again.
+			</p>
+			<p>
+				If your DNS is on Cloudflare, set each record to DNS only, with the grey cloud. Cloudflare turns its proxy on for a new
+				CNAME record, with the orange cloud, and the proxy hides where the record points: inboxes can&apos;t check your emails, and
+				they land in spam. The Domains page says when a record is behind a proxy.
+			</p>
+
+			<h2 id="dns-checks">When a record changes</h2>
+			<p>
+				Your email provider checks your records to verify the domain, and may not notice when one changes later. So MailCheap also
+				looks at them itself: when you click Check now, every day once the domain is verified, and before a test email or a send
+				when it hasn&apos;t looked in the last hour.
+			</p>
+			<p>
+				A record that&apos;s gone, that doesn&apos;t match anymore or that&apos;s behind a proxy stops the domain from sending, since
+				its emails would fail the checks and land in spam. The <LinkApp href="/domains">Domains page</LinkApp> shows which record
+				and how to fix it, a test email from it says the same, a campaign sending from it pauses, and you get an email. Fix the
+				record, click Check now, and resume the campaign from its page.
 			</p>
 
 			<h2 id="switch">Switching to your domain</h2>
