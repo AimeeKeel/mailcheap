@@ -27,16 +27,21 @@ export default function NoticePace({ pace, emails, newContacts = 0, gmailShare =
 				gmail && {
 					title: sender.isGradual ? "Gmail gets it more slowly for now" : "Some Gmail readers get it tomorrow",
 					tracks: [gmail],
-					why: GMAIL_WHY,
-					help: { article: "warm-up", section: sender.isGradual ? "gmail" : "new-domain" },
-					children: isSharedSender && (
-						<p className="text-xs text-pretty text-muted-foreground">
-							From a domain you already send newsletters with, it all goes today.{" "}
-							<Link href="/domains" className="font-medium text-foreground underline underline-offset-4">
+					why: isSharedSender ? (
+						<>
+							{GMAIL_WHY}{" "}
+							<Link
+								href="/domains"
+								className="font-medium whitespace-nowrap text-foreground underline decoration-foreground/30 underline-offset-4 transition-colors duration-150 hover:decoration-foreground"
+							>
 								Add a domain
-							</Link>
-						</p>
+							</Link>{" "}
+							you already send newsletters with, and it all goes today.
+						</>
+					) : (
+						GMAIL_WHY
 					),
+					help: { article: "warm-up", section: sender.isGradual ? "gmail" : "new-domain" },
 				},
 			]}
 		/>

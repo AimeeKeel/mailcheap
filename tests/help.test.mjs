@@ -140,6 +140,11 @@ test("from a new domain, the notice says how many Gmail readers get a send today
 	assert.match(shared, /Next: the other 4,103 tomorrow\./);
 	assert.match(shared, /Gmail is careful with the first emails from a new domain/);
 	assert.match(shared, /href="\/domains"[^>]*>Add a domain</);
+	assert.match(
+		shared,
+		/out of spam\. <a [^>]*>Add a domain<\/a> you already send newsletters with, and it all goes today\. <a [^>]*>Learn more<\/a><\/p>/,
+		"in the same paragraph as why"
+	);
 	assert.doesNotMatch(shared, /new account|you&#x27;re new/i, "about the domain, never the customer");
 
 	const own = render({ pace: { sender: fresh }, emails: 6000, newContacts: 0, gmailShare: 0.5 });
