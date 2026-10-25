@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renderIssueBody } from "../lib/archive-content.js";
-import { cleanRichHtml, removeUnsafeElements } from "../lib/clean-html.js";
+import { cleanBlockHtml, cleanRichHtml, removeUnsafeElements } from "../lib/clean-html.js";
 import { markdownToHtml } from "../lib/markdown.js";
-import { htmlToText } from "../lib/render-email.js";
+import { hasContent, htmlToText, renderEmail } from "../lib/render-email.js";
 import { firstImageUrl } from "../lib/thumbnail.js";
 
 // Bodies as large as the API and the editor accept. Before, the first two took 6 s at 192 KB and 12 s
@@ -123,6 +123,46 @@ for (const [label, html] of Object.entries(SHAPES)) {
 		}
 	});
 }
+
+// An editor's HTML block holding each shape, and shapes of its own: its inline styles and the block's marker.
+const BLOCK_SHAPES = {
+	...SHAPES,
+	"a long inline style": `<p style="${repeat("color:red;")}">x</p>`,
+	"a style of unclosed functions": `<p style="background:${repeat("linear-gradient(rgb(")}">x</p>`,
+	"a style of short unclosed functions": `<p style="${repeat("color:rgb(1,;")}">x</p>`,
+	"a link of unclosed merge tags": `<a href="https://x.test/${repeat("{{a")}">x</a>`,
+	"a run of entities": `<p title="${repeat("&#x")}">${repeat("&a")}</p>`,
+};
+
+function escapeText(html) {
+	return html.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+for (const [label, source] of Object.entries(BLOCK_SHAPES)) {
+	test(`an HTML block of "${label}" (500 KB) renders in linear time`, () => {
+		const html = `<div data-html-block="">${escapeText(source)}</div>`;
+		// The email's own <style> is in its head, so only the page and the cleaned block are read for unsafe tags.
+		for (const [run, read] of [
+			[() => renderIssueBody({ format: "rich", html }), (result) => result.html],
+			[() => cleanBlockHtml(source), (result) => result],
+			[() => renderEmail({ format: "rich", html, subject: "Hi" })],
+			[() => hasContent(html)],
+		]) {
+			const { result, ms } = fastest(run, maxMs);
+			assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
+			if (read) assertNoUnsafeTags(read(result), label);
+		}
+	});
+}
+
+test(`a run of HTML block markers (500 KB) renders in linear time`, () => {
+	for (const html of [repeat('<div data-html-block="">'), repeat('<div data-html-block="">x'), `<div data-html-block="">${repeat("x")}`]) {
+		for (const run of [() => renderIssueBody({ format: "rich", html }), () => renderEmail({ format: "rich", html, subject: "Hi" }), () => hasContent(html)]) {
+			const { ms } = fastest(run, maxMs);
+			assert.ok(ms < maxMs, `${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
+		}
+	}
+});
 
 for (const [label, markdown] of Object.entries(MARKDOWN_SHAPES)) {
 	test(`Markdown "${label}" (500 KB) renders in linear time`, (t) => {

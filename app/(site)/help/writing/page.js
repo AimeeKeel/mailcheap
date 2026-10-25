@@ -36,7 +36,8 @@ export default function WritingPage() {
 				</li>
 				<li>
 					<strong>Slash commands</strong>: type <kbd>/</kbd> on an empty line for text, three heading sizes, bulleted and numbered
-					lists, a picture, a quote, a divider or a box, which sets a block apart on a gray background. Contact fields, at the bottom
+					lists, a picture, a quote, a divider, a box, which sets a block apart on a gray background, or{" "}
+					<Link href={getHelpHref("writing", "html")}>your own HTML</Link>. Contact fields, at the bottom
 					of the menu, opens the <Link href={getHelpHref("writing", "first-name")}>first name and your own fields</Link>. From the
 					keyboard, <kbd>→</kbd> opens it and <kbd>←</kbd> comes back. Keep typing after the slash to find any of them, like{" "}
 					<kbd>/quote</kbd> or a field&apos;s name.
@@ -68,10 +69,29 @@ export default function WritingPage() {
 				stays highlighted once a picture has one.
 			</p>
 
+			<h2 id="html">HTML blocks</h2>
+			<p>
+				Type <kbd>/</kbd> and pick HTML to add your own HTML to an issue, like a button, a table, a sponsor&apos;s banner or a
+				signature. Paste or type it, and what readers get shows under it as you type, in your newsletter&apos;s email design. Click
+				Done or press <kbd>Esc</kbd> when you&apos;re finished, and click the block to change it again.
+			</p>
+			<p>
+				Your emails and your website get the same block, cleaned first. Scripts, forms, frames, <code>&lt;style&gt;</code> tags,
+				classes and ids are removed, and so are styles that could move the block over the rest of the issue, like{" "}
+				<code>position</code> or a negative margin. Style each element inline instead, with <code>style=&quot;…&quot;</code>.
+				Tables, colors, fonts, borders, spacing and sizes stay. Links and pictures need their full address, starting with{" "}
+				<code>https://</code>. Names and fields work in its text and its links.
+			</p>
+			<p>
+				Embeds that need a script, like a video player or a signup form from another site, can&apos;t work in an email: link to
+				them instead. Where the HTML sets no font or color, your website shows the block in its own.
+			</p>
+
 			<h2 id="moving-blocks">Moving blocks</h2>
 			<p>
-				With a mouse, a grip appears to the left of the paragraph, heading, list, picture or box under the pointer. Drag it to move the
-				block, and a line shows where it lands. Click it to select the block. From the keyboard, <kbd>⌘ Shift ↑</kbd> and{" "}
+				With a mouse, a grip appears to the left of the paragraph, heading, list, picture, box or HTML block under the pointer. Drag
+				it to move the block, and a line shows where it lands. Click it to select the block. From the keyboard,{" "}
+				<kbd>⌘ Shift ↑</kbd> and{" "}
 				<kbd>⌘ Shift ↓</kbd> (<kbd>Ctrl</kbd> instead of <kbd>⌘</kbd> on Windows) move the block the cursor is in. Moves undo like any
 				other change.
 			</p>
@@ -133,6 +153,9 @@ export default function WritingPage() {
 				A campaign made with the API or an AI assistant can be a whole HTML document. The dashboard then shows its HTML to edit, and it
 				needs <code>{UNSUBSCRIBE_PLACEHOLDER}</code> where the unsubscribe link goes.{" "}
 				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
+			</p>
+			<p>
+				To add HTML to an issue you write in the editor, use an <Link href={getHelpHref("writing", "html")}>HTML block</Link>.
 			</p>
 			<p>
 				When you&apos;re done, <Link href={getHelpHref("sending")}>send or schedule it</Link>.

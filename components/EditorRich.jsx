@@ -5,6 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import FileHandler from "@tiptap/extension-file-handler";
 import { Placeholder } from "@tiptap/extensions";
 import StarterKit from "@tiptap/starter-kit";
+import { HtmlBlock } from "@/components/BlockHtml";
 import DialogImagePicker from "@/components/DialogImagePicker";
 import MenuFormat from "@/components/MenuFormat";
 import MenuImage from "@/components/MenuImage";
@@ -20,7 +21,8 @@ import { useFileDropGuard } from "@/lib/use-file-drop";
 const MIN_HEIGHT = "min-h-[560px]";
 
 // contactFields: the account's fields, whose tags the editor draws as placeholders and its slash menu inserts.
-export default function EditorRich({ content, onChange, contactFields = [] }) {
+// newsletter: whose email design HTML blocks preview in.
+export default function EditorRich({ content, onChange, contactFields = [], newsletter = null }) {
 	const [isEditingLink, setIsEditingLink] = useState(false);
 	const [isPickingImage, setIsPickingImage] = useState(false);
 	const editor = useEditor({
@@ -43,6 +45,7 @@ export default function EditorRich({ content, onChange, contactFields = [] }) {
 				},
 			}),
 			Callout,
+			HtmlBlock.configure({ newsletter }),
 			BlockHandle,
 			MergeTags.configure({ contactFields }),
 			Placeholder.configure({

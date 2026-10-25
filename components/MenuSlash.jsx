@@ -8,6 +8,7 @@ import Suggestion from "@tiptap/suggestion";
 import {
 	ChevronLeft,
 	ChevronRight,
+	CodeXml,
 	Heading1,
 	Heading2,
 	Heading3,
@@ -355,6 +356,12 @@ const SLASH_ITEMS = [
 		keywords: "callout container update promo",
 		icon: RectangleHorizontal,
 		run: (chain) => chain.wrapIn("callout"),
+	},
+	{
+		title: "HTML",
+		keywords: "code embed snippet custom raw markup",
+		icon: CodeXml,
+		run: (chain) => chain.insertContent({ type: "htmlBlock", attrs: { isNew: true } }),
 	},
 ];
 const FIRST_NAME = {

@@ -117,7 +117,8 @@ export default function FormCampaign({
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const deferredValues = useDeferredValue(values);
-	const isUploading = values.body.includes('src="blob:');
+	// The editor's own pictures: an HTML block's code is text.
+	const isUploading = /<img\b[^>]*\ssrc="blob:/.test(values.body);
 	const scheduledAt = campaign.status === "scheduled" ? campaign.scheduledAt : null;
 	const isCompact = useMediaQuery(COMPACT_SCREEN);
 	const rootRef = useRef(null);
@@ -424,7 +425,7 @@ export default function FormCampaign({
 								/>
 							</div>
 						) : (
-							<EditorRich content={initialBody} onChange={updateBody} contactFields={contactFields} />
+							<EditorRich content={initialBody} onChange={updateBody} contactFields={contactFields} newsletter={newsletter} />
 						)}
 					</div>
 				</section>

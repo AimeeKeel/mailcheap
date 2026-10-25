@@ -714,17 +714,42 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   & [data-callout] > :last-child {
     margin-bottom: 0;
   }
+  /* HTML blocks (lib/clean-html.js) style themselves inline, as in emails: the article's own pictures, tables and
+     captions stay out of them, and what's wider than the column scrolls. */
+  & [data-html-block] {
+    overflow-x: auto;
+  }
+  & [data-html-block] :where(table) {
+    margin: 0;
+    border-collapse: separate;
+  }
+  & [data-html-block] :where(img) {
+    display: inline;
+    vertical-align: baseline;
+    margin: 0;
+    border-radius: 0;
+    outline: none;
+  }
+  & [data-html-block] :where(small) {
+    display: inline;
+    margin: 0;
+    font-size: 0.875em;
+    line-height: inherit;
+    text-align: inherit;
+    color: inherit;
+  }
   & hr {
     margin: 3em 0;
     border: 0;
     border-top: 1px solid var(--border);
   }
-  & table {
+  /* An HTML block's tables keep the widths and alignment their attributes give them. */
+  & table:where(:not([data-html-block] *)) {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9375rem;
   }
-  & :where(th, td) {
+  & :where(th, td):where(:not([data-html-block] *)) {
     padding: 0.5em 0.75em;
     border-bottom: 1px solid var(--border);
     text-align: left;
