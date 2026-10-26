@@ -77,6 +77,10 @@ export default function WritingPage() {
 				again, and <Link href={getHelpHref("writing", "preview")}>Preview</Link> shows it in the whole email.
 			</p>
 			<p>
+				To delete a block, click it, then the bin next to Done, and confirm. <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd> on Windows) brings it
+				back.
+			</p>
+			<p>
 				Your emails and your website get the same block, cleaned first. Scripts, forms, frames, <code>&lt;style&gt;</code> tags,
 				classes and ids are removed, and so are styles that could move the block over the rest of the issue, like{" "}
 				<code>position</code> or a negative margin. Style each element inline instead, with <code>style=&quot;…&quot;</code>.

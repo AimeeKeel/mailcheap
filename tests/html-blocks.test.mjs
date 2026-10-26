@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import BlockHtml from "../components/BlockHtml.jsx";
 import InputHtml from "../components/InputHtml.jsx";
 import { renderIssueBody } from "../lib/archive-content.js";
 import { HTML_BLOCK_ATTRIBUTES, HTML_BLOCK_STYLES, HTML_BLOCK_TAGS, cleanBlockHtml, cleanRichHtml } from "../lib/clean-html.js";
@@ -326,6 +327,19 @@ describe("an HTML block's code in color", () => {
 		assert.match(html, /<div aria-hidden="true"[^>]*><span class="text-zinc-400[^"]*">&lt;<\/span><span class="text-rose-600[^"]*">p<\/span>/);
 		assert.match(html, /<textarea[^>]*\sclass="[^"]*\btext-transparent\b[^"]*"[^>]*>&lt;p class=&quot;x&quot;&gt;Hi&lt;\/p&gt;<\/textarea>/);
 		assert.match(html, /<textarea[^>]*\saria-label="HTML"/);
+	});
+
+	test("a block being edited can be deleted from its header, next to Done", () => {
+		const props = {
+			node: { attrs: { html: "", isNew: true }, nodeSize: 1 },
+			updateAttributes: () => {},
+			selected: false,
+			editor: {},
+			getPos: () => 0,
+			extension: { options: { newsletter: NEWSLETTER } },
+		};
+		const html = renderToStaticMarkup(createElement(BlockHtml, props));
+		assert.match(html, /<button[^>]*\saria-label="Delete HTML block"[^>]*><svg[^>]*lucide-trash-2[^>]*>[\s\S]*?<\/button><button[^>]*>Done<\/button>/);
 	});
 });
 

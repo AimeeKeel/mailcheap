@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Node } from "@tiptap/core";
 import { NodeSelection, Selection } from "@tiptap/pm/state";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
-import { CodeXml } from "lucide-react";
+import { CodeXml, Trash2 } from "lucide-react";
 import FrameIssue from "@/components/FrameIssue";
 import InputHtml from "@/components/InputHtml";
 import LinkHelp from "@/components/LinkHelp";
@@ -17,8 +17,8 @@ const EDIT_EVENT = "htmlblockedit";
 
 // An HTML block in the editor: what readers get from it once it's cleaned (lib/clean-html.js), in a frame where nothing
 // runs, and while it's edited its HTML instead, in color. A click, or Enter once it's selected, edits it, and Escape or
-// Done goes back to the issue. One just added from the slash menu starts in editing. The campaign's Preview shows it in
-// the whole email.
+// Done goes back to the issue, or the bin next to Done deletes it. One just added from the slash menu starts in editing.
+// The campaign's Preview shows it in the whole email.
 export default function BlockHtml({ node, updateAttributes, selected, editor, getPos, extension }) {
 	const { html } = node.attrs;
 	const [isEditing, setIsEditing] = useState(() => node.attrs.isNew && !html);
@@ -47,6 +47,13 @@ export default function BlockHtml({ node, updateAttributes, selected, editor, ge
 			.run();
 	}
 
+	// Its HTML can be long to write again, so deleting it asks first, unless there's none yet.
+	function remove() {
+		if (html.trim() && !window.confirm("Delete this HTML block?")) return;
+		const pos = getPos();
+		if (typeof pos === "number") editor.chain().focus().setNodeSelection(pos).deleteSelection().run();
+	}
+
 	useEffect(() => {
 		const wrapper = wrapperRef.current;
 		const onEdit = () => setIsEditing(true);
@@ -66,12 +73,18 @@ export default function BlockHtml({ node, updateAttributes, selected, editor, ge
 		if (isEditing && !(event.target instanceof HTMLTextAreaElement) && !event.target.closest("a, button")) event.preventDefault();
 	}
 
+	// The focus going elsewhere in the page ends editing. The window losing it doesn't, to another app or to the question
+	// before deleting: the browser gives it back to the HTML with the window.
+	function leave(event) {
+		if (document.hasFocus() && !event.currentTarget.contains(event.relatedTarget)) setIsEditing(false);
+	}
+
 	return (
 		<NodeViewWrapper ref={wrapperRef} className="my-6">
 			<div
 				onMouseDown={keepFocus}
 				onClick={isEditing ? undefined : edit}
-				onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && setIsEditing(false)}
+				onBlur={leave}
 				className={cn(
 					"group/html relative rounded-xl transition-shadow duration-150",
 					isEditing
@@ -83,6 +96,17 @@ export default function BlockHtml({ node, updateAttributes, selected, editor, ge
 					<div className="flex h-10 items-center gap-2 border-b border-border/60 pr-1.5 pl-4 text-xs font-medium text-muted-foreground">
 						<CodeXml className="size-3.5" aria-hidden="true" />
 						<span className="flex-1">HTML</span>
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							onMouseDown={(event) => event.preventDefault()}
+							onClick={remove}
+							aria-label="Delete HTML block"
+							title="Delete HTML block"
+							className="hover:text-destructive"
+						>
+							<Trash2 />
+						</Button>
 						<Button variant="ghost" size="xs" onMouseDown={(event) => event.preventDefault()} onClick={finish}>
 							Done
 						</Button>
