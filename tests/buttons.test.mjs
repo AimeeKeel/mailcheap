@@ -7,6 +7,8 @@ import { BUTTON_PROBLEM } from "../lib/buttons.js";
 import { getCheckFix } from "../lib/campaign-steps.js";
 import { cleanRichHtml } from "../lib/clean-html.js";
 import { getReviewInput } from "../lib/content-review.js";
+import { getLlmsFull } from "../lib/docs/llms.js";
+import { getOpenApiDocument } from "../lib/docs/openapi.js";
 import { normalizeUrl } from "../lib/editor-links.js";
 import { getLinkKey, getLinkLabels, normalizeLink } from "../lib/link-stats.js";
 import { fillForReader } from "../lib/merge-tags.js";
@@ -192,6 +194,16 @@ describe("buttons through the API", () => {
 	});
 
 	after(() => app?.stop());
+
+	test("update_campaign tells agents how to write buttons and HTML blocks, in the OpenAPI document and the llms file", () => {
+		const operations = Object.values(getOpenApiDocument("https://mail.example.com").paths).flatMap((path) => Object.values(path));
+		const update = operations.find(({ operationId }) => operationId === "update_campaign");
+		const { description } = update.requestBody.content["application/json"].schema.properties.format;
+		assert.match(description, /^With content: the format it's in\./);
+		assert.ok(description.includes('<div data-button=""><a href="https://…">Its text</a></div>'), description);
+		assert.ok(description.includes('<div data-html-block="">'), description);
+		assert.ok(getLlmsFull("https://mail.example.com").includes('data-align="left" or "right"'));
+	});
 
 	test("an issue's button is kept as written, drawn in its preview, and holds the send until it has a link", async () => {
 		const content = `<p>Hello</p>${button("Join the waitlist", null, "right")}`;
