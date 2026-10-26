@@ -63,6 +63,7 @@ export async function createContactField({ label, type } = {}) {
 	const { output, failure } = await runDashboardAction("create_contact_field", { label: String(label ?? ""), type });
 	if (failure) return toFormError(failure);
 	revalidatePath("/contacts");
+	revalidatePath("/(app)/contacts/[id]", "page");
 	return { field: output };
 }
 
@@ -70,6 +71,7 @@ export async function deleteContactField(key) {
 	const { failure } = await runDashboardAction("delete_contact_field", { key: String(key ?? "") });
 	if (failure) return toFormError(failure);
 	revalidatePath("/contacts");
+	revalidatePath("/(app)/contacts/[id]", "page");
 	return { ok: true };
 }
 

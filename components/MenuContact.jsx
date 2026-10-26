@@ -33,8 +33,8 @@ const AFTER_DELETE = {
 	complained: "They marked an email as spam, so adding them again won't email them.",
 };
 
-// Its details, the status changes lib/contact-status.js allows for this contact, then delete. firstName, tags, fields:
-// what the details dialog edits. undeliverableReason: why the list hygiene stopped it, if it did.
+// Its fields, the status changes lib/contact-status.js allows for this contact, then delete. firstName, tags, fields:
+// what the fields dialog edits. undeliverableReason: why the list hygiene stopped it, if it did.
 export default function MenuContact({ id, email, status, undeliverableReason, firstName = "", tags = [], fields = {} }) {
 	const [dialog, setDialog] = useState(null);
 	const [isPending, startTransition] = useTransition();
@@ -69,7 +69,7 @@ export default function MenuContact({ id, email, status, undeliverableReason, fi
 				<DropdownMenuContent align="end" className="min-w-44">
 					<DropdownMenuItem onSelect={() => setDialog("details")}>
 						<Pencil />
-						Edit details
+						Edit fields
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					{lock && <DropdownMenuLabel className="max-w-56 font-normal">{lock}.</DropdownMenuLabel>}

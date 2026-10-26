@@ -88,14 +88,16 @@ export default function ContactsPage() {
 			<h2 id="contact-page">Each contact&apos;s page</h2>
 			<p>
 				Click a contact on the <LinkApp href="/contacts">Contacts page</LinkApp> to open their page. At the top: their picture, name
-				and address, their status, their country, their inbox and when they subscribed. Below, how many of your emails they got and
-				the share they opened and clicked, then their activity, newest first: every email they got, when they opened it, the links
-				they clicked, and when they signed up, confirmed or changed status. On the side are their first name, fields and tags, where
-				they came from, the segments they&apos;re in and your other newsletters they&apos;re on.
+				and address. Under them, a globe turned to their country, next to how many of your emails they got and the share they opened
+				and clicked. Then About, with when they subscribed, where they came from, their email provider (Gmail, Outlook, or their own
+				domain, like their company&apos;s), when they confirmed and when they last clicked; their fields, each with the tag that
+				prints it in your emails; their tags, the segments they&apos;re in and your other newsletters they&apos;re on. Last, their
+				activity, newest first: every email they got, when they opened it, the links they clicked, and when they signed up, confirmed
+				or changed status.
 			</p>
 			<p>
-				Change their status from the badge under their name. Edit details changes their first name, fields and tags, and the trash
-				button deletes them. Click an issue to open its report, a tag to list everyone who has it, and a segment to open its page.
+				The buttons at the top right change their status, edit their fields and delete them. Click an issue to open its report, a tag
+				to list everyone who has it, and a segment to open its page.
 			</p>
 			<p>
 				Their activity keeps every change of their status, each with what made it: the unsubscribe link in your email or their mail
@@ -106,8 +108,8 @@ export default function ContactsPage() {
 			</p>
 			<p>
 				Their country comes from where they signed up or confirmed, or for someone who joined another way, like an import, where
-				they first clicked a link in your emails. MailCheap reads it from their connection, then keeps the country only, never the
-				address. Opens never give one, since inboxes load images through their own servers.
+				they first clicked a link in your emails, and the globe on their page lights it up. MailCheap reads it from their connection,
+				then keeps the country only, never the address. Opens never give one, since inboxes load images through their own servers.
 				{!isCloud() && " On a self-hosted server, countries need Vercel, which names each visitor's country."}
 			</p>
 			<p>
@@ -117,8 +119,9 @@ export default function ContactsPage() {
 
 			<h2 id="details">First names, tags and fields</h2>
 			<p>
-				Besides an email address, each contact can have a first name, tags and values for your own fields. Click Edit details on
-				their page, or in their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>, to change them.
+				Besides an email address, each contact can have a first name, tags and values for your own fields. Click Edit fields on
+				their page, or in their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>, to change them. Next to each field is
+				the tag that prints it in your emails, like <code>{"{{first_name}}"}</code>: click it to copy it.
 			</p>
 			<ul>
 				<li>
@@ -155,15 +158,16 @@ export default function ContactsPage() {
 			<ol>
 				<li>
 					<strong>Make your fields.</strong> Click Fields at the top of the <LinkApp href="/contacts">Contacts page</LinkApp>.
-					Before your list has contacts, and on a phone, it&apos;s Contact fields in the <strong>⋯</strong> menu there. Type a
-					name, like Birthday, pick its type (text, a number or a date) and click the plus. Its key, like <code>birthday</code>, is
+					Before your list has contacts, and on a phone, it&apos;s Contact fields in the <strong>⋯</strong> menu there. On a
+					contact&apos;s page, Add a field opens the same list, under their fields or in Edit fields. Type a name, like Birthday,
+					pick its type (text, a number or a date) and click the plus. Its key, like <code>birthday</code>, is
 					what imports, segments and the API call it. An import can make fields for you too, as below.
 				</li>
 				<li>
 					<strong>Fill them in</strong>, whichever way suits you:
 					<ul>
 						<li>
-							<strong>By hand</strong>: open a contact&apos;s page, or their menu at the end of their row, click Edit details, and
+							<strong>By hand</strong>: open a contact&apos;s page, or their menu at the end of their row, click Edit fields, and
 							type their first name and a value for each field. A date field opens a calendar: pick the month and year at its top,
 							then the day, and the cross at its end clears it.
 						</li>
@@ -249,12 +253,12 @@ export default function ContactsPage() {
 
 			<h2 id="actions">Changing a status, and deleting</h2>
 			<p>
-				Each contact&apos;s menu, at the end of their row, has what applies to them, and so do the badge and the buttons at the top of
-				their page:
+				Each contact&apos;s menu, at the end of their row, has what applies to them, and so do the buttons at the top right of their
+				page, where the first one shows their status and opens the changes it allows:
 			</p>
 			<ul>
 				<li>
-					<strong>Edit details</strong> changes their first name, tags and fields.
+					<strong>Edit fields</strong> changes their first name, fields and tags.
 				</li>
 				<li>
 					<strong>Mark as active</strong> brings back a dormant contact: they get your next issue. On a pending contact, it skips

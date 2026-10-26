@@ -307,6 +307,12 @@ describe("the contact page and its data", () => {
 		const html = await renderPage(user, String(contact._id));
 		assert.ok(html.includes(">Jane</h1>"), "their first name heads the page");
 		assert.ok(html.includes("France") && html.includes("https://flagcdn.com/fr.svg"), "their country, with its flag");
+		assert.ok(html.includes("animate-globe-pulse"), "on the globe");
+		const header = html.match(/<header[^>]*>([\s\S]*?)<\/header>/)[1];
+		assert.match(header, /<span class="sr-only">Status: <\/span>.*?Active/, "their status, a button at the top next to Edit fields");
+		assert.ok(header.includes("Edit fields"));
+		assert.ok(html.includes("aria-label=\"Copy {{first_name}}\"") && html.includes("aria-label=\"Copy {{plan}}\""), "each field with its tag");
+		assert.ok(html.includes("Email provider"), "what their inbox is, named");
 		assert.ok(html.includes("Hello Jane, on Pro"), "the subject as they got it, with their first name and fields");
 		assert.ok(html.includes(`href="/campaigns/`), "each issue links to its report");
 		assert.ok(html.includes("example.com/story") && html.includes("google.com/s2/favicons?domain=example.com"), "the link they clicked, with its favicon");

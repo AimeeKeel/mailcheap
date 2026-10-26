@@ -1,10 +1,13 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { updateContactDetails } from "@/app/(app)/contacts/actions";
+import ButtonMergeTag from "@/components/ButtonMergeTag";
+import DialogContactFields from "@/components/DialogContactFields";
 import InputDate from "@/components/InputDate";
 import InputTags from "@/components/InputTags";
+import LinkHelpFields from "@/components/LinkHelpFields";
 import { useContactOptions } from "@/components/ProviderContactOptions";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,11 +20,12 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { MAX_FIRST_NAME } from "@/lib/contact-fields";
+import { MAX_CONTACT_FIELDS, MAX_FIRST_NAME } from "@/lib/contact-fields";
+import { fieldTag, firstNameTag } from "@/lib/merge-tags";
 import { toast } from "@/lib/toast";
 
-// A contact's first name, its values for the account's fields and its tags. contact: { id, email, firstName, tags,
-// fields }, with dates as YYYY-MM-DD.
+// A contact's first name, its values for the account's fields and its tags, each field with the tag that prints it in
+// emails. contact: { id, email, firstName, tags, fields }, with dates as YYYY-MM-DD.
 export default function DialogContactDetails({ contact, isOpen, onOpenChange }) {
 	const [formKey, setFormKey] = useState(0);
 
@@ -47,6 +51,7 @@ function FormContactDetails({ contact, onDone }) {
 	const [values, setValues] = useState(() =>
 		Object.fromEntries(fields.map(({ key }) => [key, contact.fields?.[key] === undefined ? "" : String(contact.fields[key])]))
 	);
+	const [isFieldsOpen, setIsFieldsOpen] = useState(false);
 	const [isSaving, startSaving] = useTransition();
 
 	function save(event) {
@@ -63,68 +68,72 @@ function FormContactDetails({ contact, onDone }) {
 		});
 	}
 
+	// The fields' own dialog stays out of the form: React would bubble its submit up to this one.
 	return (
-		<form onSubmit={save} className="flex flex-col gap-5">
-			<DialogHeader>
-				<DialogTitle className="truncate">{contact.email}</DialogTitle>
-				<DialogDescription className="sr-only">Their first name, fields and tags</DialogDescription>
-			</DialogHeader>
+		<>
+			<form onSubmit={save} className="flex flex-col gap-5">
+				<DialogHeader>
+					<DialogTitle>Edit fields</DialogTitle>
+					<DialogDescription className="text-pretty">
+						<span className="font-medium wrap-anywhere text-foreground">{contact.email}</span>. Each field prints in your emails with
+						the tag on its right. Tags sort contacts and never show in emails.
+					</DialogDescription>
+					<LinkHelpFields className="self-start text-sm" />
+				</DialogHeader>
 
-			<div className="flex flex-col gap-4">
-				<div className="flex flex-col gap-1.5">
-					<label htmlFor={nameId} className="text-sm font-medium">
-						First name
-					</label>
-					<Input
-						id={nameId}
-						value={firstName}
-						onChange={(event) => setFirstName(event.target.value)}
-						placeholder="Jane"
-						maxLength={MAX_FIRST_NAME}
-						autoComplete="off"
-						autoFocus
-					/>
-					<p className="text-xs text-muted-foreground">
-						What <code className="font-mono">{"{{first_name}}"}</code> shows in your emails
-					</p>
+				<div className="flex flex-col gap-4">
+					<RowField htmlFor={nameId} label="First name" tag={firstNameTag("")}>
+						<Input
+							id={nameId}
+							value={firstName}
+							onChange={(event) => setFirstName(event.target.value)}
+							placeholder="Jane"
+							maxLength={MAX_FIRST_NAME}
+							autoComplete="off"
+							autoFocus
+						/>
+					</RowField>
+
+					{fields.map((field) => (
+						<InputField
+							key={field.key}
+							field={field}
+							value={values[field.key]}
+							onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))}
+						/>
+					))}
+
+					<RowField label="Tags" note="Not in emails">
+						<InputTags value={tags} onChange={setTags} suggestions={tagOptions.map(({ name }) => name)} />
+					</RowField>
 				</div>
 
-				{fields.map((field) => (
-					<InputField
-						key={field.key}
-						field={field}
-						value={values[field.key]}
-						onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))}
-					/>
-				))}
-
-				<div className="flex flex-col gap-1.5">
-					<span className="text-sm font-medium">Tags</span>
-					<InputTags value={tags} onChange={setTags} suggestions={tagOptions.map(({ name }) => name)} />
-				</div>
-			</div>
-
-			<DialogFooter>
-				<DialogClose asChild>
-					<Button type="button" variant="outline">
-						Cancel
+				<DialogFooter>
+					{fields.length < MAX_CONTACT_FIELDS && (
+						<Button type="button" variant="ghost" onClick={() => setIsFieldsOpen(true)} className="text-muted-foreground sm:mr-auto">
+							<Plus data-icon="inline-start" />
+							Add a field
+						</Button>
+					)}
+					<DialogClose asChild>
+						<Button type="button" variant="outline">
+							Cancel
+						</Button>
+					</DialogClose>
+					<Button type="submit" disabled={isSaving} className="min-w-20">
+						{isSaving ? <Loader2 className="animate-spin" /> : "Save"}
 					</Button>
-				</DialogClose>
-				<Button type="submit" disabled={isSaving} className="min-w-20">
-					{isSaving ? <Loader2 className="animate-spin" /> : "Save"}
-				</Button>
-			</DialogFooter>
-		</form>
+				</DialogFooter>
+			</form>
+			<DialogContactFields isOpen={isFieldsOpen} onOpenChange={setIsFieldsOpen} />
+		</>
 	);
 }
 
 function InputField({ field, value, onChange }) {
 	const inputId = useId();
 	return (
-		<div className="flex flex-col gap-1.5">
-			<label htmlFor={inputId} className="text-sm font-medium">
-				{field.label}
-			</label>
+		<RowField htmlFor={inputId} label={field.label} tag={fieldTag(field.key)}>
 			{field.type === "date" ? (
 				<InputDate id={inputId} value={value ?? ""} onChange={onChange} />
 			) : (
@@ -139,6 +148,22 @@ function InputField({ field, value, onChange }) {
 					className={field.type === "number" ? "tabular-nums" : undefined}
 				/>
 			)}
+		</RowField>
+	);
+}
+
+// A field with its name on the left and, on the right, the tag that prints it in emails or a note.
+function RowField({ htmlFor, label, tag, note, children }) {
+	const Label = htmlFor ? "label" : "span";
+	return (
+		<div className="flex flex-col gap-1.5">
+			<div className="flex min-h-6 items-center justify-between gap-3">
+				<Label htmlFor={htmlFor} className="min-w-0 truncate text-sm font-medium">
+					{label}
+				</Label>
+				{tag ? <ButtonMergeTag tag={tag} className="shrink" /> : <span className="shrink-0 text-xs text-muted-foreground">{note}</span>}
+			</div>
+			{children}
 		</div>
 	);
 }

@@ -333,6 +333,29 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   }
 }
 
+/* The pin on a contact's globe (components/ImageGlobe.jsx): a ring that grows and fades, again and again. */
+@keyframes globe-pulse {
+  from {
+    opacity: 0.55;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 3.2;
+  }
+}
+
+@utility animate-globe-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: globe-pulse 2.4s cubic-bezier(0.2, 0, 0, 1) infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* Streamed content taking its skeleton's place: same size, so it only fades. */
 @keyframes fade-in {
   from {
