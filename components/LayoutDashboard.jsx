@@ -7,6 +7,7 @@ import NavMobile from "@/components/NavMobile";
 import NavNewsletter from "@/components/NavNewsletter";
 import NavSidebar from "@/components/NavSidebar";
 import PanelGetStarted from "@/components/PanelGetStarted";
+import PanelInboxCheck from "@/components/PanelInboxCheck";
 import ProviderPaywall from "@/components/ProviderPaywall";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MenuItems, SiteAnalytics, SupportChat, WhatsNew } from "@/components/SiteExtensions";
@@ -66,6 +67,9 @@ export default async function LayoutDashboard({ user, account, isAdmin, children
 			</div>
 			<Suspense fallback={null}>
 				<PanelGetStarted account={account} />
+			</Suspense>
+			<Suspense fallback={null}>
+				<PanelInboxCheck account={account} />
 			</Suspense>
 			{WhatsNew && (
 				<Suspense fallback={null}>

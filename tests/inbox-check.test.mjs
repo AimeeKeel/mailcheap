@@ -3,10 +3,11 @@ import { after, before, test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { activate, as, callApi, catchRedirect, form, platformEmails, signIn, startTestApp } from "./helpers/app.mjs";
-import { INBOX_CHECK_LIMIT, isInboxCheckShown, renderInboxCheckEmail } from "../lib/inbox-check.js";
+import { INBOX_CHECK_LIMIT, isInboxCheckOpen, renderInboxCheckEmail } from "../lib/inbox-check.js";
 
-// The settings' inbox check: an email from MailCheap that its owner replies to, so MailCheap's next emails reach their
-// inbox. Only ever to the account's own owner, a few a day, and its card closes for one newsletter at a time.
+// The dashboard's inbox check: an email from MailCheap that its owner replies to, so MailCheap's next emails reach their
+// inbox. A card at the bottom right offers it to customers once the get-started panel is gone; it only ever goes to the
+// account's own owner, a few a day, and the card closes for one newsletter at a time.
 let app;
 let m;
 
@@ -19,7 +20,8 @@ before(async () => {
 		Account: (await import("../models/Account.js")).default,
 		Message: (await import("../models/Message.js")).default,
 		Newsletter: (await import("../models/Newsletter.js")).default,
-		NoticeInboxCheck: (await import("../components/NoticeInboxCheck.jsx")).default,
+		CardInboxCheck: (await import("../components/CardInboxCheck.jsx")).default,
+		PanelInboxCheck: (await import("../components/PanelInboxCheck.jsx")).default,
 	};
 });
 
@@ -46,13 +48,24 @@ async function readClosedAt(newsletterId) {
 	return newsletter.dismissedNudges?.inboxCheck ?? null;
 }
 
-test("the card shows on MailCheap Cloud until it's closed, for each newsletter on its own", () => {
+test("customers get the card once the open newsletter's get-started panel is gone, until they close it for that newsletter", () => {
 	const cloud = { MAILCHEAP_CLOUD: "true" };
-	assert.equal(isInboxCheckShown({ name: "Hens" }, cloud), true);
-	assert.equal(isInboxCheckShown({ name: "Hens", dismissedNudges: { ownDomain: "add" } }, cloud), true, "another helper closed");
-	assert.equal(isInboxCheckShown({ name: "Hens", dismissedNudges: { inboxCheck: new Date() } }, cloud), false);
-	assert.equal(isInboxCheckShown({ name: "Hens" }, {}), false, "a self-hosted server sends MailCheap's emails from its own domain");
-	assert.equal(isInboxCheckShown(null, cloud), false);
+	const paying = { subscriptionStatus: "active" };
+	const createdAt = new Date("2026-10-20T09:00:00Z");
+	const closed = { createdAt, getStarted: { dismissedAt: new Date("2026-10-21T09:00:00Z") } };
+	const open = (account, newsletter) => isInboxCheckOpen(account, newsletter, cloud);
+
+	assert.equal(open(paying, closed), true);
+	assert.equal(open(paying, { createdAt, getStarted: { finishedAt: new Date("2026-10-21T09:00:00Z") } }), true, "a finished list is gone too");
+	assert.equal(open({ ...paying, onboarding: { checklistDismissedAt: new Date("2026-10-21T09:00:00Z") } }, { createdAt }), true, "closed on the account, before each newsletter had its own");
+	assert.equal(open(paying, { createdAt }), false, "the get-started panel holds the corner first");
+	assert.equal(open({}, closed), false, "signed up without a plan");
+	assert.equal(open({ subscriptionStatus: "canceled" }, closed), false);
+	assert.equal(open({ comp: { plan: "starter", grantedAt: createdAt } }, closed), true, "a free plan an admin gave");
+	assert.equal(open(paying, { ...closed, dismissedNudges: { ownDomain: "add" } }), true, "another helper closed");
+	assert.equal(open(paying, { ...closed, dismissedNudges: { inboxCheck: new Date() } }), false);
+	assert.equal(open(paying, null), false);
+	assert.equal(isInboxCheckOpen(paying, closed, {}), false, "a self-hosted server sends MailCheap's emails from its own domain");
 });
 
 test("the email asks for a reply, says it isn't marketing, and carries nothing a customer wrote", () => {
@@ -65,15 +78,33 @@ test("the email asks for a reply, says it isn't marketing, and carries nothing a
 	assert.doesNotMatch(email.html, /<a\b|<img\b|https?:/, "no link or picture to look like a campaign");
 });
 
-test("the card says what to do, why, and how to close it", () => {
-	const html = renderToStaticMarkup(createElement(m.NoticeInboxCheck, { newsletterId: "65f1c0ffee00000000000001" }));
+test("the card floats at the bottom right like the get-started panel, says what to do and why, and closes", () => {
+	const html = renderToStaticMarkup(createElement(m.CardInboxCheck, { newsletterId: "65f1c0ffee00000000000001" }));
+	assert.match(html, /^<div class="pointer-events-none fixed right-\(--dock-right\) bottom-\(--dock-bottom\)/);
+	assert.match(html, /shadow-float/);
 	assert.match(html, /Get MailCheap&#x27;s emails in your inbox/);
-	assert.match(html, /Send yourself an email from MailCheap/);
+	assert.match(html, /Never marketing/);
+	assert.match(html, /aria-current="step"[^>]*>.*Send yourself an email.*>Send me an email</);
 	assert.match(html, /Reply to it with anything/);
-	assert.match(html, />Send me an email</);
-	assert.match(html, /aria-label="Close"/);
-	assert.match(html, /never for marketing/);
-	assert.match(html, /bg-muted\/60/, "gray like the pace notice, not a white settings card");
+	assert.match(html, /aria-label="Dismiss"/);
+});
+
+test("the dashboard shows the card to customers once the open newsletter's get-started panel is gone, one newsletter at a time", async () => {
+	const panel = async (user) => as(user, async () => m.PanelInboxCheck({ account: await m.Account.findById(user.accountId).lean() }));
+	const user = await customer("inbox-corner@example.com");
+	assert.equal(await panel(user), null, "the get-started panel first");
+
+	assert.deepEqual(await as(user, () => m.welcome.dismissGetStarted(user.newsletterId)), { ok: true });
+	const card = await panel(user);
+	assert.equal(card.type, m.CardInboxCheck);
+	assert.equal(card.props.newsletterId, user.newsletterId);
+
+	assert.deepEqual(await as(user, () => m.welcome.dismissInboxCheck(user.newsletterId)), { ok: true });
+	assert.equal(await panel(user), null, "closed for good");
+
+	const free = await customer("inbox-corner-free@example.com", { hasPlan: false });
+	await as(free, () => m.welcome.dismissGetStarted(free.newsletterId));
+	assert.equal(await panel(free), null, "only customers, not every signup");
 });
 
 test("it goes to the signed-in owner only, 3 a day, and never counts as one of the plan's emails", async () => {
@@ -109,9 +140,10 @@ test("the API sends it to the owner, whatever address it's given, and shares the
 	assert.equal(inboxChecksTo("inbox-api@example.com").length, 3);
 });
 
-test("without a plan, the dashboard sends it; the API needs one, as for every action", async () => {
+test("only customers get it: without a plan, neither the dashboard nor the API sends it", async () => {
 	const free = await customer("inbox-free@example.com", { hasPlan: false });
-	assert.deepEqual(await as(free, () => m.newsletters.sendInboxCheck()), { sentTo: "inbox-free@example.com" });
+	assert.equal((await as(free, () => m.newsletters.sendInboxCheck())).code, "subscription_required");
+	assert.equal(inboxChecksTo("inbox-free@example.com").length, 0);
 
 	const lapsed = await customer("inbox-lapsed@example.com");
 	const { key } = await as(lapsed, () => m.apiKeys.createApiKey(null, form({ name: "Agent", level: "full" })));

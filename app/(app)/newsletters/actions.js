@@ -90,7 +90,7 @@ export async function previewSummaryEmail(newsletterId) {
 	return failure ? toFormError(failure) : { html: output.html, subject: output.subject, previewText: output.previewText };
 }
 
-// The settings' inbox check card (NoticeInboxCheck): an email to the signed-in owner, to reply to.
+// The inbox check at the dashboard's bottom right (CardInboxCheck): an email to the signed-in owner, to reply to.
 export async function sendInboxCheck() {
 	const { output, failure } = await runDashboardAction("send_inbox_check_email", {});
 	return failure ? toFormError(failure) : { sentTo: output.sentTo };

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Check, ChevronRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronRight } from "lucide-react";
 import ButtonNewCampaign from "@/components/ButtonNewCampaign";
+import CircleStep from "@/components/CircleStep";
 import IconBrand, { AGENTS } from "@/components/IconBrand";
 import ShellGetStarted from "@/components/ShellGetStarted";
 import { Button } from "@/components/ui/button";
@@ -107,22 +108,6 @@ function ItemStep({ step, number, isNext, link, newsletterId }) {
 				<Arrow className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5" />
 			</Link>
 		</li>
-	);
-}
-
-function CircleStep({ number, isDone, isNext }) {
-	return (
-		<span
-			aria-hidden="true"
-			className={cn(
-				"grid size-6 shrink-0 place-items-center rounded-full font-mono text-[11px] tabular-nums",
-				isDone && "bg-foreground text-background",
-				isNext && "bg-card text-foreground inset-ring-[1.5px] inset-ring-foreground",
-				!isDone && !isNext && "text-muted-foreground inset-ring inset-ring-foreground/15"
-			)}
-		>
-			{isDone ? <Check className="size-3.5" strokeWidth={2.5} /> : number}
-		</span>
 	);
 }
 

@@ -179,13 +179,13 @@ export default function NewslettersPage() {
 					<h2 id="inbox-check" data-cloud>Getting MailCheap&apos;s emails in your inbox</h2>
 					<p>
 						MailCheap only emails you about your account, like a campaign that needs you or your summary, never for marketing. To
-						keep those out of spam, the top of the <LinkApp href="/newsletters">Settings page</LinkApp> has a card that sends you
-						an email from MailCheap: reply to it with anything, and your mail app files MailCheap&apos;s next emails in your inbox. If
-						it lands in spam, mark it as not spam too.
+						keep those out of spam, once you have a plan and your newsletter&apos;s get-started list is closed or done, a card at the
+						bottom right of the <LinkApp href="/">dashboard</LinkApp> sends you an email from MailCheap: reply to it with anything,
+						and your mail app files MailCheap&apos;s next emails in your inbox. If it lands in spam, mark it as not spam too.
 					</p>
 					<p>
 						It goes to your account&apos;s address, {INBOX_CHECK_LIMIT.limit} times a day at most. Closing the card, or Done once
-						you&apos;ve replied, hides it for that newsletter.
+						you&apos;ve replied, hides it for that newsletter, on every device.
 					</p>
 				</>
 			)}

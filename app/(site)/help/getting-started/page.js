@@ -54,6 +54,13 @@ export default function GettingStartedPage() {
 				newsletter that&apos;s open: its issues and subscribers count for it alone, while your domain and AI agent count for all your
 				newsletters. Close the list and it stays closed for that newsletter, on every device. Your other newsletters, and the ones you
 				add later, keep theirs.
+				{isCloud() && (
+					<>
+						{" "}
+						With a plan, that corner then offers an email from MailCheap to reply to, so its next emails reach your inbox.{" "}
+						<Link href={getHelpHref("newsletters", "inbox-check")}>Getting MailCheap&apos;s emails in your inbox</Link>
+					</>
+				)}
 			</p>
 			<ol>
 				<li>
