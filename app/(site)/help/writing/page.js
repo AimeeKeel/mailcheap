@@ -36,7 +36,8 @@ export default function WritingPage() {
 				</li>
 				<li>
 					<strong>Slash commands</strong>: type <kbd>/</kbd> on an empty line for text, three heading sizes, bulleted and numbered
-					lists, a picture, a quote, a divider, a box, which sets a block apart on a gray background, or{" "}
+					lists, a picture, a quote, a divider, a box, which sets a block apart on a gray background, a{" "}
+					<Link href={getHelpHref("writing", "buttons")}>button</Link> or{" "}
 					<Link href={getHelpHref("writing", "html")}>your own HTML</Link>. Contact fields, at the bottom
 					of the menu, opens the <Link href={getHelpHref("writing", "first-name")}>first name and your own fields</Link>. From the
 					keyboard, <kbd>→</kbd> opens it and <kbd>←</kbd> comes back. Keep typing after the slash to find any of them, like{" "}
@@ -69,10 +70,24 @@ export default function WritingPage() {
 				stays highlighted once a picture has one.
 			</p>
 
+			<h2 id="buttons">Buttons</h2>
+			<p>
+				Type <kbd>/</kbd> and pick Button to add a link readers can&apos;t miss, like Read the full story or Join the waitlist. Type
+				its text, press <kbd>Enter</kbd> and paste the link it opens: a web address, or an email address, which opens an email to it.
+				The bar above it places it on the left, in the center or on the right. Click Done or press <kbd>Esc</kbd> when you&apos;re
+				finished, and click the button to change it again, or the bin next to Done to delete it: <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd>{" "}
+				on Windows) brings it back. Names and fields work in its text and its link.
+			</p>
+			<p>
+				Buttons take your newsletter&apos;s <Link href={getHelpHref("design", "customize")}>theme</Link>: its accent color, with text
+				that reads on it, and its corners, in your emails and on your website. Change them in{" "}
+				<LinkApp href="/newsletters/design">Design</LinkApp>, and every button follows. A button needs its text and its link before the
+				issue can go out: the review step says when one is missing, and the button shows No link.
+			</p>
+
 			<h2 id="html">HTML blocks</h2>
 			<p>
-				Type <kbd>/</kbd> and pick HTML to add your own HTML to an issue, like a button, a table, a sponsor&apos;s banner or a
-				signature. Paste or type it, and its tags, attributes and styles show in color. Click Done or press <kbd>Esc</kbd> when
+				Type <kbd>/</kbd> and pick HTML to add your own HTML to an issue, like a table, a sponsor&apos;s banner or a signature. Paste or type it, and its tags, attributes and styles show in color. Click Done or press <kbd>Esc</kbd> when
 				you&apos;re finished: the block then shows what readers get, in your newsletter&apos;s email design. Click it to change it
 				again, and <Link href={getHelpHref("writing", "preview")}>Preview</Link> shows it in the whole email.
 			</p>
@@ -94,7 +109,7 @@ export default function WritingPage() {
 
 			<h2 id="moving-blocks">Moving blocks</h2>
 			<p>
-				With a mouse, a grip appears to the left of the paragraph, heading, list, picture, box or HTML block under the pointer. Drag
+				With a mouse, a grip appears to the left of the paragraph, heading, list, picture, box, button or HTML block under the pointer. Drag
 				it to move the block, and a line shows where it lands. Click it to select the block. From the keyboard,{" "}
 				<kbd>⌘ Shift ↑</kbd> and{" "}
 				<kbd>⌘ Shift ↓</kbd> (<kbd>Ctrl</kbd> instead of <kbd>⌘</kbd> on Windows) move the block the cursor is in. Moves undo like any

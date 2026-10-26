@@ -737,6 +737,47 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   & [data-callout] > :last-child {
     margin-bottom: 0;
   }
+  /* Buttons (lib/buttons.js): a link in the colors and corners of the website's own buttons, placed like pictures. */
+  & [data-button] {
+    margin: 2em 0;
+    text-align: center;
+  }
+  & [data-button][data-align="left"] {
+    text-align: left;
+  }
+  & [data-button][data-align="right"] {
+    text-align: right;
+  }
+  & [data-button] > a {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    text-align: center;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    transition:
+      background-color 150ms ease-out,
+      scale 150ms ease-out;
+  }
+  & [data-button] > a:hover {
+    background: color-mix(in oklab, var(--primary) 80%, transparent);
+  }
+  & [data-button] > a:active {
+    scale: 0.96;
+  }
+  & [data-button] > a:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+  & [data-button] > a * {
+    color: inherit;
+  }
   /* HTML blocks (lib/clean-html.js) style themselves inline, as in emails: the article's own pictures, tables and
      captions stay out of them, and what's wider than the column scrolls. */
   & [data-html-block] {

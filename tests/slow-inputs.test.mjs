@@ -4,7 +4,7 @@ import { renderIssueBody } from "../lib/archive-content.js";
 import { cleanBlockHtml, cleanRichHtml, removeUnsafeElements } from "../lib/clean-html.js";
 import { highlightHtml } from "../lib/highlight-html.js";
 import { markdownToHtml } from "../lib/markdown.js";
-import { hasContent, htmlToText, renderEmail } from "../lib/render-email.js";
+import { findButtonProblem, hasContent, htmlToText, renderEmail } from "../lib/render-email.js";
 import { firstImageUrl } from "../lib/thumbnail.js";
 
 // Bodies as large as the API and the editor accept. Before, the first two took 6 s at 192 KB and 12 s
@@ -153,6 +153,30 @@ for (const [label, source] of Object.entries(BLOCK_SHAPES)) {
 			const { result, ms } = fastest(run, maxMs);
 			assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
 			if (read) assertNoUnsafeTags(read(result), label);
+		}
+	});
+}
+
+// The editor's buttons (lib/buttons.js): each <div data-button> is read for one link, so its end and its link are looked
+// up once whatever surrounds them.
+const BUTTON_SHAPES = {
+	"a run of button starts": repeat('<div data-button="">'),
+	"buttons left open": repeat('<div data-button=""><a href="https://x.test">x'),
+	"buttons with no link end": repeat('<div data-button=""><a href="https://x.test">x</div>'),
+	"one button around everything": `<div data-button=""><a href="https://x.test">${repeat("</a> ")}</div>`,
+	"a button of unclosed links": `<div data-button="">${repeat("<a ")}</div>`,
+	"buttons with long links": repeat(`<div data-button=""><a href="https://x.test/${"a".repeat(2000)}">x</a></div>`),
+};
+
+for (const [label, html] of Object.entries(BUTTON_SHAPES)) {
+	test(`an issue of "${label}" (500 KB) renders and is checked in linear time`, () => {
+		for (const run of [
+			() => renderIssueBody({ format: "rich", html }),
+			() => renderEmail({ format: "rich", html, subject: "Hi" }),
+			() => findButtonProblem(html),
+		]) {
+			const { ms } = fastest(run, maxMs);
+			assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
 		}
 	});
 }

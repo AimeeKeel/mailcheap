@@ -15,7 +15,7 @@ const FIELDS = [
 	{ key: "campaign_channel", label: "Campaign channel", type: "text" },
 	{ key: "birthday", label: "Birthday", type: "date" },
 ];
-const BLOCKS = ["Text", "Heading 1", "Heading 2", "Heading 3", "Bulleted list", "Numbered list", "Image", "Quote", "Divider", "Box", "HTML"];
+const BLOCKS = ["Text", "Heading 1", "Heading 2", "Heading 3", "Bulleted list", "Numbered list", "Image", "Quote", "Divider", "Box", "Button", "HTML"];
 
 // What the arrows go through, in order: items by title, the menu's own rows by id (the entry to the fields, back from
 // them, and how to add them).

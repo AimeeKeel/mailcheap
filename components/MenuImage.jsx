@@ -184,7 +184,8 @@ function isInside(element, node) {
 }
 
 const INSET = 8;
-const ALIGNMENTS = [
+// Also a button's (components/BlockButton.jsx).
+export const ALIGNMENTS = [
 	{ value: "left", label: "Align left", icon: AlignLeft },
 	{ value: "center", label: "Center", icon: AlignCenter },
 	{ value: "right", label: "Align right", icon: AlignRight },

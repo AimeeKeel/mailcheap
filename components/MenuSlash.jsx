@@ -16,6 +16,7 @@ import {
 	List,
 	ListOrdered,
 	Minus,
+	MousePointerClick,
 	Pilcrow,
 	RectangleHorizontal,
 	TextQuote,
@@ -356,6 +357,12 @@ const SLASH_ITEMS = [
 		keywords: "callout container update promo",
 		icon: RectangleHorizontal,
 		run: (chain) => chain.wrapIn("callout"),
+	},
+	{
+		title: "Button",
+		keywords: "cta call to action link",
+		icon: MousePointerClick,
+		run: (chain) => chain.insertContent({ type: "button", attrs: { isNew: true } }),
 	},
 	{
 		title: "HTML",
