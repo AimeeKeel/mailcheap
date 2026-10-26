@@ -72,8 +72,9 @@ export default function WritingPage() {
 			<h2 id="html">HTML blocks</h2>
 			<p>
 				Type <kbd>/</kbd> and pick HTML to add your own HTML to an issue, like a button, a table, a sponsor&apos;s banner or a
-				signature. Paste or type it, and what readers get shows under it as you type, in your newsletter&apos;s email design. Click
-				Done or press <kbd>Esc</kbd> when you&apos;re finished, and click the block to change it again.
+				signature. Paste or type it, and its tags, attributes and styles show in color. Click Done or press <kbd>Esc</kbd> when
+				you&apos;re finished: the block then shows what readers get, in your newsletter&apos;s email design. Click it to change it
+				again, and <Link href={getHelpHref("writing", "preview")}>Preview</Link> shows it in the whole email.
 			</p>
 			<p>
 				Your emails and your website get the same block, cleaned first. Scripts, forms, frames, <code>&lt;style&gt;</code> tags,

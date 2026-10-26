@@ -1,11 +1,12 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Node } from "@tiptap/core";
 import { NodeSelection, Selection } from "@tiptap/pm/state";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import { CodeXml } from "lucide-react";
 import FrameIssue from "@/components/FrameIssue";
+import InputHtml from "@/components/InputHtml";
 import LinkHelp from "@/components/LinkHelp";
 import { Button } from "@/components/ui/button";
 import { renderBlockPreview } from "@/lib/render-email";
@@ -14,17 +15,17 @@ import { cn } from "@/lib/utils";
 // Enter on a selected block edits it: the keymap tells its view.
 const EDIT_EVENT = "htmlblockedit";
 
-// An HTML block in the editor: the HTML its author writes, and under it what readers get once it's cleaned
-// (lib/clean-html.js), in a frame where nothing runs. Out of editing, only that. A click, or Enter once it's selected,
-// edits it, and Escape or Done goes back to the issue. One just added from the slash menu starts in editing.
+// An HTML block in the editor: what readers get from it once it's cleaned (lib/clean-html.js), in a frame where nothing
+// runs, and while it's edited its HTML instead, in color. A click, or Enter once it's selected, edits it, and Escape or
+// Done goes back to the issue. One just added from the slash menu starts in editing. The campaign's Preview shows it in
+// the whole email.
 export default function BlockHtml({ node, updateAttributes, selected, editor, getPos, extension }) {
 	const { html } = node.attrs;
 	const [isEditing, setIsEditing] = useState(() => node.attrs.isNew && !html);
 	const wrapperRef = useRef(null);
 	const textareaRef = useRef(null);
-	const preview = useDeferredValue(html);
 	const newsletter = extension.options.newsletter;
-	const previewHtml = useMemo(() => renderBlockPreview(preview, newsletter), [preview, newsletter]);
+	const previewHtml = useMemo(() => (isEditing ? null : renderBlockPreview(html, newsletter)), [isEditing, html, newsletter]);
 
 	// The issue's selection moves onto the block, so the format menu of a text selected before goes.
 	function edit() {
@@ -60,12 +61,6 @@ export default function BlockHtml({ node, updateAttributes, selected, editor, ge
 		return () => cancelAnimationFrame(frame);
 	}, [isEditing]);
 
-	// The field types into the block, and follows it when the block changes some other way.
-	useEffect(() => {
-		const textarea = textareaRef.current;
-		if (textarea && textarea.value !== html) textarea.value = html;
-	}, [html]);
-
 	// While editing, a click anywhere in the block but its HTML and buttons keeps the focus in the HTML.
 	function keepFocus(event) {
 		if (isEditing && !(event.target instanceof HTMLTextAreaElement) && !event.target.closest("a, button")) event.preventDefault();
@@ -94,34 +89,31 @@ export default function BlockHtml({ node, updateAttributes, selected, editor, ge
 					</div>
 				)}
 				{isEditing && (
-					<textarea
+					<InputHtml
 						ref={textareaRef}
-						defaultValue={html}
+						value={html}
 						autoFocus
-						onChange={(event) => updateAttributes({ html: event.target.value })}
+						onChange={(next) => updateAttributes({ html: next })}
 						onKeyDown={(event) => {
 							if (event.key !== "Escape" && !(event.key === "Enter" && (event.metaKey || event.ctrlKey))) return;
 							event.preventDefault();
 							finish();
 						}}
 						placeholder="Paste or type HTML"
-						spellCheck={false}
 						aria-label="HTML"
-						className="block min-h-40 w-full resize-none bg-transparent px-4 py-3 font-mono text-[13px] leading-6 outline-none [field-sizing:content] placeholder:text-muted-foreground"
 					/>
 				)}
-				{previewHtml ? (
-					<div inert className={cn(isEditing && "border-t border-border/60")}>
-						<FrameIssue html={previewHtml} title="HTML preview" initialHeight={0} className={cn(isEditing && "rounded-none")} />
-					</div>
-				) : (
-					!isEditing && (
+				{!isEditing &&
+					(previewHtml ? (
+						<div inert>
+							<FrameIssue html={previewHtml} title="HTML preview" initialHeight={0} />
+						</div>
+					) : (
 						<div className="flex items-center gap-3 rounded-xl border border-dashed px-4 py-5 text-sm text-muted-foreground">
 							<CodeXml className="size-4 shrink-0" aria-hidden="true" />
 							{html ? "Nothing to show: scripts, forms and frames are removed" : "Add HTML"}
 						</div>
-					)
-				)}
+					))}
 				{isEditing ? (
 					<div className="border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
 						Use inline styles: scripts, forms and style tags are removed. <LinkHelp article="writing" section="html" />

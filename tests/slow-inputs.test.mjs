@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renderIssueBody } from "../lib/archive-content.js";
 import { cleanBlockHtml, cleanRichHtml, removeUnsafeElements } from "../lib/clean-html.js";
+import { highlightHtml } from "../lib/highlight-html.js";
 import { markdownToHtml } from "../lib/markdown.js";
 import { hasContent, htmlToText, renderEmail } from "../lib/render-email.js";
 import { firstImageUrl } from "../lib/thumbnail.js";
@@ -147,6 +148,7 @@ for (const [label, source] of Object.entries(BLOCK_SHAPES)) {
 			[() => cleanBlockHtml(source), (result) => result],
 			[() => renderEmail({ format: "rich", html, subject: "Hi" })],
 			[() => hasContent(html)],
+			[() => highlightHtml(source)],
 		]) {
 			const { result, ms } = fastest(run, maxMs);
 			assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);

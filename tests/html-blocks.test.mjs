@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import InputHtml from "../components/InputHtml.jsx";
 import { renderIssueBody } from "../lib/archive-content.js";
 import { HTML_BLOCK_ATTRIBUTES, HTML_BLOCK_STYLES, HTML_BLOCK_TAGS, cleanBlockHtml, cleanRichHtml } from "../lib/clean-html.js";
 import { getReviewInput } from "../lib/content-review.js";
+import { highlightHtml } from "../lib/highlight-html.js";
 import { fillForReader } from "../lib/merge-tags.js";
 import { hasContent, htmlToText, renderBlockPreview, renderEmail } from "../lib/render-email.js";
 import { getSendProblem } from "../lib/sending-rules.js";
@@ -250,6 +254,78 @@ describe("where HTML blocks go", () => {
 		assert.ok(preview.includes('<div class="body" style="display:flow-root;"><p style="color:red">Hi</p></div>'));
 		assert.match(preview, /<base target="_blank">/);
 		assert.doesNotMatch(preview, /onclick|<script/);
+	});
+});
+
+describe("an HTML block's code in color", () => {
+	const kinds = (source) => highlightHtml(source).map(({ type, text }) => [type, text]);
+
+	test("tags, attributes, values, a style's properties, merge tags, entities and comments each get their color", () => {
+		assert.deepEqual(kinds('<!-- sponsor --><td align=center style="color:#fff; padding:{{gap}}">Hi {{first_name|there}} &amp; you</td><br/>'), [
+			["comment", "<!-- sponsor -->"],
+			["punctuation", "<"],
+			["tag", "td"],
+			["text", " "],
+			["attribute", "align"],
+			["punctuation", "="],
+			["value", "center"],
+			["text", " "],
+			["attribute", "style"],
+			["punctuation", "="],
+			["value", '"'],
+			["property", "color"],
+			["punctuation", ":"],
+			["value", "#fff"],
+			["punctuation", ";"],
+			["property", " padding"],
+			["punctuation", ":"],
+			["field", "{{gap}}"],
+			["value", '"'],
+			["punctuation", ">"],
+			["text", "Hi "],
+			["field", "{{first_name|there}}"],
+			["text", " "],
+			["entity", "&amp;"],
+			["text", " you"],
+			["punctuation", "</"],
+			["tag", "td"],
+			["punctuation", "><"],
+			["tag", "br"],
+			["punctuation", "/>"],
+		]);
+	});
+
+	test("what isn't markup stays text, a script's code included, and a half-written tag colors as far as it goes", () => {
+		assert.deepEqual(kinds("1 < 2 {x} <script>if (a<b) go()</script>"), [
+			["text", "1 < 2 {x} "],
+			["punctuation", "<"],
+			["tag", "script"],
+			["punctuation", ">"],
+			["text", "if (a<b) go()"],
+			["punctuation", "</"],
+			["tag", "script"],
+			["punctuation", ">"],
+		]);
+		assert.deepEqual(kinds('<a href="https://exam'), [
+			["punctuation", "<"],
+			["tag", "a"],
+			["text", " "],
+			["attribute", "href"],
+			["punctuation", "="],
+			["value", '"https://exam'],
+		]);
+	});
+
+	test("every character lands in one token, so the colored copy lines up with the field", () => {
+		const sources = [...Object.values(payloads), "", "<", "</", "<a", '<a b="', "<!--", "<!", "{{", "&", "<a =x>", "<a b c=d e='f'>", "<p\n  class=x\n>"];
+		for (const source of sources) assert.equal(highlightHtml(source).map(({ text }) => text).join(""), source, JSON.stringify(source));
+	});
+
+	test("the field shows its code in color behind letters of its own, and types in the field's own value", () => {
+		const html = renderToStaticMarkup(createElement(InputHtml, { value: '<p class="x">Hi</p>', onChange: () => {}, "aria-label": "HTML" }));
+		assert.match(html, /<div aria-hidden="true"[^>]*><span class="text-zinc-400[^"]*">&lt;<\/span><span class="text-rose-600[^"]*">p<\/span>/);
+		assert.match(html, /<textarea[^>]*\sclass="[^"]*\btext-transparent\b[^"]*"[^>]*>&lt;p class=&quot;x&quot;&gt;Hi&lt;\/p&gt;<\/textarea>/);
+		assert.match(html, /<textarea[^>]*\saria-label="HTML"/);
 	});
 });
 
