@@ -89,12 +89,22 @@ export default function ContactsPage() {
 			<p>
 				Click a contact on the <LinkApp href="/contacts">Contacts page</LinkApp> to open their page. At the top: their picture, name
 				and address. Under them, a globe turned to their country, next to how many of your emails they got and the share they opened
-				and clicked. Then About, with when they subscribed, where they came from, their email provider (Gmail, Outlook, or their own
-				domain, like their company&apos;s), when they confirmed and when they last clicked; their fields, each with the tag that
-				prints it in your emails; their tags, the segments they&apos;re in and your other newsletters they&apos;re on. Last, their
-				activity, newest first: every email they got, when they opened it, the links they clicked, and when they signed up, confirmed
-				or changed status.
+				and clicked. Below, three tabs:
 			</p>
+			<ul>
+				<li>
+					<strong>Activity</strong>, newest first: every email they got, when they opened it, the links they clicked, and when they
+					signed up, confirmed or changed status.
+				</li>
+				<li>
+					<strong>About</strong>: when they subscribed, where they came from, their email provider (Gmail, Outlook, or their own
+					domain, like their company&apos;s), when they confirmed and when they last clicked, the segments they&apos;re in and your
+					other newsletters they&apos;re on.
+				</li>
+				<li>
+					<strong>Fields and tags</strong>: their fields, each with the tag that prints it in your emails, and their tags.
+				</li>
+			</ul>
 			<p>
 				The buttons at the top right change their status, edit their fields and delete them. Click an issue to open its report, a tag
 				to list everyone who has it, and a segment to open its page.

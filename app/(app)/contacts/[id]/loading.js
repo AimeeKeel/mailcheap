@@ -1,9 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TIMELINE_WIDTHS = [72, 58, 64, 46, 68, 52];
-const ROW_WIDTHS = [20, 28, 16, 24];
-// The profile's cards, About, Fields and Tags, by their number of rows.
-const CARD_ROWS = [4, 3, 1];
+// The tabs' names: Activity, About, Fields and tags.
+const TAB_WIDTHS = [18, 14, 28];
 
 export default function Loading() {
 	return (
@@ -43,28 +42,13 @@ export default function Loading() {
 						))}
 					</div>
 				</div>
-				<div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{CARD_ROWS.map((rows, card) => (
-						<div key={card} className="rounded-xl bg-card shadow-border">
-							<div className="flex h-12 items-center px-4">
-								<Skeleton className="h-3.5 w-16" />
-							</div>
-							<div className="divide-y divide-border/60 border-t border-border/60">
-								{ROW_WIDTHS.slice(0, rows).map((width, row) => (
-									<div key={row} className="flex justify-between px-4 py-3">
-										<Skeleton className="h-3 w-16" />
-										<Skeleton className="h-3" style={{ width: `${width * 4}px` }} />
-									</div>
-								))}
-							</div>
-						</div>
-					))}
-				</div>
-				<div className="rounded-xl bg-card shadow-border">
-					<div className="flex h-12 items-center px-4">
-						<Skeleton className="h-3.5 w-16" />
+				<div className="flex flex-col gap-4">
+					<div className="flex h-11 items-center gap-6 border-b border-border/60">
+						{TAB_WIDTHS.map((width, index) => (
+							<Skeleton key={index} className="h-3.5" style={{ width: `${width * 4}px` }} />
+						))}
 					</div>
-					<div className="flex flex-col gap-5 border-t border-border/60 p-4">
+					<div className="flex flex-col gap-5 rounded-xl bg-card p-4 shadow-border">
 						{TIMELINE_WIDTHS.map((width, index) => (
 							<div key={index} className="flex items-center gap-3">
 								<Skeleton className="size-7 shrink-0 rounded-full" />

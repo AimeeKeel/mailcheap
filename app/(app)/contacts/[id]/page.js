@@ -6,6 +6,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Clock,
+	History,
 	Mail,
 	MailCheck,
 	MailOpen,
@@ -14,8 +15,10 @@ import {
 	MousePointerClick,
 	Send,
 	ShieldAlert,
+	Tags as TagsIcon,
 	UserCheck,
 	UserPlus,
+	UserRound,
 	UserX,
 } from "lucide-react";
 import AvatarContact from "@/components/AvatarContact";
@@ -35,6 +38,7 @@ import MenuContactStatus from "@/components/MenuContactStatus";
 import ProviderContactOptions from "@/components/ProviderContactOptions";
 import TextEmpty from "@/components/TextEmpty";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { scoped } from "@/lib/account-scope";
 import { countContactEmails, listContactEmails } from "@/lib/contact-emails";
 import { MAX_CONTACT_FIELDS, contactFieldValues } from "@/lib/contact-fields";
@@ -61,8 +65,9 @@ export const metadata = { title: "Contact" };
 const EMAILS_STEP = 30;
 const MAX_EMAILS = 600;
 
-// One contact: who they are, how they read, every email they got and what they did with it, among the rest of their
-// history, and their details, segments and other newsletters. Its newsletter opens with it, like a campaign's.
+// One contact: who they are, where and how they read, then in tabs every email they got and what they did with it among
+// the rest of their history, where they came from with their segments and other newsletters, and their fields and tags.
+// Its newsletter opens with it, like a campaign's.
 export default async function ContactPage({ params, searchParams }) {
 	const [{ id }, query, view, cookieStore] = await Promise.all([params, searchParams, getSelectedNewsletter(), cookies()]);
 	if (!isObjectIdString(id)) notFound();
@@ -151,63 +156,146 @@ export default async function ContactPage({ params, searchParams }) {
 					</div>
 				</div>
 
-				<div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 lg:grid-cols-3">
-					<CardSettings title="About" stagger={3}>
-						<RowFact label="Subscribed">{formatDate(contact.subscribedAt, timeZone)}</RowFact>
-						<RowFact label="Source">
-							<TextSource contact={source} />
-						</RowFact>
-						<RowFact label="Email provider">
-							<span className="flex min-w-0 items-center gap-1.5">
-								<ImageFavicon domain={inbox.domain} size={14} />
-								<span className="truncate">{inbox.label}</span>
-							</span>
-						</RowFact>
-						{contact.confirmedAt && <RowFact label="Confirmed">{formatDate(contact.confirmedAt, timeZone)}</RowFact>}
-						<RowFact label="Last click">{formatDate(contact.lastClickAt, timeZone) ?? <TextEmpty label="Never" />}</RowFact>
-						{hasImportedNumbers(contact.imported) && (
-							<RowFact label="Before MailCheap">{describeImported(contact.imported)}</RowFact>
-						)}
-					</CardSettings>
-
-					<CardSettings
-						title="Fields"
-						stagger={4}
-						action={
-							<ButtonEditContact contact={details} variant="ghost" size="sm">
-								Edit
-							</ButtonEditContact>
-						}
+				{/* Every tab is rendered, the others hidden: they open at once, and the server's HTML has them all. */}
+				<Tabs defaultValue="activity" style={{ "--stagger": 3 }} className="gap-4 animate-enter">
+					<TabsList
+						variant="line"
+						className="w-full justify-start gap-6 overflow-x-auto rounded-none border-b border-border/60 p-0 group-data-horizontal/tabs:h-11 [scrollbar-width:none]"
 					>
-						<RowFieldValue label="First name" tag={firstNameTag("")}>
-							{name ?? <TextEmpty />}
-						</RowFieldValue>
-						{fields.map((field) => (
-							<RowFieldValue key={field.key} label={field.label} tag={fieldTag(field.key)}>
-								<TextFieldValue field={field} value={values[field.key]} />
-							</RowFieldValue>
-						))}
-						<div className="flex flex-col items-start gap-2.5 px-4 py-3">
-							<p className="text-xs text-pretty text-muted-foreground">
-								Type a field&apos;s tag in an email to print each reader&apos;s value. Fields you add, like a company, are on
-								every contact.
-							</p>
-							{fields.length < MAX_CONTACT_FIELDS && <ButtonAddField className="-ml-2.5" />}
-							<LinkHelpFields />
-						</div>
-					</CardSettings>
+						<TriggerTab value="activity" icon={History}>
+							Activity
+						</TriggerTab>
+						<TriggerTab value="about" icon={UserRound}>
+							About
+						</TriggerTab>
+						<TriggerTab value="fields" icon={TagsIcon}>
+							Fields and tags
+						</TriggerTab>
+					</TabsList>
 
-					<div className="flex flex-col gap-6 md:col-span-2 lg:col-span-1">
+					<PanelTab value="activity">
+						<section aria-label="Activity" className="rounded-xl bg-card shadow-border">
+							<ol className="flex flex-col p-4">
+								{timeline.map((item) =>
+									item.email ? (
+										<ItemEmail
+											key={item.key}
+											email={item.email}
+											contact={contact}
+											contactFields={account.contactFields}
+											timeZone={timeZone}
+										/>
+									) : (
+										<ItemEvent key={item.key} event={item.event} source={source} timeZone={timeZone} />
+									)
+								)}
+							</ol>
+							{nextCursor && (
+								<div className="border-t border-border/60 p-2">
+									<Button asChild variant="ghost" className="w-full text-muted-foreground">
+										<Link href={`/contacts/${id}?emails=${limit + EMAILS_STEP}`} scroll={false}>
+											Show older emails
+										</Link>
+									</Button>
+								</div>
+							)}
+						</section>
+					</PanelTab>
+
+					<PanelTab value="about" className="flex flex-col gap-4">
+						<section aria-label="About" className="rounded-xl bg-card p-4 shadow-border sm:p-5">
+							<dl className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+								<Property label="Subscribed">{formatDate(contact.subscribedAt, timeZone)}</Property>
+								<Property label="Source">
+									<TextSource contact={source} />
+								</Property>
+								<Property label="Email provider">
+									<span className="flex min-w-0 items-center gap-1.5">
+										<ImageFavicon domain={inbox.domain} size={14} />
+										<span className="truncate">{inbox.label}</span>
+									</span>
+								</Property>
+								{contact.confirmedAt && <Property label="Confirmed">{formatDate(contact.confirmedAt, timeZone)}</Property>}
+								<Property label="Last click">{formatDate(contact.lastClickAt, timeZone) ?? <TextEmpty label="Never" />}</Property>
+								{hasImportedNumbers(contact.imported) && <Property label="Before MailCheap">{describeImported(contact.imported)}</Property>}
+							</dl>
+						</section>
+
+						{(segments.hasAny || otherNewsletters.length > 0) && (
+							<div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+								{segments.hasAny && (
+									<CardSettings title="Segments">
+										{segments.matched.length > 0 ? (
+											segments.matched.map((segment) => (
+												<RowLink key={String(segment._id)} href={`/contacts/segments/${segment._id}`}>
+													<span className="truncate">{segment.name}</span>
+												</RowLink>
+											))
+										) : (
+											<p className="px-4 py-3 text-sm text-muted-foreground">In none of your segments</p>
+										)}
+									</CardSettings>
+								)}
+								{otherNewsletters.length > 0 && (
+									<CardSettings title="Other newsletters">
+										{otherNewsletters.map((other) => {
+											const newsletter = byNewsletter.get(String(other.newsletterId));
+											return (
+												<RowLink key={String(other._id)} href={`/contacts/${other._id}`}>
+													<span className="flex min-w-0 items-center gap-2">
+														<AvatarNewsletter newsletter={newsletter} size={18} />
+														<span className="truncate">{newsletter.name}</span>
+													</span>
+													<BadgeStatus status={other.status} className="ml-auto" />
+												</RowLink>
+											);
+										})}
+									</CardSettings>
+								)}
+							</div>
+						)}
+					</PanelTab>
+
+					<PanelTab value="fields" className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
 						<CardSettings
-							title="Tags"
-							stagger={5}
+							title="Fields"
 							action={
 								<ButtonEditContact contact={details} variant="ghost" size="sm">
 									Edit
 								</ButtonEditContact>
 							}
 						>
-							<div className="flex flex-col gap-2.5 px-4 py-3">
+							<dl className="grid grid-cols-1 gap-x-6 gap-y-5 p-4 sm:grid-cols-2">
+								<PropertyField label="First name" tag={firstNameTag("")}>
+									{name ?? <TextEmpty />}
+								</PropertyField>
+								{fields.map((field) => (
+									<PropertyField key={field.key} label={field.label} tag={fieldTag(field.key)}>
+										<TextFieldValue field={field} value={values[field.key]} />
+									</PropertyField>
+								))}
+							</dl>
+							<div className="flex flex-col items-start gap-2.5 px-4 py-3">
+								<p className="text-xs text-pretty text-muted-foreground">
+									Type a field&apos;s tag in an email to print each reader&apos;s value. Fields you add, like a company, are on
+									every contact.
+								</p>
+								<div className="-ml-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+									{fields.length < MAX_CONTACT_FIELDS && <ButtonAddField />}
+									<LinkHelpFields className="ml-2.5" />
+								</div>
+							</div>
+						</CardSettings>
+
+						<CardSettings
+							title="Tags"
+							action={
+								<ButtonEditContact contact={details} variant="ghost" size="sm">
+									Edit
+								</ButtonEditContact>
+							}
+						>
+							<div className="flex flex-col gap-2.5 p-4">
 								{details.tags.length > 0 ? (
 									<span className="flex flex-wrap gap-1.5">
 										{details.tags.map((tag) => (
@@ -228,90 +316,51 @@ export default async function ContactPage({ params, searchParams }) {
 								</p>
 							</div>
 						</CardSettings>
-
-						{segments.hasAny && (
-							<CardSettings title="Segments" stagger={6}>
-								{segments.matched.length > 0 ? (
-									segments.matched.map((segment) => (
-										<RowLink key={String(segment._id)} href={`/contacts/segments/${segment._id}`}>
-											<span className="truncate">{segment.name}</span>
-										</RowLink>
-									))
-								) : (
-									<p className="px-4 py-3 text-sm text-muted-foreground">In none of your segments</p>
-								)}
-							</CardSettings>
-						)}
-
-						{otherNewsletters.length > 0 && (
-							<CardSettings title="Other newsletters" stagger={7}>
-								{otherNewsletters.map((other) => {
-									const newsletter = byNewsletter.get(String(other.newsletterId));
-									return (
-										<RowLink key={String(other._id)} href={`/contacts/${other._id}`}>
-											<span className="flex min-w-0 items-center gap-2">
-												<AvatarNewsletter newsletter={newsletter} size={18} />
-												<span className="truncate">{newsletter.name}</span>
-											</span>
-											<BadgeStatus status={other.status} className="ml-auto" />
-										</RowLink>
-									);
-								})}
-							</CardSettings>
-						)}
-					</div>
-				</div>
-
-				<section style={{ "--stagger": 6 }} className="rounded-xl bg-card shadow-border animate-enter">
-					<h2 className="flex h-12 items-center px-4 text-sm font-medium">Activity</h2>
-					<ol className="flex flex-col border-t border-border/60 p-4">
-						{timeline.map((item) =>
-							item.email ? (
-								<ItemEmail
-									key={item.key}
-									email={item.email}
-									contact={contact}
-									contactFields={account.contactFields}
-									timeZone={timeZone}
-								/>
-							) : (
-								<ItemEvent key={item.key} event={item.event} source={source} timeZone={timeZone} />
-							)
-						)}
-					</ol>
-					{nextCursor && (
-						<div className="border-t border-border/60 p-2">
-							<Button asChild variant="ghost" className="w-full text-muted-foreground">
-								<Link href={`/contacts/${id}?emails=${limit + EMAILS_STEP}`} scroll={false}>
-									Show older emails
-								</Link>
-							</Button>
-						</div>
-					)}
-				</section>
+					</PanelTab>
+				</Tabs>
 			</div>
 		</ProviderContactOptions>
 	);
 }
 
-function RowFact({ label, children }) {
+function TriggerTab({ value, icon: Icon, children }) {
 	return (
-		<div className="flex items-start justify-between gap-4 px-4 py-2.5 text-sm">
-			<span className="shrink-0 text-muted-foreground">{label}</span>
-			<span className="flex min-h-5 min-w-0 items-center justify-end text-right break-words">{children}</span>
+		<TabsTrigger
+			value={value}
+			className="h-full flex-none gap-2 px-0.5 group-data-horizontal/tabs:after:-bottom-px [&_svg:not([class*='size-'])]:size-3.5"
+		>
+			<Icon aria-hidden="true" />
+			{children}
+		</TabsTrigger>
+	);
+}
+
+function PanelTab({ value, className, children }) {
+	return (
+		<TabsContent value={value} forceMount className={cn("animate-fade-in data-[state=inactive]:hidden", className)}>
+			{children}
+		</TabsContent>
+	);
+}
+
+function Property({ label, children }) {
+	return (
+		<div className="flex min-w-0 flex-col gap-1">
+			<dt className="text-xs text-muted-foreground">{label}</dt>
+			<dd className="flex min-h-5 min-w-0 items-center text-sm break-words">{children}</dd>
 		</div>
 	);
 }
 
 // A field's name and the contact's value, over the tag that prints it in emails.
-function RowFieldValue({ label, tag, children }) {
+function PropertyField({ label, tag, children }) {
 	return (
-		<div className="flex flex-col items-start gap-1.5 px-4 py-2.5 text-sm">
-			<div className="flex w-full items-start justify-between gap-4">
-				<span className="shrink-0 text-muted-foreground">{label}</span>
-				<span className="flex min-h-5 min-w-0 items-center justify-end text-right break-words">{children}</span>
-			</div>
-			<ButtonMergeTag tag={tag} className="max-w-full -translate-x-px" />
+		<div className="flex min-w-0 flex-col gap-1">
+			<dt className="text-xs text-muted-foreground">{label}</dt>
+			<dd className="flex min-w-0 flex-col items-start gap-2 text-sm">
+				<span className="flex min-h-5 max-w-full min-w-0 items-center break-words">{children}</span>
+				<ButtonMergeTag tag={tag} className="max-w-full -translate-x-px" />
+			</dd>
 		</div>
 	);
 }

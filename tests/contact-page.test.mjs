@@ -311,6 +311,11 @@ describe("the contact page and its data", () => {
 		const header = html.match(/<header[^>]*>([\s\S]*?)<\/header>/)[1];
 		assert.match(header, /<span class="sr-only">Status: <\/span>.*?Active/, "their status, a button at the top next to Edit fields");
 		assert.ok(header.includes("Edit fields"));
+		const tabs = [...html.matchAll(/<button([^>]*role="tab"[^>]*)>([\s\S]*?)<\/button>/g)].map(([, attributes, inner]) => [
+			inner.replace(/<[^>]+>/g, ""),
+			attributes.includes('aria-selected="true"'),
+		]);
+		assert.deepEqual(tabs, [["Activity", true], ["About", false], ["Fields and tags", false]], "the rest in three tabs, Activity open");
 		assert.ok(html.includes("aria-label=\"Copy {{first_name}}\"") && html.includes("aria-label=\"Copy {{plan}}\""), "each field with its tag");
 		assert.ok(html.includes("Email provider"), "what their inbox is, named");
 		assert.ok(html.includes("Hello Jane, on Pro"), "the subject as they got it, with their first name and fields");
