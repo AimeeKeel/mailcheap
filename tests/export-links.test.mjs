@@ -23,12 +23,21 @@ test("an export link carries the account and filters, signed, for an hour", () =
 		query: "jane",
 		segmentId: null,
 		tag: null,
+		source: null,
+		signedUpSince: null,
+		signedUpBefore: null,
 	});
 	assert.equal(verifyExportToken(token, now + 61 * 60_000), null, "expired");
 	const segment = createExportToken({ accountId: ACCOUNT, segmentId: "6650f1c2e9b1d4a0123456ee" }, now);
 	assert.equal(verifyExportToken(segment.token, now).segmentId, "6650f1c2e9b1d4a0123456ee", "a segment's export keeps it");
 	const tagged = createExportToken({ accountId: ACCOUNT, tag: "vip" }, now);
 	assert.equal(verifyExportToken(tagged.token, now).tag, "vip", "a tag's export keeps it");
+	const narrowed = createExportToken({ accountId: ACCOUNT, source: "import", signedUpSince: "2026-10-01", signedUpBefore: "2026-10-16" }, now);
+	assert.deepEqual(
+		(({ source, signedUpSince, signedUpBefore }) => ({ source, signedUpSince, signedUpBefore }))(verifyExportToken(narrowed.token, now)),
+		{ source: "import", signedUpSince: "2026-10-01", signedUpBefore: "2026-10-16" },
+		"a source's and signup days' export keeps them"
+	);
 
 	const [payload, signature] = token.split(".");
 	const widened = Buffer.from(JSON.stringify({ a: "6650f1c2e9b1d4a0123456aa", e: Math.floor(now / 1000) + 3600 })).toString("base64url");

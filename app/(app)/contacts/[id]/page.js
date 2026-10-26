@@ -220,7 +220,7 @@ export default async function ContactPage({ params, searchParams }) {
 							<CardSettings title="Segments" stagger={4}>
 								{segments.matched.length > 0 ? (
 									segments.matched.map((segment) => (
-										<RowLink key={String(segment._id)} href={`/contacts?segment=${segment._id}`}>
+										<RowLink key={String(segment._id)} href={`/contacts/segments/${segment._id}`}>
 											<span className="truncate">{segment.name}</span>
 										</RowLink>
 									))

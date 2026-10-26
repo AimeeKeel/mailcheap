@@ -4,10 +4,10 @@ import LinkApp from "@/components/LinkApp";
 import { TRIAL_CONTACTS } from "@/lib/actions/contacts";
 import { isCloud } from "@/lib/config";
 import { MAX_CONTACT_FIELDS, MAX_TAGS, MAX_TAG_LENGTH } from "@/lib/contact-fields";
-import { LIST_STARTED_AT } from "@/lib/contacts-header";
+import { LIST_STARTED_AT, SEGMENTS_FROM } from "@/lib/contacts-header";
 import { isSpamListEnabled } from "@/lib/domain-reputation";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
-import { MAX_SEGMENT_CONDITIONS, SEGMENT_PRESETS, describeSegment } from "@/lib/segments";
+import { ACTIVITY_DAYS, MAX_SEGMENT_CONDITIONS, SEGMENT_PRESETS, describeSegment } from "@/lib/segments";
 
 export const metadata = getHelpPageMetadata("contacts");
 
@@ -17,10 +17,7 @@ export default function ContactsPage() {
 			<h2 id="statuses">Statuses</h2>
 			<p>
 				The <LinkApp href="/contacts">Contacts page</LinkApp> lists the open newsletter&apos;s contacts, newest signups first, each
-				with their Gravatar photo, or else the logo of their email&apos;s domain, or their initial. Filter them by status or by tag,
-				or search by any part of their email address: <code>@example.com</code> finds everyone at that domain, and a{" "}
-				<code>*</code> stands for any characters, as in <code>jane*@example.com</code>. Tag and Export follow the search, to tag or
-				download everyone it found.
+				with their Gravatar photo, or else the logo of their email&apos;s domain, or their initial. Each one has a status:
 			</p>
 			<table>
 				<thead>
@@ -62,6 +59,32 @@ export default function ContactsPage() {
 				</tbody>
 			</table>
 
+			<h2 id="filters">Searching and filtering</h2>
+			<p>
+				Search by any part of an email address: <code>@example.com</code> finds everyone at that domain, and a <code>*</code> stands
+				for any characters, as in <code>jane*@example.com</code>. Next to the search, filters narrow the list:
+			</p>
+			<ul>
+				<li>
+					<strong>Status</strong>: one of the statuses above, each with how many contacts have it.
+				</li>
+				<li>
+					<strong>Tag</strong>: everyone with a tag, once your contacts have tags.
+				</li>
+				<li>
+					<strong>Signed up</strong>: before a day, after one, or between two, both included. Days are in UTC, like the dates in the
+					list.
+				</li>
+				<li>
+					<strong>Source</strong>: where they came from: your website&apos;s signup form, the form on your own site, an import, by
+					hand, the API, or a source an API call gave.
+				</li>
+			</ul>
+			<p>
+				The cross on a filter clears it, and Clear clears them all. The filters stay in the page&apos;s address, so a bookmark keeps
+				them. Export and Delete, in the <strong>⋯</strong> menu at the top, follow the search and the filters.
+			</p>
+
 			<h2 id="contact-page">Each contact&apos;s page</h2>
 			<p>
 				Click a contact on the <LinkApp href="/contacts">Contacts page</LinkApp> to open their page. At the top: their picture, name
@@ -72,7 +95,7 @@ export default function ContactsPage() {
 			</p>
 			<p>
 				Change their status from the badge under their name. Edit details changes their first name, fields and tags, and the trash
-				button deletes them. Click an issue to open its report, a tag to list everyone who has it, and a segment to list its contacts.
+				button deletes them. Click an issue to open its report, a tag to list everyone who has it, and a segment to open its page.
 			</p>
 			<p>
 				Their activity keeps every change of their status, each with what made it: the unsubscribe link in your email or their mail
@@ -105,8 +128,9 @@ export default function ContactsPage() {
 				<li>
 					<strong>Tags</strong>: labels a contact has or doesn&apos;t, like vip, podcast or customer, {MAX_TAGS} per contact at most.
 					Use them to sort people into groups: list everyone with a tag, or send to them through a segment. Tags are lowercase, up
-					to {MAX_TAG_LENGTH} characters, without commas. Tag lists everyone the page shows with its filters, or takes a tag off
-					them. Tags never show in emails.
+					to {MAX_TAG_LENGTH} characters, without commas. Add them in a contact&apos;s details, with an import, or through the{" "}
+					<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>, which can tag many contacts at once. Tags never show
+					in emails.
 				</li>
 				<li>
 					<strong>Fields</strong>: your own questions with an answer for each contact, like a last name, a birthday or a plan, as
@@ -181,9 +205,10 @@ export default function ContactsPage() {
 
 			<h2 id="segments">Segments</h2>
 			<p>
-				A segment picks some of your contacts with a few conditions, and keeps up to date as they change. The{" "}
-				<LinkApp href="/contacts">Contacts page</LinkApp> shows each one as a card with its count: click it to list its contacts, and
-				the export follows. New segment opens the editor, with a few starting points:
+				A segment picks some of your contacts with a few conditions, and keeps up to date as they change. Once your list has{" "}
+				{SEGMENTS_FROM} contacts, Segments at the top of the <LinkApp href="/contacts">Contacts page</LinkApp> opens{" "}
+				<LinkApp href="/contacts/segments">yours</LinkApp>, each with its active contacts, their share of your list and how many
+				opened in the last {ACTIVITY_DAYS} days. New segment opens the editor, with a few starting points:
 			</p>
 			<ul>
 				{SEGMENT_PRESETS.map((segment) => (
@@ -198,6 +223,12 @@ export default function ContactsPage() {
 				whether they have a first name, and your own fields, {MAX_SEGMENT_CONDITIONS} at most. A segment matches all of its
 				conditions, or any of them. In the send step, pick one to send an issue to its contacts only.{" "}
 				<Link href={getHelpHref("sending", "who")}>Who gets it</Link>
+			</p>
+			<p>
+				Click a segment to open its page. At the top: its active contacts, the share of them who opened and clicked in the last{" "}
+				{ACTIVITY_DAYS} days next to your whole list, and the campaigns sent to it. Below, its contacts of every status, with the
+				search and filters of the Contacts page. Edit changes its name and conditions, and the <strong>⋯</strong> menu exports its
+				contacts, deletes them, or deletes the segment, whose contacts stay.
 			</p>
 			<p>
 				Counts are of active contacts, the ones an issue goes to. Conditions on dates count back from now, so &ldquo;opened in the last
@@ -248,6 +279,10 @@ export default function ContactsPage() {
 				</li>
 			</ul>
 			<p>
+				To delete many at once, <a href="#filters">filter the list</a> or open a segment, then pick Delete in the{" "}
+				<strong>⋯</strong> menu at the top. It deletes every contact the list shows, on every page, the same way.
+			</p>
+			<p>
 				Bounced and complained contacts keep their status: their address can&apos;t receive email, or they marked one of your
 				emails as spam. No email goes out when you change a status. The{" "}
 				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link> can change statuses too, with the same rules.
@@ -256,8 +291,8 @@ export default function ContactsPage() {
 			<h2 id="export">Exporting</h2>
 			<p>
 				Export, in the <strong>⋯</strong> menu at the top of the <LinkApp href="/contacts">Contacts page</LinkApp>, downloads the
-				contacts that match your filters as a CSV file, with their first name, tags and a column per field. Its columns go back in
-				through the import as they are, so it&apos;s also a backup.
+				contacts that match your filters as a CSV file, with their first name, tags and a column per field. On a segment&apos;s
+				page, it downloads the segment&apos;s. Its columns go back in through the import as they are, so it&apos;s also a backup.
 			</p>
 
 			<h2 id="undeliverable">Addresses no one can reach</h2>

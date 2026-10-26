@@ -134,7 +134,7 @@ function FormSegment({ newsletterId, segment, onSaved, isPicking, onDeleted }) {
 			if (result?.error) return void toast.error(result.error);
 			toast.success(segment ? "Segment saved" : "Segment created");
 			onSaved(result.id);
-			if (!isPicking) router.push(`/contacts?segment=${result.id}`, { scroll: false });
+			if (!isPicking) router.push(`/contacts/segments/${result.id}`, { scroll: false });
 		});
 	}
 
@@ -145,7 +145,7 @@ function FormSegment({ newsletterId, segment, onSaved, isPicking, onDeleted }) {
 			if (result?.error) return void toast.error(result.error);
 			toast.success("Segment deleted");
 			onDeleted();
-			router.push("/contacts", { scroll: false });
+			router.replace("/contacts/segments", { scroll: false });
 		});
 	}
 

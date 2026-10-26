@@ -94,6 +94,8 @@ contactSchema.index({ newsletterId: 1, status: 1, subscribedAt: -1, _id: -1 });
 contactSchema.index({ newsletterId: 1, status: 1, lastOpenAt: -1 });
 // A tag's contacts, newest first, for the list's tag filter and segments on tags, and the newsletter's tags.
 contactSchema.index({ newsletterId: 1, tags: 1, subscribedAt: -1, _id: -1 });
+// The same for a source, and the newsletter's sources.
+contactSchema.index({ newsletterId: 1, source: 1, subscribedAt: -1, _id: -1 });
 // The list cleanup totals in newsletter settings.
 contactSchema.index({ newsletterId: 1, lastChanceAt: 1 }, { partialFilterExpression: { lastChanceAt: { $exists: true } } });
 // An admin taking an address off the never-email list finds the contacts it stopped, in every account.
