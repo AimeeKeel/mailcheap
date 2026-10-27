@@ -181,7 +181,7 @@ function FormConsent({ id, email, status, onDone }) {
 }
 
 // redirectTo: where to go once it's deleted, from the contact's own page.
-export function DialogDeleteContact({ id, email, status, isOpen, onOpenChange, redirectTo }) {
+export function DialogDeleteContact({ id, email, status, isOpen, onOpenChange, onCloseAutoFocus, redirectTo }) {
 	const router = useRouter();
 	const [isDeleting, startDeleting] = useTransition();
 
@@ -197,7 +197,7 @@ export function DialogDeleteContact({ id, email, status, isOpen, onOpenChange, r
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-sm">
+			<DialogContent className="sm:max-w-sm" onCloseAutoFocus={onCloseAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>Delete this contact?</DialogTitle>
 					<DialogDescription>

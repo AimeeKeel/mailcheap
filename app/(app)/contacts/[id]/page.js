@@ -26,7 +26,6 @@ import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
 import ButtonAddField from "@/components/ButtonAddField";
 import ButtonCopy from "@/components/ButtonCopy";
-import ButtonDeleteContact from "@/components/ButtonDeleteContact";
 import ButtonEditContact from "@/components/ButtonEditContact";
 import ButtonMergeTag from "@/components/ButtonMergeTag";
 import CardLocation from "@/components/CardLocation";
@@ -34,6 +33,7 @@ import CardSettings from "@/components/CardSettings";
 import CardStat from "@/components/CardStat";
 import ImageFavicon from "@/components/ImageFavicon";
 import LinkHelpFields from "@/components/LinkHelpFields";
+import MenuContactMore from "@/components/MenuContactMore";
 import MenuContactStatus from "@/components/MenuContactStatus";
 import ProviderContactOptions from "@/components/ProviderContactOptions";
 import TextEmpty from "@/components/TextEmpty";
@@ -133,7 +133,7 @@ export default async function ContactPage({ params, searchParams }) {
 						undeliverableReason={contact.undeliverableReason}
 					/>
 					<ButtonEditContact contact={details} />
-					<ButtonDeleteContact id={id} email={contact.email} status={contact.status} />
+					<MenuContactMore id={id} email={contact.email} status={contact.status} />
 				</div>
 			</header>
 

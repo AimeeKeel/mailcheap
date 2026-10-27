@@ -107,8 +107,8 @@ export default function ContactsPage() {
 				</li>
 			</ul>
 			<p>
-				The buttons at the top right change their status, edit their fields and delete them. Click an issue to open its report, a tag
-				to list everyone who has it, and a segment to open its page.
+				The buttons at the top right change their status and edit their fields, and the <strong>⋯</strong> menu next to them has
+				Delete contact. Click an issue to open its report, a tag to list everyone who has it, and a segment to open its page.
 			</p>
 			<p>
 				Their activity keeps every change of their status, each with what made it: the unsubscribe link in your email or their mail
@@ -267,8 +267,8 @@ export default function ContactsPage() {
 
 			<h2 id="actions">Changing a status, and deleting</h2>
 			<p>
-				Each contact&apos;s menu, at the end of their row, has what applies to them, and so do the buttons at the top right of their
-				page, where the first one shows their status and opens the changes it allows:
+				Each contact&apos;s menu, at the end of their row, has what applies to them, and so does the top right of their page: the
+				first button shows their status and opens the changes it allows, and Delete contact is in the <strong>⋯</strong> menu:
 			</p>
 			<ul>
 				<li>

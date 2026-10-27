@@ -20,7 +20,7 @@ export default function Loading() {
 				<div className="flex gap-2">
 					<Skeleton className="h-9 w-24 rounded-lg" />
 					<Skeleton className="h-9 w-28 rounded-lg" />
-					<Skeleton className="size-9 rounded-lg" />
+					<span className="size-9 shrink-0" />
 				</div>
 			</div>
 			<div className="flex flex-col gap-6">

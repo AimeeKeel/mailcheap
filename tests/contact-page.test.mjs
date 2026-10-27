@@ -311,6 +311,8 @@ describe("the contact page and its data", () => {
 		const header = html.match(/<header[^>]*>([\s\S]*?)<\/header>/)[1];
 		assert.match(header, /<span class="sr-only">Status: <\/span>.*?Active/, "their status, a button at the top next to Edit fields");
 		assert.ok(header.includes("Edit fields"));
+		assert.ok(header.includes('aria-label="More"'), "a ⋯ menu after them");
+		assert.ok(!header.includes("Delete contact"), "deleting is in it, not a button of its own");
 		const tabs = [...html.matchAll(/<button([^>]*role="tab"[^>]*)>([\s\S]*?)<\/button>/g)].map(([, attributes, inner]) => [
 			inner.replace(/<[^>]+>/g, ""),
 			attributes.includes('aria-selected="true"'),
