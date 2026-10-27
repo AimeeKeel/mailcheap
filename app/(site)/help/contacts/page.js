@@ -171,7 +171,9 @@ export default function ContactsPage() {
 					Before your list has contacts, and on a phone, it&apos;s Contact fields in the <strong>⋯</strong> menu there. On a
 					contact&apos;s page, Add a field opens the same list, under their fields or in Edit fields. Type a name, like Birthday,
 					pick its type (text, a number or a date) and click the plus. Its key, like <code>birthday</code>, is
-					what imports, segments and the API call it. An import can make fields for you too, as below.
+					what imports, segments and the API call it, and between double braces, like <code>{"{{birthday}}"}</code> next to it,
+					it prints each reader&apos;s own value in your emails: click it to copy it. An import can make fields for you too, as
+					below.
 				</li>
 				<li>
 					<strong>Fill them in</strong>, whichever way suits you:
