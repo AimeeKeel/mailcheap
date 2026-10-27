@@ -17,6 +17,7 @@ import { Callout } from "@/lib/editor-callout";
 import { findWords } from "@/lib/editor-find";
 import { ImageAligned } from "@/lib/editor-image";
 import { MergeTags } from "@/lib/editor-merge-tags";
+import { UndoDelete } from "@/lib/editor-undo-delete";
 import { toast } from "@/lib/toast";
 import { IMAGE_TYPES, IMAGE_TYPE_ERROR, getDisplaySize, prepareImage, uploadImage } from "@/lib/upload-image";
 import { useFileDropGuard } from "@/lib/use-file-drop";
@@ -53,6 +54,7 @@ export default function EditorRich({ ref, content, onChange, contactFields = [],
 			ButtonBlock.configure({ newsletter, onEditLink: () => setIsEditingButtonLink(true) }),
 			HtmlBlock.configure({ newsletter }),
 			BlockHandle,
+			UndoDelete,
 			MergeTags.configure({ contactFields }),
 			Placeholder.configure({
 				placeholder: ({ node }) => (node.type.name === "heading" ? "Heading" : "Write, or press / for commands"),

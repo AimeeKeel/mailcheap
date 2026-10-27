@@ -9,6 +9,7 @@ import FrameIssue from "@/components/FrameIssue";
 import InputHtml from "@/components/InputHtml";
 import LinkHelp from "@/components/LinkHelp";
 import { Button } from "@/components/ui/button";
+import { deleteBlock } from "@/lib/editor-undo-delete";
 import { renderBlockPreview } from "@/lib/render-email";
 import { cn } from "@/lib/utils";
 
@@ -47,11 +48,9 @@ export default function BlockHtml({ node, updateAttributes, selected, editor, ge
 			.run();
 	}
 
-	// Its HTML can be long to write again, so deleting it asks first, unless there's none yet.
 	function remove() {
-		if (html.trim() && !window.confirm("Delete this HTML block?")) return;
 		const pos = getPos();
-		if (typeof pos === "number") editor.chain().focus().setNodeSelection(pos).deleteSelection().run();
+		if (typeof pos === "number") deleteBlock(editor, pos);
 	}
 
 	useEffect(() => {
@@ -73,8 +72,8 @@ export default function BlockHtml({ node, updateAttributes, selected, editor, ge
 		if (isEditing && !(event.target instanceof HTMLTextAreaElement) && !event.target.closest("a, button")) event.preventDefault();
 	}
 
-	// The focus going elsewhere in the page ends editing. The window losing it doesn't, to another app or to the question
-	// before deleting: the browser gives it back to the HTML with the window.
+	// The focus going elsewhere in the page ends editing. The window losing it doesn't, to another app: the browser gives
+	// it back to the HTML with the window.
 	function leave(event) {
 		if (document.hasFocus() && !event.currentTarget.contains(event.relatedTarget)) setIsEditing(false);
 	}

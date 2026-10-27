@@ -76,8 +76,9 @@ export default function WritingPage() {
 				Type <kbd>/</kbd> and pick Button to add a link readers can&apos;t miss, like Read the full story or Join the waitlist. Type
 				its text right on the button, press <kbd>Enter</kbd> and paste the link it opens: a web address, or an email address, which
 				opens an email to it. <kbd>Enter</kbd> again goes on below it. While you write on a button, a bar above it shows where it
-				goes, places it on the left, in the center or on the right, and deletes it: <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd> on Windows)
-				brings it back. Click its link, or press <kbd>⌘ K</kbd>, to change it. Names and fields work in its text and its link.
+				goes, places it on the left, in the center or on the right, and deletes it, which you can{" "}
+				<Link href={getHelpHref("writing", "deleting-blocks")}>undo</Link>. Click its link, or press <kbd>⌘ K</kbd>, to change it.
+				Names and fields work in its text and its link.
 			</p>
 			<p>
 				Buttons take your newsletter&apos;s <Link href={getHelpHref("design", "customize")}>theme</Link>: its accent color, with text
@@ -93,8 +94,8 @@ export default function WritingPage() {
 				again, and <Link href={getHelpHref("writing", "preview")}>Preview</Link> shows it in the whole email.
 			</p>
 			<p>
-				To delete a block, click it, then the bin next to Done, and confirm. <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd> on Windows) brings it
-				back.
+				To delete a block, click it, then the bin next to Done. It goes at once, and{" "}
+				<Link href={getHelpHref("writing", "deleting-blocks")}>Undo</Link> brings it back.
 			</p>
 			<p>
 				Your emails and your website get the same block, cleaned first. Scripts, forms, frames, <code>&lt;style&gt;</code> tags,
@@ -119,6 +120,13 @@ export default function WritingPage() {
 				<kbd>⌘ Shift ↑</kbd> and{" "}
 				<kbd>⌘ Shift ↓</kbd> (<kbd>Ctrl</kbd> instead of <kbd>⌘</kbd> on Windows) move the block the cursor is in. Moves undo like any
 				other change.
+			</p>
+
+			<h2 id="deleting-blocks">Deleting blocks</h2>
+			<p>
+				Pictures, buttons and HTML blocks go as soon as you delete them, from their bin or with the keyboard. A message at the top of
+				the page says so for a few seconds: click Undo in it to bring the block back, or press <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd> on
+				Windows), as its button shows. The message goes once you change something else, since undo would take that back first.
 			</p>
 
 			<h2 id="first-name">Names and fields in your emails</h2>

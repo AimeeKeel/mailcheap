@@ -9,6 +9,7 @@ import { ButtonFormat } from "@/components/MenuFormat";
 import { ALIGNMENTS } from "@/components/MenuImage";
 import { isButtonLink } from "@/lib/buttons";
 import { findButton } from "@/lib/editor-button";
+import { deleteBlock } from "@/lib/editor-undo-delete";
 import { formatLinkUrl, normalizeUrl } from "@/lib/links";
 
 // The toolbar of the button being written in (lib/editor-button.js), above it: where it sits in the column, where it
@@ -67,15 +68,8 @@ export default function MenuButton({ editor, isEditingLink, onEditLink }) {
 	}
 
 	function remove() {
-		editor
-			.chain()
-			.focus()
-			.command(({ tr, state }) => {
-				const found = findButton(state);
-				if (found) tr.delete(found.pos, found.pos + found.node.nodeSize);
-				return Boolean(found);
-			})
-			.run();
+		const found = findButton(editor.state);
+		if (found) deleteBlock(editor, found.pos);
 	}
 
 	return (
