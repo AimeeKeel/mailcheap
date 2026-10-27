@@ -1,3 +1,4 @@
+import { GLOBE_FRAME } from "@/components/CardLocation";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TIMELINE_WIDTHS = [72, 58, 64, 46, 68, 52];
@@ -24,13 +25,15 @@ export default function Loading() {
 			</div>
 			<div className="flex flex-col gap-6">
 				<div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-					<div className="flex min-h-52 items-center justify-between gap-6 rounded-xl bg-card p-4 shadow-border">
-						<div className="flex flex-col gap-2.5 self-end">
+					<div className="relative isolate flex min-h-52 items-end overflow-hidden rounded-xl bg-card p-4 shadow-border">
+						<div className="relative z-10 flex flex-col gap-2.5">
 							<Skeleton className="h-4 w-6" />
 							<Skeleton className="h-6 w-36" />
 							<Skeleton className="h-2.5 w-28" />
 						</div>
-						<Skeleton className="size-44 shrink-0 rounded-full" />
+						<div className={GLOBE_FRAME}>
+							<Skeleton className="absolute inset-[4%] rounded-full" />
+						</div>
 					</div>
 					<div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-2">
 						{Array.from({ length: 4 }, (_, index) => (

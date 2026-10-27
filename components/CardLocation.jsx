@@ -5,6 +5,10 @@ import { cn } from "@/lib/utils";
 
 // Signups set the country from the form; anyone else gets one from their first click in an email (lib/countries.js).
 const SIGNUP_SOURCES = new Set(["website", "embed"]);
+// Where the globe sits, and the loading page's placeholder: half again as tall as the card, so it fills it from top to
+// bottom, cut off past its edges, and faded on the left, where the text can run over it.
+export const GLOBE_FRAME =
+	"absolute -inset-y-1/4 right-0 aspect-square translate-x-1/5 [mask-image:linear-gradient(to_right,transparent_4%,black_30%)]";
 
 // Where a contact is, as far as MailCheap knows: their country on a globe turned to face it. source: how they joined.
 export default function CardLocation({ country, source, stagger = 0, className }) {
@@ -34,7 +38,7 @@ export default function CardLocation({ country, source, stagger = 0, className }
 					</div>
 				)}
 			</div>
-			<div aria-hidden="true" className="pointer-events-none absolute inset-y-2 -right-6 aspect-square sm:-right-4">
+			<div aria-hidden="true" className={cn("pointer-events-none", GLOBE_FRAME)}>
 				<div className={cn("absolute inset-[18%] rounded-full blur-2xl", name ? "bg-sky-500/15" : "bg-foreground/5")} />
 				<ImageGlobe country={name ? country : null} className={cn("relative size-full", !name && "opacity-70")} />
 			</div>
