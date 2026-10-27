@@ -104,7 +104,7 @@ afterEach(() => fake.state.failures.splice(0));
 after(() => app?.stop());
 
 describe("which alerts reach Telegram", () => {
-	test("the admins' alerts that need them do; records, an account's own alerts and unknown kinds don't", () => {
+	test("the admins' alerts that need them do; the others, an account's own alerts and unknown kinds don't, and those with nothing to do aren't emailed either", () => {
 		const needed = [
 			`account-blocked:${ACCOUNT_ID}:1792000000000`,
 			`tenant-hold:${ACCOUNT_ID}`,
@@ -121,8 +121,14 @@ describe("which alerts reach Telegram", () => {
 			"postshiba-kyc:pending",
 		];
 		for (const key of needed) assert.equal(isTelegramAlert({ accountId: null, key }), true, key);
-		const records = [`account-blocked-by-admin:${ACCOUNT_ID}:1792000000000`, `deleted-email-signup:${ACCOUNT_ID}`, `tenant:${ACCOUNT_ID}:ENABLED`, `tenant-failed:${ACCOUNT_ID}`, "shared-sender-waiting:6a0000000000000000000002"];
-		for (const key of records) assert.equal(isTelegramAlert({ accountId: null, key }), false, key);
+		const emailedOnly = [`deleted-email-signup:${ACCOUNT_ID}`, `tenant:${ACCOUNT_ID}:ENABLED`, `tenant-failed:${ACCOUNT_ID}`, "content-flagged:6a0000000000000000000003"];
+		for (const key of emailedOnly) assert.deepEqual([isTelegramAlert({ accountId: null, key }), isDashboardAlert({ accountId: null, key })], [false, false], key);
+		const nothingToDo = [
+			"gmail-backoff:6a0000000000000000000002",
+			`account-blocked-by-admin:${ACCOUNT_ID}:1792000000000`,
+			"shared-sender-waiting:6a0000000000000000000002",
+		];
+		for (const key of nothingToDo) assert.deepEqual([isTelegramAlert({ accountId: null, key }), isDashboardAlert({ accountId: null, key })], [false, true], key);
 		assert.equal(isTelegramAlert({ accountId: ACCOUNT_ID, key: "account-blocked" }), false, "the owner's copy of a block");
 		assert.equal(isTelegramAlert({ accountId: ACCOUNT_ID, key: "complaints" }), false, "a complaint goes to its account's owner only");
 		assert.equal(isTelegramAlert({ accountId: null, key: "something-new:1" }), false, "an unknown kind is only a record");
@@ -265,15 +271,22 @@ describe("delivery", () => {
 		});
 	});
 
-	test("records, an owner's own alerts and an admin's own block stay off Telegram; each automatic block reaches it", async () => {
+	test("what's only worth a look, an owner's own alerts and an admin's own block stay off Telegram, the block off the admins' email too; each automatic block reaches it", async () => {
 		const user = await signIn("blocked-twice@example.com");
 		const other = await signIn("blocked-by-hand@example.com");
 		await withEnv(TELEGRAM, async () => {
 			const before = telegramMessages.length;
+			const emails = platformEmails.length;
 			await m.alerts.sendAlert({ accountId: null, key: `deleted-email-signup:${ACCOUNT_ID}`, title: "A deleted account's email signed up again", detail: "jane.doe@example.com deleted an account." });
 			await m.alerts.sendAlert({ accountId: user.accountId, key: "complaints", title: "Spam complaint", detail: "reader@example.org marked an email as spam." });
 			assert.equal(await m.blocks.blockAccount(other.accountId, { reason: "Spam", by: "admin", detail: "Blocked by admin@example.com" }), true);
 			assert.equal(telegramMessages.length, before, "none of them");
+			assert.deepEqual(
+				toAdmins(platformEmails.slice(emails)).map(({ subject }) => subject),
+				["[MailCheap] A deleted account's email signed up again"],
+				"the admin who blocked an account knows already"
+			);
+			assert.ok(platformEmails.slice(emails).some(({ to, subject }) => to.includes("blocked-by-hand@example.com") && subject === "[MailCheap] Account blocked"), "its owner hears of it");
 
 			assert.equal(await m.blocks.blockAccount(user.accountId, { reason: "Complaints over 0.3%", by: "rates" }), true);
 			// An admin unblocks it, and it's blocked again within the hour: news again.
@@ -436,7 +449,7 @@ describe("what alerts", () => {
 		});
 	});
 
-	test("the DNS helper at its cap alerts once for itself, and each shared address waiting for it is only emailed", async () => {
+	test("the DNS helper at its cap alerts once for itself, and each shared address waiting for it only shows on the admin page", async () => {
 		await withEnv(TELEGRAM, async () => {
 			const first = await signIn("dns-cap@example.com");
 			const second = await signIn("dns-cap-two@example.com");
@@ -451,9 +464,12 @@ describe("what alerts", () => {
 				}
 			});
 			assert.deepEqual(firstLines(telegramMessages.slice(before.telegram)), ["<b>MailCheap</b> · DNS helper at its daily cap"], "once for both");
-			const emails = toAdmins(platformEmails.slice(before.emails));
-			assert.deepEqual(emails.map(({ subject }) => subject), ["[MailCheap] DNS helper at its daily cap", "[MailCheap] Shared address not set up", "[MailCheap] Shared address not set up"]);
-			assert.ok(emails[2].text.includes("dns-cap-two.mailcheapmail.com"), "each one named");
+			assert.deepEqual(toAdmins(platformEmails.slice(before.emails)).map(({ subject }) => subject), ["[MailCheap] DNS helper at its daily cap"]);
+			const waiting = (await m.Alert.find({ accountId: null, key: /^shared-sender-waiting:/ }).lean()).map(({ occurrences }) => occurrences.at(-1));
+			for (const domain of ["dns-cap.mailcheapmail.com", "dns-cap-two.mailcheapmail.com"]) {
+				const occurrence = waiting.find(({ detail }) => detail.startsWith(`${domain} `));
+				assert.deepEqual([occurrence?.emailed, occurrence?.telegram], [false, false], `${domain} named on the admin page`);
+			}
 
 			await quietly(async () => {
 				failNextPublish({ status: 403, message: "CNAME dns-own.mailcheapmail.com isn't a shared address record of dns-own", helperProblem: null });

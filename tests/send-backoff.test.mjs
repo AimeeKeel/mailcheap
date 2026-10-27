@@ -117,7 +117,7 @@ describe("a domain Gmail rate limits", () => {
 			domain: domain ?? (await m.Newsletter.findOne({ accountId: send.accountId, _id: send.newsletterId }).lean()).sendingDomain,
 		}).lean();
 	const resume = async (job) => (await m.resumeRoute.POST(jsonRequest(job.url, { method: "POST", body: job.body }))).json();
-	const adminAlerts = () => platformEmails.filter(({ subject }) => subject === "[MailCheap] Gmail is rate limiting a newsletter").length;
+	const backoffAlert = (send) => m.Alert.findOne({ accountId: null, key: `gmail-backoff:${send.newsletterId}` }).lean();
 
 	before(async () => {
 		app = await startTestApp({ QSTASH_CURRENT_SIGNING_KEY: "sig-current", QSTASH_NEXT_SIGNING_KEY: "sig-next", SEND_RATE_PER_SECOND: "1000" });
@@ -128,6 +128,7 @@ describe("a domain Gmail rate limits", () => {
 			resumeRoute: await import("../app/api/jobs/resume-send/route.js"),
 			emailEvents: await import("../lib/email-events.js"),
 			blocks: await import("../lib/account-blocks.js"),
+			Alert: (await import("../models/Alert.js")).default,
 			Campaign: (await import("../models/Campaign.js")).default,
 			Contact: (await import("../models/Contact.js")).default,
 			Message: (await import("../models/Message.js")).default,
@@ -138,7 +139,7 @@ describe("a domain Gmail rate limits", () => {
 
 	after(() => app?.stop());
 
-	test("its sends pause for 6 hours, the owner and the admins hear of it, then Gmail gets half its day, spread over 3 doubling days", async () => {
+	test("its sends pause for 6 hours, the owner hears of it and the admin page shows it, then Gmail gets half its day, spread over 3 doubling days", async () => {
 		const send = await setup("rate-limited@example.com", 1000);
 		await runBatches(send.batches.slice(0, 8));
 		const before = { emails: platformEmails.length, telegram: telegramMessages.length, jobs: published.length };
@@ -156,17 +157,17 @@ describe("a domain Gmail rate limits", () => {
 		near(jobs[0].notBefore * 1000, limitedAt + 6 * HOUR_MS);
 		assert.deepEqual(
 			platformEmails.slice(before.emails).map(({ to, subject }) => [to[0], subject]),
-			[
-				["rate-limited@example.com", "[MailCheap] Campaign paused"],
-				["admin@example.com", "[MailCheap] Gmail is rate limiting a newsletter"],
-			]
+			[["rate-limited@example.com", "[MailCheap] Campaign paused"]],
+			"MailCheap handles it, so the admins get neither an email nor a Telegram message"
 		);
-		assert.equal(telegramMessages.length, before.telegram + 1);
-		assert.match(telegramMessages.at(-1).text, /Gmail is rate limiting a newsletter/);
+		assert.equal(telegramMessages.length, before.telegram);
+		const alert = await backoffAlert(send);
+		assert.deepEqual(alert.occurrences.map(({ emailed, telegram }) => ({ emailed, telegram })), [{ emailed: false, telegram: false }]);
+		assert.match(alert.occurrences[0].detail, /Gmail answered: .*unusual rate of mail/);
 
 		await withEnv(TELEGRAM, () => defer(send, GMAIL_LIMIT));
 		assert.equal(published.length, before.jobs + 1, "Gmail saying it again, about emails still queued, changes nothing");
-		assert.equal(telegramMessages.length, before.telegram + 1);
+		assert.equal((await backoffAlert(send)).count, 1);
 		assert.equal((await domainOf(send)).firstDay, 200);
 
 		const resumedFrom = published.length;
@@ -195,7 +196,7 @@ describe("a domain Gmail rate limits", () => {
 		await runBatches(send.batches.slice(0, 8));
 		const limitedAt = Date.now();
 		await defer(send, GMAIL_LIMIT);
-		const alerts = adminAlerts();
+		assert.equal((await backoffAlert(send)).count, 1);
 
 		const from = published.length;
 		assert.deepEqual(await as(send.user, () => m.campaigns.resumeCampaign(send.campaignId)), { ok: true });
@@ -208,7 +209,7 @@ describe("a domain Gmail rate limits", () => {
 		assert.deepEqual([paused.status, paused.pauseCode], ["paused", "rate_limited"]);
 		const [job] = jobsTo(published.slice(again), "resume-send");
 		near(job.notBefore * 1000, limitedAt + 6 * HOUR_MS, "it goes on when the back-off ends, not 6 hours from now");
-		assert.equal(adminAlerts(), alerts);
+		assert.equal((await backoffAlert(send)).count, 1);
 	});
 
 	test("a newsletter that moves to another domain during a back-off still waits for it, from no more emails", async () => {
