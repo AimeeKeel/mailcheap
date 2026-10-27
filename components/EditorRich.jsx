@@ -5,13 +5,14 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import FileHandler from "@tiptap/extension-file-handler";
 import { Placeholder } from "@tiptap/extensions";
 import StarterKit from "@tiptap/starter-kit";
-import { ButtonBlock } from "@/components/BlockButton";
 import { HtmlBlock } from "@/components/BlockHtml";
 import DialogImagePicker from "@/components/DialogImagePicker";
+import MenuButton from "@/components/MenuButton";
 import MenuFormat from "@/components/MenuFormat";
 import MenuImage from "@/components/MenuImage";
 import { SlashCommand } from "@/components/MenuSlash";
 import { BlockHandle } from "@/lib/editor-block-handle";
+import { ButtonBlock, findButton } from "@/lib/editor-button";
 import { Callout } from "@/lib/editor-callout";
 import { ImageAligned } from "@/lib/editor-image";
 import { MergeTags } from "@/lib/editor-merge-tags";
@@ -25,6 +26,7 @@ const MIN_HEIGHT = "min-h-[560px]";
 // newsletter: whose email design HTML blocks preview in, and whose button colors and corners buttons show.
 export default function EditorRich({ content, onChange, contactFields = [], newsletter = null }) {
 	const [isEditingLink, setIsEditingLink] = useState(false);
+	const [isEditingButtonLink, setIsEditingButtonLink] = useState(false);
 	const [isPickingImage, setIsPickingImage] = useState(false);
 	const editor = useEditor({
 		immediatelyRender: false,
@@ -46,7 +48,7 @@ export default function EditorRich({ content, onChange, contactFields = [], news
 				},
 			}),
 			Callout,
-			ButtonBlock.configure({ newsletter }),
+			ButtonBlock.configure({ newsletter, onEditLink: () => setIsEditingButtonLink(true) }),
 			HtmlBlock.configure({ newsletter }),
 			BlockHandle,
 			MergeTags.configure({ contactFields }),
@@ -64,9 +66,10 @@ export default function EditorRich({ content, onChange, contactFields = [], news
 		editorProps: {
 			// With a mouse, the left padding holds the blocks' drag handle (lib/editor-block-handle.js).
 			attributes: { class: `prose-issue ${MIN_HEIGHT} px-5 py-5 outline-none [@media(pointer:fine)]:pl-12`, "aria-label": "Content" },
+			// In a button, ⌘K opens the button's own link (lib/editor-button.js).
 			handleKeyDown: (view, event) => {
 				const isLinkShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
-				if (!isLinkShortcut || view.state.selection.empty) return false;
+				if (!isLinkShortcut || view.state.selection.empty || findButton(view.state)) return false;
 				setIsEditingLink(true);
 				return true;
 			},
@@ -89,6 +92,7 @@ export default function EditorRich({ content, onChange, contactFields = [], news
 		<>
 			<EditorContent editor={editor} className="relative" />
 			<MenuFormat editor={editor} isEditingLink={isEditingLink} onEditLink={setIsEditingLink} />
+			<MenuButton editor={editor} isEditingLink={isEditingButtonLink} onEditLink={setIsEditingButtonLink} />
 			<MenuImage editor={editor} />
 			<DialogImagePicker
 				open={isPickingImage}

@@ -204,8 +204,8 @@ function RowBack({ isSelected, onPoint, onPick }) {
 	);
 }
 
-// Typing "/" at the start of a line or after a space opens the menu; the text after it searches. contactFields: the
-// account's fields, offered after the first name.
+// Typing "/" at the start of a line or after a space opens the menu, but not in a button's text; the text after it
+// searches. contactFields: the account's fields, offered after the first name.
 export const SlashCommand = Extension.create({
 	name: "slashCommand",
 	addOptions() {
@@ -220,6 +220,7 @@ export const SlashCommand = Extension.create({
 				// Rendered before it's first placed, so it's placed at its own height.
 				initialItems: items,
 				items: () => items,
+				allow: ({ state, range }) => state.doc.resolve(range.from).parent.type.name !== "button",
 				command: ({ editor, range, props: item }) => {
 					item.run(editor.chain().focus().deleteRange(range)).run();
 					if (item.isImage) this.options.onPickImage(editor);
@@ -362,7 +363,7 @@ const SLASH_ITEMS = [
 		title: "Button",
 		keywords: "cta call to action link",
 		icon: MousePointerClick,
-		run: (chain) => chain.insertContent({ type: "button", attrs: { isNew: true } }),
+		run: (chain) => chain.setNode("button"),
 	},
 	{
 		title: "HTML",

@@ -73,10 +73,10 @@ export default function WritingPage() {
 			<h2 id="buttons">Buttons</h2>
 			<p>
 				Type <kbd>/</kbd> and pick Button to add a link readers can&apos;t miss, like Read the full story or Join the waitlist. Type
-				its text, press <kbd>Enter</kbd> and paste the link it opens: a web address, or an email address, which opens an email to it.
-				The bar above it places it on the left, in the center or on the right. Click Done or press <kbd>Esc</kbd> when you&apos;re
-				finished, and click the button to change it again, or the bin next to Done to delete it: <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd>{" "}
-				on Windows) brings it back. Names and fields work in its text and its link.
+				its text right on the button, press <kbd>Enter</kbd> and paste the link it opens: a web address, or an email address, which
+				opens an email to it. <kbd>Enter</kbd> again goes on below it. While you write on a button, a bar above it shows where it
+				goes, places it on the left, in the center or on the right, and deletes it: <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd> on Windows)
+				brings it back. Click its link, or press <kbd>⌘ K</kbd>, to change it. Names and fields work in its text and its link.
 			</p>
 			<p>
 				Buttons take your newsletter&apos;s <Link href={getHelpHref("design", "customize")}>theme</Link>: its accent color, with text

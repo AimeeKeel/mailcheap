@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
-import { ButtonBlock } from "../components/BlockButton.jsx";
+import { getSchema } from "@tiptap/core";
+import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
+import StarterKit from "@tiptap/starter-kit";
 import { getSlashItems } from "../components/MenuSlash.jsx";
 import { renderIssueBody } from "../lib/archive-content.js";
 import { BUTTON_PROBLEM } from "../lib/buttons.js";
@@ -9,8 +11,9 @@ import { cleanRichHtml } from "../lib/clean-html.js";
 import { getReviewInput } from "../lib/content-review.js";
 import { getLlmsFull } from "../lib/docs/llms.js";
 import { getOpenApiDocument } from "../lib/docs/openapi.js";
-import { normalizeUrl } from "../lib/editor-links.js";
+import { ButtonBlock, backspaceButton, exitButton, findButton } from "../lib/editor-button.js";
 import { getLinkKey, getLinkLabels, normalizeLink } from "../lib/link-stats.js";
+import { formatLinkUrl, normalizeUrl } from "../lib/links.js";
 import { fillForReader } from "../lib/merge-tags.js";
 import { getPresendChecks } from "../lib/presend-checks.js";
 import { findButtonProblem, hasContent, renderEmail } from "../lib/render-email.js";
@@ -21,7 +24,7 @@ import { activate, as, callApi, catchRedirect, form, signIn, startTestApp } from
 process.env.BETTER_AUTH_SECRET = "test-session-secret-with-at-least-32-characters";
 process.env.APP_URL = "https://mail.example.com";
 
-// A button as the editor writes it (components/BlockButton.jsx).
+// A button as the editor writes it (lib/editor-button.js).
 function button(text, href, align) {
 	const place = align ? ` data-align="${align}"` : "";
 	return `<div data-button=""${place}><a${href ? ` href="${href}"` : ""}>${text}</a></div>`;
@@ -60,21 +63,101 @@ describe("what an issue keeps of a button", () => {
 		});
 	});
 
-	test("the editor writes a button as the issue keeps it, centered without a place", () => {
-		const spec = (attrs) => ButtonBlock.config.renderHTML({ node: { attrs: { text: "", href: "", align: "center", ...attrs } } });
-		assert.deepEqual(spec({ text: "Join", href: STORY, align: "left" }), ["div", { "data-button": "", "data-align": "left" }, ["a", { href: STORY }, "Join"]]);
-		assert.deepEqual(spec({ text: "Join", href: STORY }), ["div", { "data-button": "" }, ["a", { href: STORY }, "Join"]]);
-		assert.deepEqual(spec({ text: "Join" }), ["div", { "data-button": "" }, ["a", {}, "Join"]], "no link yet");
+	test("the editor writes a button as the issue keeps it, its text in the link, centered without a place", () => {
+		const spec = (attrs) => ButtonBlock.config.renderHTML({ node: { attrs: { href: "", align: "center", ...attrs } } });
+		assert.deepEqual(spec({ href: STORY, align: "left" }), ["div", { "data-button": "", "data-align": "left" }, ["a", { href: STORY }, 0]]);
+		assert.deepEqual(spec({ href: STORY }), ["div", { "data-button": "" }, ["a", { href: STORY }, 0]]);
+		assert.deepEqual(spec({}), ["div", { "data-button": "" }, ["a", {}, 0]], "no link yet");
 	});
 
-	test("the slash menu's Button adds a new one, and its link field takes what's typed as a web or email address", () => {
+	test("the slash menu's Button turns the line into one, and its link field takes what's typed as a web or email address", () => {
 		const item = getSlashItems().find(({ title }) => title === "Button");
-		assert.deepEqual(item.run({ insertContent: (content) => content }), { type: "button", attrs: { isNew: true } });
+		assert.equal(item.run({ setNode: (name) => name }), "button");
 		assert.match(item.keywords, /\bcta\b/);
 		assert.equal(normalizeUrl(" example.com/story "), "https://example.com/story");
 		assert.equal(normalizeUrl("jane@example.com"), "mailto:jane@example.com");
 		assert.equal(normalizeUrl(STORY), STORY);
 		assert.equal(normalizeUrl(""), "");
+		assert.equal(formatLinkUrl("https://example.com/"), "example.com", "its toolbar shows where it goes as the click report does");
+	});
+});
+
+describe("writing on a button in the editor", () => {
+	const schema = getSchema([StarterKit, ButtonBlock]);
+	const paragraph = (text) => schema.node("paragraph", null, text ? [schema.text(text)] : []);
+	const block = (text, href = STORY) => schema.node("button", { href }, text ? [schema.text(text)] : []);
+
+	function stateAt(nodes, pos) {
+		const doc = schema.node("doc", null, nodes);
+		return EditorState.create({ doc, selection: TextSelection.create(doc, pos) });
+	}
+
+	function backspace(state) {
+		let next = null;
+		const isHandled = backspaceButton(state, (tr) => (next = state.apply(tr)));
+		return { isHandled, next };
+	}
+
+	function enter(state) {
+		let next = null;
+		exitButton(state, (tr) => (next = state.apply(tr)));
+		return next;
+	}
+
+	function blocks(state) {
+		const names = [];
+		state.doc.forEach((node) => names.push(`${node.type.name}:${node.textContent}`));
+		return names;
+	}
+
+	test("its text is plain: no formatting, no Markdown shortcuts, and a line break never splits it", () => {
+		const { spec } = schema.nodes.button;
+		assert.equal(spec.code, true, "the editor's Markdown shortcuts skip code");
+		assert.equal(schema.nodes.button.allowsMarkType(schema.marks.bold), false);
+		assert.equal(schema.nodes.button.allowsMarkType(schema.marks.link), false);
+		assert.equal(spec.isolating, true, "Backspace and Delete never join it with the text around it");
+	});
+
+	test("Enter goes on below it, in the empty paragraph already there or in a new one", () => {
+		const into = enter(stateAt([block("Go"), paragraph("")], 3));
+		assert.deepEqual(blocks(into), ["button:Go", "paragraph:"]);
+		assert.equal(into.selection.from, 5);
+		const added = enter(stateAt([block("Go"), paragraph("Hi")], 3));
+		assert.deepEqual(blocks(added), ["button:Go", "paragraph:", "paragraph:Hi"]);
+		assert.equal(added.selection.$from.parent.type.name, "paragraph");
+		assert.equal(added.selection.from, 5);
+		assert.deepEqual(blocks(enter(stateAt([paragraph("Hi"), block("Go")], 7))), ["paragraph:Hi", "button:Go", "paragraph:"], "as the last block");
+	});
+
+	test("Backspace in an empty button makes it a paragraph again", () => {
+		const { isHandled, next } = backspace(stateAt([paragraph("Hi"), block("")], 5));
+		assert.equal(isHandled, true);
+		assert.deepEqual(blocks(next), ["paragraph:Hi", "paragraph:"]);
+	});
+
+	test("Backspace at the start of a block right after a button goes into its text, and an empty block goes too", () => {
+		// The button "Go" is 0 to 4, its text 1 to 3; the paragraph starts at 4, its text at 5.
+		const before = backspace(stateAt([block("Go"), paragraph("Hi")], 5));
+		assert.deepEqual(blocks(before.next), ["button:Go", "paragraph:Hi"], "the text after it stays where it is");
+		assert.equal(before.next.selection.from, 3);
+		const empty = backspace(stateAt([block("Go"), paragraph("")], 5));
+		assert.deepEqual(blocks(empty.next), ["button:Go"]);
+		assert.equal(empty.next.selection.from, 3);
+	});
+
+	test("Backspace anywhere else is the editor's own", () => {
+		assert.equal(backspace(stateAt([block("Go"), paragraph("Hi")], 2)).isHandled, false, "inside its text");
+		assert.equal(backspace(stateAt([block("Go"), paragraph("Hi")], 1)).isHandled, false, "at the start of its text");
+		assert.equal(backspace(stateAt([paragraph("Go"), paragraph("Hi")], 5)).isHandled, false, "after a paragraph");
+		assert.equal(backspace(stateAt([block("Go"), paragraph("Hi")], 6)).isHandled, false, "inside the next paragraph");
+	});
+
+	test("its toolbar is for the button holding the caret or selected whole, not a selection running past it", () => {
+		const state = stateAt([paragraph("Hi"), block("Go", "")], 6);
+		assert.deepEqual({ pos: findButton(state).pos, href: findButton(state).node.attrs.href }, { pos: 4, href: "" });
+		assert.equal(findButton(state.apply(state.tr.setSelection(NodeSelection.create(state.doc, 4)))).pos, 4);
+		assert.equal(findButton(state.apply(state.tr.setSelection(TextSelection.create(state.doc, 2, 6)))), null);
+		assert.equal(findButton(stateAt([paragraph("Hi"), block("Go")], 2)), null);
 	});
 });
 
