@@ -134,7 +134,8 @@ export default function WritingPage() {
 				<code>{"{{first_name}}"}</code> shows each reader&apos;s first name. Type <kbd>/</kbd>, pick Contact fields at the bottom of
 				the menu, then First name, or click the person icon at the end of the subject. Both add <code>{"{{first_name|there}}"}</code>: the word
 				after the bar is what readers without a first name see, so &ldquo;Hi {"{{first_name|there}}"}&rdquo; reads &ldquo;Hi
-				Jane&rdquo; or &ldquo;Hi there&rdquo;. Change it, or remove it with the bar to show nothing.
+				Jane&rdquo; or &ldquo;Hi there&rdquo;. Change it, or remove it with the bar to show nothing. In the editor, names and fields
+				show on a gray background: point at one to see what it prints, with a value and without one.
 			</p>
 			<p>
 				Your own <Link href={getHelpHref("contacts", "fields")}>contact fields</Link> work the same way, by their key:{" "}

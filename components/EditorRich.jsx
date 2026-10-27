@@ -11,6 +11,7 @@ import MenuButton from "@/components/MenuButton";
 import MenuFormat from "@/components/MenuFormat";
 import MenuImage from "@/components/MenuImage";
 import { SlashCommand } from "@/components/MenuSlash";
+import TooltipMergeTag from "@/components/TooltipMergeTag";
 import { BlockHandle } from "@/lib/editor-block-handle";
 import { ButtonBlock, findButton } from "@/lib/editor-button";
 import { Callout } from "@/lib/editor-callout";
@@ -99,6 +100,7 @@ export default function EditorRich({ ref, content, onChange, contactFields = [],
 			<MenuFormat editor={editor} isEditingLink={isEditingLink} onEditLink={setIsEditingLink} />
 			<MenuButton editor={editor} isEditingLink={isEditingButtonLink} onEditLink={setIsEditingButtonLink} />
 			<MenuImage editor={editor} />
+			<TooltipMergeTag editor={editor} contactFields={contactFields} />
 			<DialogImagePicker
 				open={isPickingImage}
 				onOpenChange={setIsPickingImage}

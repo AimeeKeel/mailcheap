@@ -106,14 +106,15 @@ describe("field merge tags", () => {
 		assert.equal(withoutMergeTags("{{first_name|Friend}}, your {{plan|free}} plan {{other}}"), "Friend, your free plan ");
 	});
 
-	test("the editor draws the account's tags only", () => {
-		const text = "Hi {{first_name|there}}, {{Plan}} {{nope}} {{seats|0}}";
+	test("the editor draws the account's tags only, each with its fallback", () => {
+		const text = "Hi {{first_name|there}}, {{Plan}} {{nope}} {{seats|0}} {{ birthday | soon }}";
 		assert.deepEqual(
-			findMergeTags(text, FIELDS).map(({ index, length, key }) => [text.slice(index, index + length), key]),
+			findMergeTags(text, FIELDS).map(({ index, length, key, fallback }) => [text.slice(index, index + length), key, fallback]),
 			[
-				["{{first_name|there}}", "first_name"],
-				["{{Plan}}", "plan"],
-				["{{seats|0}}", "seats"],
+				["{{first_name|there}}", "first_name", "there"],
+				["{{Plan}}", "plan", ""],
+				["{{seats|0}}", "seats", "0"],
+				["{{ birthday | soon }}", "birthday", "soon"],
 			]
 		);
 	});

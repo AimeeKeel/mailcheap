@@ -912,13 +912,21 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   & [data-resize-container] img {
     margin: 0;
   }
-  /* {{first_name}}, filled in per reader (lib/editor-merge-tags.js). */
+  /* {{first_name}}, filled in per reader (lib/editor-merge-tags.js), darker under the pointer, which shows its tooltip
+     (components/TooltipMergeTag.jsx). */
   & .merge-tag {
     border-radius: 0.375rem;
     padding: 0.1em 0.3em;
     background-color: color-mix(in oklab, var(--foreground) 7%, transparent);
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
+    transition: background-color 150ms ease-out;
+  }
+  & .merge-tag:hover {
+    background-color: color-mix(in oklab, var(--foreground) 14%, transparent);
+  }
+  & [data-button] .merge-tag:hover {
+    background-color: color-mix(in oklab, currentColor 32%, transparent);
   }
   & img[src^="blob:"] {
     opacity: 0.5;
