@@ -102,7 +102,8 @@ export default function ContactsPage() {
 					other newsletters they&apos;re on.
 				</li>
 				<li>
-					<strong>Fields and tags</strong>: their fields, each with the tag that prints it in your emails, and their tags.
+					<strong>Fields and tags</strong>: their fields, each with what prints it in your emails, between double braces, and their
+					tags.
 				</li>
 			</ul>
 			<p>
@@ -131,7 +132,7 @@ export default function ContactsPage() {
 			<p>
 				Besides an email address, each contact can have a first name, tags and values for your own fields. Click Edit fields on
 				their page, or in their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>, to change them. Next to each field is
-				the tag that prints it in your emails, like <code>{"{{first_name}}"}</code>: click it to copy it.
+				what prints it in your emails, between double braces, like <code>{"{{first_name}}"}</code>: click it to copy it.
 			</p>
 			<ul>
 				<li>
@@ -141,7 +142,8 @@ export default function ContactsPage() {
 				<li>
 					<strong>Tags</strong>: labels a contact has or doesn&apos;t, like vip, podcast or customer, {MAX_TAGS} per contact at most.
 					Use them to sort people into groups: list everyone with a tag, or send to them through a segment. Tags are lowercase, up
-					to {MAX_TAG_LENGTH} characters, without commas. Add them in a contact&apos;s details, with an import, or through the{" "}
+					to {MAX_TAG_LENGTH} characters, without commas. Add them in Edit fields on a contact&apos;s page, pressing Enter or a comma
+					after each one, with an import, or through the{" "}
 					<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>, which can tag many contacts at once. Tags never show
 					in emails.
 				</li>

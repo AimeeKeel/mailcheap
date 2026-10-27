@@ -75,8 +75,8 @@ function FormContactDetails({ contact, onDone }) {
 				<DialogHeader>
 					<DialogTitle>Edit fields</DialogTitle>
 					<DialogDescription className="text-pretty">
-						<span className="font-medium wrap-anywhere text-foreground">{contact.email}</span>. Each field prints in your emails with
-						the tag on its right. Tags sort contacts and never show in emails.
+						<span className="font-medium wrap-anywhere text-foreground">{contact.email}</span>. In your emails, what&apos;s on the right of
+						a field, like {firstNameTag("")}, prints their value.
 					</DialogDescription>
 					<LinkHelpFields className="self-start text-sm" />
 				</DialogHeader>
@@ -103,7 +103,10 @@ function FormContactDetails({ contact, onDone }) {
 						/>
 					))}
 
-					<RowField label="Tags" note="Not in emails">
+					<RowField
+						label="Tags"
+						hint="Labels like vip or customer, to filter your list and build segments. Unlike fields, they never show in emails. Press Enter or a comma after each one."
+					>
 						<InputTags value={tags} onChange={setTags} suggestions={tagOptions.map(({ name }) => name)} />
 					</RowField>
 				</div>
@@ -152,8 +155,8 @@ function InputField({ field, value, onChange }) {
 	);
 }
 
-// A field with its name on the left and, on the right, the tag that prints it in emails or a note.
-function RowField({ htmlFor, label, tag, note, children }) {
+// A field with its name on the left, what prints it in emails on the right, and a hint under it.
+function RowField({ htmlFor, label, tag, hint, children }) {
 	const Label = htmlFor ? "label" : "span";
 	return (
 		<div className="flex flex-col gap-1.5">
@@ -161,9 +164,10 @@ function RowField({ htmlFor, label, tag, note, children }) {
 				<Label htmlFor={htmlFor} className="min-w-0 truncate text-sm font-medium">
 					{label}
 				</Label>
-				{tag ? <ButtonMergeTag tag={tag} className="shrink" /> : <span className="shrink-0 text-xs text-muted-foreground">{note}</span>}
+				{tag && <ButtonMergeTag tag={tag} className="shrink" />}
 			</div>
 			{children}
+			{hint && <p className="text-xs text-pretty text-muted-foreground">{hint}</p>}
 		</div>
 	);
 }

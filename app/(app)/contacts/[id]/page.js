@@ -277,8 +277,8 @@ export default async function ContactPage({ params, searchParams }) {
 							</dl>
 							<div className="flex flex-col items-start gap-2.5 px-4 py-3">
 								<p className="text-xs text-pretty text-muted-foreground">
-									Type a field&apos;s tag in an email to print each reader&apos;s value. Fields you add, like a company, are on
-									every contact.
+									Type a field between double braces in an email, like {firstNameTag("")}, to print each reader&apos;s value.
+									Fields you add, like a company, are on every contact.
 								</p>
 								<div className="-ml-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
 									{fields.length < MAX_CONTACT_FIELDS && <ButtonAddField />}

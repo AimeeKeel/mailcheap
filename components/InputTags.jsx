@@ -7,7 +7,15 @@ import { cn } from "@/lib/utils";
 
 // Tags as chips: Enter, a comma or Tab adds what's typed, Backspace in the empty field takes the last one off.
 // suggestions: tag names the newsletter's contacts already have.
-export default function InputTags({ value, onChange, suggestions = [], max = MAX_TAGS, placeholder = "Add a tag", label = "Tags", autoFocus }) {
+export default function InputTags({
+	value,
+	onChange,
+	suggestions = [],
+	max = MAX_TAGS,
+	placeholder = "Type a tag, then press Enter",
+	label = "Tags",
+	autoFocus,
+}) {
 	const listId = useId();
 	const [text, setText] = useState("");
 	const isFull = value.length >= max;
@@ -62,13 +70,18 @@ export default function InputTags({ value, onChange, suggestions = [], max = MAX
 				onKeyDown={onKeyDown}
 				onBlur={() => text.trim() && add(text)}
 				list={options.length > 0 ? listId : undefined}
-				placeholder={isFull ? "" : value.length > 0 ? "" : placeholder}
+				placeholder={isFull ? "" : value.length > 0 ? "Add another" : placeholder}
 				aria-label={label}
 				disabled={isFull}
 				autoFocus={autoFocus}
 				maxLength={60}
 				className="h-6 min-w-24 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground [&::-webkit-calendar-picker-indicator]:hidden"
 			/>
+			{text.trim() && (
+				<kbd aria-hidden="true" className="mr-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-sans text-[11px] text-muted-foreground shadow-border animate-fade-in">
+					Enter ↵
+				</kbd>
+			)}
 			{options.length > 0 && (
 				<datalist id={listId}>
 					{options.map((name) => (
