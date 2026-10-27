@@ -6,7 +6,6 @@ import { updateContactDetails } from "@/app/(app)/contacts/actions";
 import ButtonMergeTag from "@/components/ButtonMergeTag";
 import DialogContactFields from "@/components/DialogContactFields";
 import InputDate from "@/components/InputDate";
-import InputTags from "@/components/InputTags";
 import LinkHelpFields from "@/components/LinkHelpFields";
 import { useContactOptions } from "@/components/ProviderContactOptions";
 import { Button } from "@/components/ui/button";
@@ -24,8 +23,8 @@ import { MAX_CONTACT_FIELDS, MAX_FIRST_NAME } from "@/lib/contact-fields";
 import { fieldTag, firstNameTag } from "@/lib/merge-tags";
 import { toast } from "@/lib/toast";
 
-// A contact's first name, its values for the account's fields and its tags, each field with the tag that prints it in
-// emails. contact: { id, email, firstName, tags, fields }, with dates as YYYY-MM-DD.
+// A contact's first name and its values for the account's fields, each with what prints it in emails; DialogContactTags
+// has its tags. contact: { id, email, firstName, fields }, with dates as YYYY-MM-DD.
 export default function DialogContactDetails({ contact, isOpen, onOpenChange }) {
 	const [formKey, setFormKey] = useState(0);
 
@@ -44,10 +43,9 @@ export default function DialogContactDetails({ contact, isOpen, onOpenChange }) 
 }
 
 function FormContactDetails({ contact, onDone }) {
-	const { fields, tags: tagOptions } = useContactOptions();
+	const { fields } = useContactOptions();
 	const nameId = useId();
 	const [firstName, setFirstName] = useState(contact.firstName ?? "");
-	const [tags, setTags] = useState(contact.tags ?? []);
 	const [values, setValues] = useState(() =>
 		Object.fromEntries(fields.map(({ key }) => [key, contact.fields?.[key] === undefined ? "" : String(contact.fields[key])]))
 	);
@@ -59,7 +57,6 @@ function FormContactDetails({ contact, onDone }) {
 		startSaving(async () => {
 			const result = await updateContactDetails(contact.id, {
 				firstName: firstName.trim(),
-				tags,
 				fields: Object.fromEntries(fields.map(({ key }) => [key, values[key]?.trim() ? values[key].trim() : null])),
 			});
 			if (result?.error) return void toast.error(result.error);
@@ -102,13 +99,6 @@ function FormContactDetails({ contact, onDone }) {
 							onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))}
 						/>
 					))}
-
-					<RowField
-						label="Tags"
-						hint="Labels like vip or customer, to filter your list and build segments. Unlike fields, they never show in emails. Press Enter or a comma after each one."
-					>
-						<InputTags value={tags} onChange={setTags} suggestions={tagOptions.map(({ name }) => name)} />
-					</RowField>
 				</div>
 
 				<DialogFooter>
@@ -155,19 +145,17 @@ function InputField({ field, value, onChange }) {
 	);
 }
 
-// A field with its name on the left, what prints it in emails on the right, and a hint under it.
-function RowField({ htmlFor, label, tag, hint, children }) {
-	const Label = htmlFor ? "label" : "span";
+// A field with its name on the left and what prints it in emails on the right.
+function RowField({ htmlFor, label, tag, children }) {
 	return (
 		<div className="flex flex-col gap-1.5">
 			<div className="flex min-h-6 items-center justify-between gap-3">
-				<Label htmlFor={htmlFor} className="min-w-0 truncate text-sm font-medium">
+				<label htmlFor={htmlFor} className="min-w-0 truncate text-sm font-medium">
 					{label}
-				</Label>
-				{tag && <ButtonMergeTag tag={tag} className="shrink" />}
+				</label>
+				<ButtonMergeTag tag={tag} className="shrink" />
 			</div>
 			{children}
-			{hint && <p className="text-xs text-pretty text-muted-foreground">{hint}</p>}
 		</div>
 	);
 }

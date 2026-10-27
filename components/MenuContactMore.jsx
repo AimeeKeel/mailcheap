@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // The ⋯ menu at the top of a contact's page, after their status and Edit fields: delete them, then back to the list.
-export default function MenuContactMore({ id, email, status }) {
+export default function MenuContactMore({ id, email, status, className }) {
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const moreRef = useRef(null);
 	const isOpeningDialogRef = useRef(false);
@@ -33,7 +33,7 @@ export default function MenuContactMore({ id, email, status }) {
 		<>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button ref={moreRef} variant="ghost" size="icon" aria-label="More">
+					<Button ref={moreRef} variant="ghost" size="icon" aria-label="More" className={className}>
 						<MoreHorizontal />
 					</Button>
 				</DropdownMenuTrigger>

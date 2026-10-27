@@ -46,13 +46,14 @@ export async function setContactStatus(id, status, consent = false) {
 	return failure ? toFormError(failure) : { ok: true };
 }
 
-// The contact sheet: a first name, the account's field values (null clears one) and the whole list of tags.
+// A contact's Edit fields, a first name and the account's field values (null clears one), or its Edit tags, the whole
+// list of tags: what isn't given stays as it is.
 export async function updateContactDetails(id, { firstName, fields, tags } = {}) {
 	const { output, failure } = await runDashboardAction("update_contact", {
 		id: String(id),
-		firstName: typeof firstName === "string" ? firstName : null,
+		...(typeof firstName === "string" && { firstName }),
 		fields: fields && typeof fields === "object" ? fields : {},
-		tags: Array.isArray(tags) ? tags : [],
+		...(Array.isArray(tags) && { tags }),
 	});
 	if (failure) return toFormError(failure);
 	revalidateContacts();

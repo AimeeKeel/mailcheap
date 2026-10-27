@@ -107,8 +107,8 @@ export default function ContactsPage() {
 				</li>
 			</ul>
 			<p>
-				The buttons at the top right change their status and edit their fields, and the <strong>⋯</strong> menu next to them has
-				Delete contact. Click an issue to open its report, a tag to list everyone who has it, and a segment to open its page.
+				The buttons at the top right change their status, edit their fields and edit their tags, and the <strong>⋯</strong> menu
+				next to them has Delete contact. Click an issue to open its report, a tag to list everyone who has it, and a segment to open its page.
 			</p>
 			<p>
 				Their activity keeps every change of their status, each with what made it: the unsubscribe link in your email or their mail
@@ -130,9 +130,10 @@ export default function ContactsPage() {
 
 			<h2 id="details">First names, tags and fields</h2>
 			<p>
-				Besides an email address, each contact can have a first name, tags and values for your own fields. Click Edit fields on
-				their page, or in their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>, to change them. Next to each field is
-				what prints it in your emails, between double braces, like <code>{"{{first_name}}"}</code>: click it to copy it.
+				Besides an email address, each contact can have a first name, tags and values for your own fields. On their page, or in
+				their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>, Edit fields changes their first name and fields, and Edit
+				tags their tags. Next to each field is what prints it in your emails, between double braces, like{" "}
+				<code>{"{{first_name}}"}</code>: click it to copy it.
 			</p>
 			<ul>
 				<li>
@@ -142,10 +143,7 @@ export default function ContactsPage() {
 				<li>
 					<strong>Tags</strong>: labels a contact has or doesn&apos;t, like vip, podcast or customer, {MAX_TAGS} per contact at most.
 					Use them to sort people into groups: list everyone with a tag, or send to them through a segment. Tags are lowercase, up
-					to {MAX_TAG_LENGTH} characters, without commas. Add them in Edit fields on a contact&apos;s page, pressing Enter or a comma
-					after each one, with an import, or through the{" "}
-					<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>, which can tag many contacts at once. Tags never show
-					in emails.
+					to {MAX_TAG_LENGTH} characters, without commas, and never show in emails. <a href="#tags">Tagging contacts</a>
 				</li>
 				<li>
 					<strong>Fields</strong>: your own questions with an answer for each contact, like a last name, a birthday or a plan, as
@@ -160,6 +158,19 @@ export default function ContactsPage() {
 			</p>
 			<p>
 				When someone signs up again, their first name and fields only fill in what&apos;s missing, and new tags are added to theirs.
+			</p>
+
+			<h2 id="tags">Tagging contacts</h2>
+			<p>
+				Click Edit tags on a contact&apos;s page, or in their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>. Type a tag
+				and press Enter or a comma after each one, or pick one you&apos;ve given other contacts: they&apos;re listed under the field,
+				the most used first, each with how many contacts have it. Typing narrows them down, and the arrow keys then Enter pick one.
+				Click × on a tag to take it off, then save.
+			</p>
+			<p>
+				To tag many contacts at once, tag everyone an import adds, or use the{" "}
+				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>. Click a tag on a contact&apos;s page to list everyone who
+				has it.
 			</p>
 
 			<h2 id="fields">Adding fields, step by step</h2>
@@ -272,7 +283,10 @@ export default function ContactsPage() {
 			</p>
 			<ul>
 				<li>
-					<strong>Edit fields</strong> changes their first name, fields and tags.
+					<strong>Edit fields</strong> changes their first name and fields.
+				</li>
+				<li>
+					<strong>Edit tags</strong> adds and takes off their tags, with the ones your other contacts have to pick from.
 				</li>
 				<li>
 					<strong>Mark as active</strong> brings back a dormant contact: they get your next issue. On a pending contact, it skips

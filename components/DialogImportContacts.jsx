@@ -548,7 +548,7 @@ function SectionOptions({ mode, onMode, tags, onTags, tagOptions }) {
 			</div>
 			<div className="flex flex-col gap-1.5">
 				<span className="text-sm font-medium">Tag everyone</span>
-				<InputTags value={tags} onChange={onTags} suggestions={tagOptions.map(({ name }) => name)} max={10} placeholder="Optional, e.g. from-beehiiv" />
+				<InputTags value={tags} onChange={onTags} suggestions={tagOptions} maxSuggestions={6} max={10} placeholder="Optional, e.g. from-beehiiv" />
 			</div>
 		</section>
 	);

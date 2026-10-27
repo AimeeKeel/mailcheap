@@ -27,12 +27,14 @@ import BadgeStatus from "@/components/BadgeStatus";
 import ButtonAddField from "@/components/ButtonAddField";
 import ButtonCopy from "@/components/ButtonCopy";
 import ButtonEditContact from "@/components/ButtonEditContact";
+import ButtonEditTags from "@/components/ButtonEditTags";
 import ButtonMergeTag from "@/components/ButtonMergeTag";
 import CardLocation from "@/components/CardLocation";
 import CardSettings from "@/components/CardSettings";
 import CardStat from "@/components/CardStat";
 import ImageFavicon from "@/components/ImageFavicon";
 import LinkHelpFields from "@/components/LinkHelpFields";
+import LinkHelpTags from "@/components/LinkHelpTags";
 import MenuContactMore from "@/components/MenuContactMore";
 import MenuContactStatus from "@/components/MenuContactStatus";
 import ProviderContactOptions from "@/components/ProviderContactOptions";
@@ -101,8 +103,8 @@ export default async function ContactPage({ params, searchParams }) {
 
 	return (
 		<ProviderContactOptions fields={fields} tags={tags}>
-			<header className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 animate-enter">
-				<div className="flex min-w-0 items-center gap-2">
+			<header className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-4 animate-enter">
+				<div className="flex min-w-0 flex-1 items-center gap-2 sm:mr-auto sm:flex-initial sm:pr-4">
 					<Link
 						href="/contacts"
 						aria-label="Back"
@@ -124,7 +126,7 @@ export default async function ContactPage({ params, searchParams }) {
 						)}
 					</div>
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex basis-full flex-wrap items-center gap-2 max-sm:order-2 sm:basis-auto">
 					<MenuContactStatus
 						id={id}
 						email={contact.email}
@@ -132,9 +134,12 @@ export default async function ContactPage({ params, searchParams }) {
 						label={contact.undeliverableAt && (UNDELIVERABLE_LABELS[contact.undeliverableReason] ?? "Undeliverable")}
 						undeliverableReason={contact.undeliverableReason}
 					/>
-					<ButtonEditContact contact={details} />
-					<MenuContactMore id={id} email={contact.email} status={contact.status} />
+					{/* Without their icons on a phone, the three fit on one line. */}
+					<ButtonEditContact contact={details} className="max-sm:[&_svg]:hidden" />
+					<ButtonEditTags contact={details} className="max-sm:[&_svg]:hidden" />
 				</div>
+				{/* On a phone, next to the name, above the buttons. */}
+				<MenuContactMore id={id} email={contact.email} status={contact.status} className="max-sm:order-1" />
 			</header>
 
 			<div className="flex flex-col gap-6">
@@ -290,12 +295,12 @@ export default async function ContactPage({ params, searchParams }) {
 						<CardSettings
 							title="Tags"
 							action={
-								<ButtonEditContact contact={details} variant="ghost" size="sm">
+								<ButtonEditTags contact={details} variant="ghost" size="sm">
 									Edit
-								</ButtonEditContact>
+								</ButtonEditTags>
 							}
 						>
-							<div className="flex flex-col gap-2.5 p-4">
+							<div className="p-4">
 								{details.tags.length > 0 ? (
 									<span className="flex flex-wrap gap-1.5">
 										{details.tags.map((tag) => (
@@ -311,9 +316,12 @@ export default async function ContactPage({ params, searchParams }) {
 								) : (
 									<p className="text-sm text-muted-foreground">No tags yet</p>
 								)}
+							</div>
+							<div className="flex flex-col items-start gap-2.5 px-4 py-3">
 								<p className="text-xs text-pretty text-muted-foreground">
 									Tags sort contacts for your list and segments. They never show in emails.
 								</p>
+								<LinkHelpTags />
 							</div>
 						</CardSettings>
 					</PanelTab>

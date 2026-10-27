@@ -310,7 +310,7 @@ describe("the contact page and its data", () => {
 		assert.ok(html.includes("animate-globe-pulse"), "on the globe");
 		const header = html.match(/<header[^>]*>([\s\S]*?)<\/header>/)[1];
 		assert.match(header, /<span class="sr-only">Status: <\/span>.*?Active/, "their status, a button at the top next to Edit fields");
-		assert.ok(header.includes("Edit fields"));
+		assert.ok(header.includes("Edit fields") && header.includes("Edit tags"), "fields and tags, each with its own dialog");
 		assert.ok(header.includes('aria-label="More"'), "a ⋯ menu after them");
 		assert.ok(!header.includes("Delete contact"), "deleting is in it, not a button of its own");
 		const tabs = [...html.matchAll(/<button([^>]*role="tab"[^>]*)>([\s\S]*?)<\/button>/g)].map(([, attributes, inner]) => [
@@ -326,11 +326,39 @@ describe("the contact page and its data", () => {
 		assert.ok(html.includes("Signed up on your website"));
 		assert.ok(html.includes("VIP readers") && !html.includes("Never opened"), "only the segments they're in");
 		assert.ok(html.includes(`href="/contacts?tag=vip"`));
+		assert.ok(html.includes(`href="/help/contacts#tags"`), "under their tags, how tags work");
 		assert.ok(html.includes(">100%<"), "opened their one email");
 
 		const other = await customer("contact-page-other@example.com");
 		assert.equal(await catchNotFound(renderPage(other, String(contact._id))), true, "another account gets a 404");
 		assert.equal(await catchNotFound(renderPage(user, "not-an-id")), true);
+	});
+
+	test("Edit fields and Edit tags each save only what they edit", async () => {
+		const user = await customer("contact-dialogs@example.com");
+		assert.equal((await callApi("POST", "/api/v1/contacts/fields", { key: user.key, body: { label: "Plan", type: "text" } })).status, 201);
+		const contact = await m.Contact.create({
+			accountId: user.accountId,
+			newsletterId: user.newsletterId,
+			email: "dialogs@example.org",
+			firstName: "Jane",
+			tags: ["vip"],
+			fields: { plan: "Pro" },
+		});
+		const id = String(contact._id);
+		const read = async () => {
+			const { firstName, fields, tags } = await findContact(user, "dialogs@example.org");
+			return { firstName, fields, tags };
+		};
+
+		assert.ok((await as(user, () => m.contacts.updateContactDetails(id, { firstName: "Jo", fields: { plan: "Team" } }))).contact);
+		assert.deepEqual(await read(), { firstName: "Jo", fields: { plan: "Team" }, tags: ["vip"] }, "Edit fields leaves the tags");
+
+		assert.ok((await as(user, () => m.contacts.updateContactDetails(id, { tags: ["vip", "beta"] }))).contact);
+		assert.deepEqual(await read(), { firstName: "Jo", fields: { plan: "Team" }, tags: ["vip", "beta"] }, "Edit tags leaves the rest");
+
+		assert.ok((await as(user, () => m.contacts.updateContactDetails(id, { tags: [] }))).contact);
+		assert.equal((await read()).tags, undefined, "and can take them all off");
 	});
 
 	test("the timeline shows the latest emails first, and older ones with what came before them on request", async () => {

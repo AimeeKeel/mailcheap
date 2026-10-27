@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Moon, MoreHorizontal, Pencil, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
+import { Loader2, Moon, MoreHorizontal, Pencil, Tag, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
 import { deleteContact, setContactStatus } from "@/app/(app)/contacts/actions";
 import DialogContactDetails from "@/components/DialogContactDetails";
+import DialogContactTags from "@/components/DialogContactTags";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -33,8 +34,8 @@ const AFTER_DELETE = {
 	complained: "They marked an email as spam, so adding them again won't email them.",
 };
 
-// Its fields, the status changes lib/contact-status.js allows for this contact, then delete. firstName, tags, fields:
-// what the fields dialog edits. undeliverableReason: why the list hygiene stopped it, if it did.
+// Its fields and tags, the status changes lib/contact-status.js allows for this contact, then delete. firstName, fields,
+// tags: what their dialogs edit. undeliverableReason: why the list hygiene stopped it, if it did.
 export default function MenuContact({ id, email, status, undeliverableReason, firstName = "", tags = [], fields = {} }) {
 	const [dialog, setDialog] = useState(null);
 	const [isPending, startTransition] = useTransition();
@@ -71,6 +72,10 @@ export default function MenuContact({ id, email, status, undeliverableReason, fi
 						<Pencil />
 						Edit fields
 					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => setDialog("tags")}>
+						<Tag />
+						Edit tags
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					{lock && <DropdownMenuLabel className="max-w-56 font-normal">{lock}.</DropdownMenuLabel>}
 					{getStatusChanges(status).map((nextStatus) => {
@@ -94,10 +99,11 @@ export default function MenuContact({ id, email, status, undeliverableReason, fi
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<DialogContactDetails
-				contact={{ id, email, firstName, tags, fields }}
+				contact={{ id, email, firstName, fields }}
 				isOpen={dialog === "details"}
 				onOpenChange={changeOpen("details")}
 			/>
+			<DialogContactTags contact={{ id, email, tags }} isOpen={dialog === "tags"} onOpenChange={changeOpen("tags")} />
 			<DialogConsentContact id={id} email={email} status={status} isOpen={dialog === "consent"} onOpenChange={changeOpen("consent")} />
 			<DialogDeleteContact id={id} email={email} status={status} isOpen={dialog === "delete"} onOpenChange={changeOpen("delete")} />
 		</>
