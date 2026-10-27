@@ -3,6 +3,7 @@ import { after, before, describe, test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import BlockHtml from "../components/BlockHtml.jsx";
+import { fitToWidth } from "../components/FrameIssue.jsx";
 import InputHtml from "../components/InputHtml.jsx";
 import { renderIssueBody } from "../lib/archive-content.js";
 import { HTML_BLOCK_ATTRIBUTES, HTML_BLOCK_STYLES, HTML_BLOCK_TAGS, cleanBlockHtml, cleanRichHtml } from "../lib/clean-html.js";
@@ -255,6 +256,18 @@ describe("where HTML blocks go", () => {
 		assert.ok(preview.includes('<div class="body" style="display:flow-root;"><p style="color:red">Hi</p></div>'));
 		assert.match(preview, /<base target="_blank">/);
 		assert.doesNotMatch(preview, /onclick|<script/);
+	});
+
+	test("a preview that loads while its step is hidden waits to show before it's measured", () => {
+		const root = { scrollWidth: 0, scrollHeight: 0 };
+		const frame = { contentDocument: { documentElement: root }, parentElement: { clientWidth: 0 }, style: {} };
+		assert.equal(fitToWidth(frame), null, "its height stays a number instead of 0 / 0");
+
+		Object.assign(root, { scrollWidth: 600, scrollHeight: 240 });
+		frame.parentElement.clientWidth = 600;
+		assert.equal(fitToWidth(frame), 240);
+		frame.parentElement.clientWidth = 300;
+		assert.equal(fitToWidth(frame), 120, "a wide block shrinks to fit");
 	});
 });
 

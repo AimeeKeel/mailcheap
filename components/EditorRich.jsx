@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useImperativeHandle, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import FileHandler from "@tiptap/extension-file-handler";
 import { Placeholder } from "@tiptap/extensions";
@@ -14,6 +14,7 @@ import { SlashCommand } from "@/components/MenuSlash";
 import { BlockHandle } from "@/lib/editor-block-handle";
 import { ButtonBlock, findButton } from "@/lib/editor-button";
 import { Callout } from "@/lib/editor-callout";
+import { findWords } from "@/lib/editor-find";
 import { ImageAligned } from "@/lib/editor-image";
 import { MergeTags } from "@/lib/editor-merge-tags";
 import { toast } from "@/lib/toast";
@@ -24,7 +25,8 @@ const MIN_HEIGHT = "min-h-[560px]";
 
 // contactFields: the account's fields, whose tags the editor draws as placeholders and its slash menu inserts.
 // newsletter: whose email design HTML blocks preview in, and whose button colors and corners buttons show.
-export default function EditorRich({ content, onChange, contactFields = [], newsletter = null }) {
+// ref: select(words), which selects the first place the issue has them and says whether it found one.
+export default function EditorRich({ ref, content, onChange, contactFields = [], newsletter = null }) {
 	const [isEditingLink, setIsEditingLink] = useState(false);
 	const [isEditingButtonLink, setIsEditingButtonLink] = useState(false);
 	const [isPickingImage, setIsPickingImage] = useState(false);
@@ -85,6 +87,7 @@ export default function EditorRich({ content, onChange, contactFields = [], news
 		onUpdate: ({ editor: current }) => onChange(current.getHTML()),
 	});
 	useFileDropGuard();
+	useImperativeHandle(ref, () => ({ select: (words) => Boolean(editor && selectWords(editor, words)) }), [editor]);
 
 	if (!editor) return <div className={MIN_HEIGHT} />;
 
@@ -101,6 +104,16 @@ export default function EditorRich({ content, onChange, contactFields = [], news
 			/>
 		</>
 	);
+}
+
+// Centered on the screen, where the editor's own scrolling would leave the words at its edge, under the page's header.
+function selectWords(editor, words) {
+	const found = findWords(editor.state.doc, words);
+	if (!found || editor.isDestroyed) return false;
+	editor.chain().focus(null, { scrollIntoView: false }).setTextSelection(found).run();
+	const { node } = editor.view.domAtPos(found.from);
+	(node.nodeType === Node.TEXT_NODE ? node.parentElement : node)?.scrollIntoView({ block: "center" });
+	return true;
 }
 
 // Where the slash command was typed: the editor keeps its selection while the picker has focus.

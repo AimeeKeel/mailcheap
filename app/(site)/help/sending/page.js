@@ -23,7 +23,7 @@ export default function SendingPage() {
 			<h2 id="review">The review step</h2>
 			<p>Before a campaign can go out, the review step checks it:</p>
 			<ul>
-				<li>a subject, and content;</li>
+				<li>a subject, and content, with each button&apos;s text and link;</li>
 				<li>the unsubscribe link, which MailCheap adds to every issue written in the editor;</li>
 				<li>a size under 100 KB, since Gmail cuts off longer emails;</li>
 				<li>
@@ -35,8 +35,28 @@ export default function SendingPage() {
 				</li>
 			</ul>
 			<p>
-				It also warns about a subject over 70 characters, which inboxes cut off, a missing preview text and a missing test email.
-				Warnings don&apos;t stop you.
+				It also warns about a subject over 70 characters, which inboxes cut off, a missing preview text and a missing test email,
+				and about what may look broken to your readers:
+			</p>
+			<ul>
+				<li>
+					a <Link href={getHelpHref("writing", "first-name")}>merge tag</Link> MailCheap doesn&apos;t fill in, like one from another
+					platform, which goes out as written;
+				</li>
+				<li>
+					a link with no address, one that isn&apos;t a working address or needs the full one, starting with https://, one to a
+					placeholder like example.com or to your own computer, and one whose text shows a website it doesn&apos;t open, which spam
+					filters distrust;
+				</li>
+				<li>
+					an <Link href={getHelpHref("writing", "html")}>HTML block</Link> whose tags don&apos;t match up, like one never closed,
+					which can take in the rest of the issue, or with parts emails remove, like a style sheet;
+				</li>
+				<li>text left from a template, like Lorem ipsum, TODO or [insert link];</li>
+				<li>HTML or Markdown pasted as text, like **bold**, which readers would see as it is.</li>
+			</ul>
+			<p>
+				Edit content takes you to the words in question. Warnings don&apos;t stop you.
 				{isCloud() &&
 					" Problems with your account show in red above the steps: your plan's limits, and on the send step a send bigger than what your plan has left this month."}{" "}
 				A web-only issue sends no email, so it only needs a subject, content and the website on.

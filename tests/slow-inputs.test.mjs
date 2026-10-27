@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renderIssueBody } from "../lib/archive-content.js";
 import { cleanBlockHtml, cleanRichHtml, removeUnsafeElements } from "../lib/clean-html.js";
+import { findContentWarnings } from "../lib/content-warnings.js";
 import { highlightHtml } from "../lib/highlight-html.js";
 import { markdownToHtml } from "../lib/markdown.js";
 import { findButtonProblem, hasContent, htmlToText, renderEmail } from "../lib/render-email.js";
@@ -118,7 +119,13 @@ for (const [label, html] of Object.entries(SHAPES)) {
 	});
 
 	test(`sending and saving read "${label}" (500 KB) in linear time`, () => {
-		for (const run of [() => htmlToText(html), () => firstImageUrl({ format: "html", html }), () => removeUnsafeElements(html)]) {
+		for (const run of [
+			() => htmlToText(html),
+			() => firstImageUrl({ format: "html", html }),
+			() => removeUnsafeElements(html),
+			() => findContentWarnings(html),
+			() => findContentWarnings(html, { isDesigned: true }),
+		]) {
 			const { ms } = fastest(run, maxMs);
 			assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
 		}
@@ -149,6 +156,7 @@ for (const [label, source] of Object.entries(BLOCK_SHAPES)) {
 			[() => renderEmail({ format: "rich", html, subject: "Hi" })],
 			[() => hasContent(html)],
 			[() => highlightHtml(source)],
+			[() => findContentWarnings(html)],
 		]) {
 			const { result, ms } = fastest(run, maxMs);
 			assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
@@ -174,10 +182,39 @@ for (const [label, html] of Object.entries(BUTTON_SHAPES)) {
 			() => renderIssueBody({ format: "rich", html }),
 			() => renderEmail({ format: "rich", html, subject: "Hi" }),
 			() => findButtonProblem(html),
+			() => findContentWarnings(html),
 		]) {
 			const { ms } = fastest(run, maxMs);
 			assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
 		}
+	});
+}
+
+// The review step's warnings (lib/content-warnings.js) read each link, each HTML block's tags and the issue's text once,
+// whatever their shape.
+const WARNING_SHAPES = {
+	"a link to a long host": `<a href="https://${repeat("a")}">x</a>`,
+	"a link to a long dotted host": `<a href="https://${repeat("a.")}com">x</a>`,
+	"a link of long dotted text": `<a href="https://x.test">${repeat("co.")}x</a>`,
+	"a link of long text and slashes": `<a href="https://x.test">a.com${repeat("/a.com")} x</a>`,
+	"a run of empty links": repeat('<a href="#"></a>'),
+	"a run of mailto links": repeat('<a href="mailto:a@b">x</a>'),
+	"a block of open tags": `<div data-html-block="">${repeat("&lt;div&gt;")}</div>`,
+	"a block of open quotes": `<div data-html-block="">${repeat("&lt;a href=&quot;")}</div>`,
+	"a block of open scripts": `<div data-html-block="">${repeat("&lt;script&gt;")}</div>`,
+	"a block of open comments": `<div data-html-block="">${repeat("&lt;!--")}</div>`,
+	"a block of images": `<div data-html-block="">${repeat("&lt;img src=x&gt;")}</div>`,
+	"a run of brackets": `<p>${repeat("[your ")}</p>`,
+	"a run of asterisks": `<p>${repeat("**a")}</p>`,
+	"a run of Markdown links": `<p>${repeat("[a](https://")}</p>`,
+	"a run of tags as text": `<p>${repeat("&lt;b ")}</p>`,
+	"lines of #": repeat("<p># </p>"),
+};
+
+for (const [label, html] of Object.entries(WARNING_SHAPES)) {
+	test(`the review step's warnings read "${label}" (500 KB) in linear time`, () => {
+		const { ms } = fastest(() => findContentWarnings(html), maxMs);
+		assert.ok(ms < maxMs, `${label}: ${Math.round(ms)} ms, over ${Math.round(maxMs)} ms`);
 	});
 }
 

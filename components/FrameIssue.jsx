@@ -53,11 +53,12 @@ export default function FrameIssue({ html, title = "Issue", initialHeight = INIT
 
 // The email lays out at the box's width. One that can't fit (a wide table) keeps the width it needs and
 // shrinks to fit, the way mail apps show it, instead of losing its right side. Measuring at zero
-// height keeps an email sized to the frame's own height from growing it on every pass.
-function fitToWidth(frame) {
+// height keeps an email sized to the frame's own height from growing it on every pass. A box with no
+// width, in a step that's hidden, has nothing to lay out at: it's measured once it shows.
+export function fitToWidth(frame) {
 	const root = frame.contentDocument?.documentElement;
-	if (!root) return null;
 	const available = frame.parentElement.clientWidth;
+	if (!root || !available) return null;
 	Object.assign(frame.style, { width: `${available}px`, height: "0px", transform: "" });
 	const width = Math.max(root.scrollWidth, available);
 	frame.style.width = `${width}px`;

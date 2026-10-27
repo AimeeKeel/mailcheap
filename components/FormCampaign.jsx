@@ -49,7 +49,7 @@ import { toPreviewFrame } from "@/lib/email-preview";
 import { formatCount } from "@/lib/format";
 import { markdownToHtml } from "@/lib/markdown";
 import { fieldTag, firstNameTag } from "@/lib/merge-tags";
-import { getPresendChecks } from "@/lib/presend-checks";
+import { getContentWarnings, getPresendChecks } from "@/lib/presend-checks";
 import { readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
 import { SEGMENT_DELETED } from "@/lib/segments";
@@ -122,6 +122,7 @@ export default function FormCampaign({
 	const scheduledAt = campaign.status === "scheduled" ? campaign.scheduledAt : null;
 	const isCompact = useMediaQuery(COMPACT_SCREEN);
 	const rootRef = useRef(null);
+	const editorRef = useRef(null);
 	const subjectRef = useRef(null);
 	const subjectSelectionRef = useRef(null);
 	const previewTextRef = useRef(null);
@@ -146,6 +147,11 @@ export default function FormCampaign({
 		[format, deferredValues, newsletter]
 	);
 	const previewHtml = useMemo(() => toPreviewFrame(rendered.html), [rendered.html]);
+	// A long issue takes a few milliseconds to read, so it's read apart from typing.
+	const contentWarnings = useMemo(
+		() => getContentWarnings({ ...deferredValues, format, contactFields }),
+		[deferredValues, format, contactFields]
+	);
 	const { checks } = getPresendChecks({
 		campaign: { ...campaign, ...values, publishTo },
 		newsletter,
@@ -155,6 +161,7 @@ export default function FormCampaign({
 		isSharedSender,
 		isSendingEnabled,
 		planProblem,
+		contentWarnings,
 	});
 	const reviewChecks = checks.map((check) => ({ ...check, fix: getCheckFix(check, { newsletterId: newsletter._id }) }));
 	const blocking = [
@@ -226,9 +233,10 @@ export default function FormCampaign({
 		window.scrollTo({ top: scrollsRef.current[next] ?? 0 });
 	}
 
-	// words: a tip's, selected where the field has them as they are, so typing replaces them.
+	// words: a tip's or a warning's, selected where the field has them as they are, so typing replaces them.
 	function editField(field, words) {
 		goToStep("write");
+		if (field === "body" && words && editorRef.current?.select(words)) return;
 		const target =
 			field === "subject"
 				? subjectRef.current
@@ -425,7 +433,13 @@ export default function FormCampaign({
 								/>
 							</div>
 						) : (
-							<EditorRich content={initialBody} onChange={updateBody} contactFields={contactFields} newsletter={newsletter} />
+							<EditorRich
+								ref={editorRef}
+								content={initialBody}
+								onChange={updateBody}
+								contactFields={contactFields}
+								newsletter={newsletter}
+							/>
 						)}
 					</div>
 				</section>

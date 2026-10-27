@@ -14,7 +14,8 @@ export default function WritingPage() {
 			<p>
 				Start a draft from the <LinkApp href="/campaigns">Campaigns page</LinkApp>. A campaign goes through three steps, shown at the
 				top: Write, where you type the
-				subject, the preview text and the issue; Review, a checklist of what to fix before it can go out; and Send, where you pick
+				subject, the preview text and the issue; Review, a checklist of what to fix before it can go out and of what may look broken;
+				and Send, where you pick
 				who gets it and when
 				{isCloud() && (
 					<>
@@ -101,6 +102,10 @@ export default function WritingPage() {
 				<code>position</code> or a negative margin. Style each element inline instead, with <code>style=&quot;…&quot;</code>.
 				Tables, colors, fonts, borders, spacing and sizes stay. Links and pictures need their full address, starting with{" "}
 				<code>https://</code>. Names and fields work in its text and its links.
+			</p>
+			<p>
+				The <Link href={getHelpHref("sending", "review")}>review step</Link> points out a block whose tags don&apos;t match up, like a{" "}
+				<code>&lt;table&gt;</code> never closed, which can take in everything after it, and what the cleaning removes.
 			</p>
 			<p>
 				Embeds that need a script, like a video player or a signup form from another site, can&apos;t work in an email: link to
