@@ -126,7 +126,7 @@ export default async function ContactPage({ params, searchParams }) {
 						)}
 					</div>
 				</div>
-				<div className="flex basis-full flex-wrap items-center gap-2 max-sm:order-2 sm:basis-auto">
+				<div className="flex basis-full max-sm:order-2 sm:basis-auto">
 					<MenuContactStatus
 						id={id}
 						email={contact.email}
@@ -134,12 +134,9 @@ export default async function ContactPage({ params, searchParams }) {
 						label={contact.undeliverableAt && (UNDELIVERABLE_LABELS[contact.undeliverableReason] ?? "Undeliverable")}
 						undeliverableReason={contact.undeliverableReason}
 					/>
-					{/* Without their icons on a phone, the three fit on one line. */}
-					<ButtonEditContact contact={details} className="max-sm:[&_svg]:hidden" />
-					<ButtonEditTags contact={details} className="max-sm:[&_svg]:hidden" />
 				</div>
-				{/* On a phone, next to the name, above the buttons. */}
-				<MenuContactMore id={id} email={contact.email} status={contact.status} className="max-sm:order-1" />
+				{/* On a phone, next to the name, above their status. */}
+				<MenuContactMore contact={details} status={contact.status} className="max-sm:order-1" />
 			</header>
 
 			<div className="flex flex-col gap-6">

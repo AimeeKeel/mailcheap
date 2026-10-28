@@ -107,8 +107,8 @@ export default function ContactsPage() {
 				</li>
 			</ul>
 			<p>
-				The buttons at the top right change their status, edit their fields and edit their tags, and the <strong>⋯</strong> menu
-				next to them has Delete contact. Click an issue to open its report, a tag to list everyone who has it, and a segment to open its page.
+				At the top right, the first button changes their status, and the <strong>⋯</strong> menu next to it has Edit fields, Edit
+				tags and Delete contact. Click an issue to open its report, a tag to list everyone who has it, and a segment to open its page.
 			</p>
 			<p>
 				Their activity keeps every change of their status, each with what made it: the unsubscribe link in your email or their mail
@@ -162,10 +162,10 @@ export default function ContactsPage() {
 
 			<h2 id="tags">Tagging contacts</h2>
 			<p>
-				Click Edit tags on a contact&apos;s page, or in their menu on the <LinkApp href="/contacts">Contacts page</LinkApp>. Type a tag
-				and press Enter or a comma after each one, or pick one you&apos;ve given other contacts: they&apos;re listed under the field,
-				the most used first, each with how many contacts have it. Typing narrows them down, and the arrow keys then Enter pick one.
-				Click × on a tag to take it off, then save.
+				Pick Edit tags in the <strong>⋯</strong> menu at the top of a contact&apos;s page, or in their menu on the{" "}
+				<LinkApp href="/contacts">Contacts page</LinkApp>. Type a tag and press Enter or a comma after each one, or pick one
+				you&apos;ve given other contacts: they&apos;re listed under the field, the most used first, each with how many contacts
+				have it. Click one, or use the arrow keys then Enter. Click × on a tag to take it off, then save.
 			</p>
 			<p>
 				To tag many contacts at once, tag everyone an import adds, or use the{" "}
@@ -279,7 +279,7 @@ export default function ContactsPage() {
 			<h2 id="actions">Changing a status, and deleting</h2>
 			<p>
 				Each contact&apos;s menu, at the end of their row, has what applies to them, and so does the top right of their page: the
-				first button shows their status and opens the changes it allows, and Delete contact is in the <strong>⋯</strong> menu:
+				first button shows their status and opens the changes it allows, and the <strong>⋯</strong> menu has the rest:
 			</p>
 			<ul>
 				<li>
