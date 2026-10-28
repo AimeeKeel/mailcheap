@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { getEmailProviderId } from "../lib/config.js";
 import { getEventPlan } from "../lib/email-event-rules.js";
 import { SEND_OUTCOMES, providerError } from "../lib/email-provider/outcomes.js";
-import { getRefusalCode, getSendErrorAction, isCustomerRefusal } from "../lib/sending-rules.js";
+import { getRefusalCode, getSendErrorAction, isCustomerRefusal, isPauseForAdmins } from "../lib/sending-rules.js";
 
 test("PostShiba is the provider once its key is set, SES otherwise, and EMAIL_PROVIDER decides when set", () => {
 	assert.equal(getEmailProviderId({}), "ses");
@@ -70,4 +70,14 @@ test("one event shape for every provider: unsubscribes and drops of suppressed a
 	assert.equal(getEventPlan({ ...base, type: "deferred" }).status, null);
 	assert.equal(getEventPlan({ ...base, type: "processed" }), null, "only normalized types");
 	assert.equal(getEventPlan(null), null);
+});
+
+test("a provider's pause only an admin lifts, unlike the owner's own login refused or a from address they fix", () => {
+	for (const outcome of [SEND_OUTCOMES.domainUnverified, SEND_OUTCOMES.tenantPaused, SEND_OUTCOMES.approvalPending, SEND_OUTCOMES.misconfigured]) {
+		assert.equal(isPauseForAdmins(providerError(outcome, outcome)), true, outcome);
+	}
+	assert.equal(isPauseForAdmins(providerError(SEND_OUTCOMES.credentialRefused, "401")), false, "a resume sends it again");
+	const sesError = (name) => Object.assign(new Error(name), { name });
+	assert.equal(isPauseForAdmins(sesError("SendingPausedException")), true);
+	assert.equal(isPauseForAdmins(sesError("SenderNotAllowed")), false, "MailCheap's own check of their from address");
 });

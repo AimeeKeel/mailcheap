@@ -573,7 +573,7 @@ describe("PostShiba sending", () => {
 		await importContacts(other, ["too@example.org"]);
 		const id = await draft(user, "Again");
 		const otherId = await draft(other, "Too");
-		await withEnv(TELEGRAM, async () => {
+		await withEnv({ ...TELEGRAM, URGENT_REPLY_TO: "owner-help@example.com" }, async () => {
 			const before = { emails: platformEmails.length, telegram: telegramMessages.length };
 			fake.fail({ ...REFUSED_LOGIN, times: 3 });
 			await as(user, () => m.campaigns.sendCampaign(id, {}));
@@ -581,8 +581,8 @@ describe("PostShiba sending", () => {
 			const campaign = await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean();
 			assert.deepEqual([campaign.status, campaign.pauseReason], ["paused", "PostShiba refused the account's SMTP credential (401)"]);
 			assert.equal(await m.Message.countDocuments({ accountId: user.accountId, campaignId: id, status: "queued" }), 1, "waits for the resume");
-			const told = platformEmails.slice(before.emails).map(({ to, subject }) => [to.join(), subject]);
-			assert.deepEqual(told, [["ps-refused-again@example.com", "[MailCheap] Campaign paused"]], "its owner, not the admins");
+			const told = platformEmails.slice(before.emails).map(({ to, subject, reply_to }) => [to.join(), subject, reply_to]);
+			assert.deepEqual(told, [["ps-refused-again@example.com", "[MailCheap] Campaign paused", "hello@mailcheap.ai"]], "its owner, not the admins, and a resume lifts it");
 			assert.equal(telegramMessages.length, before.telegram);
 
 			fake.fail(REFUSED_LOGIN);
@@ -604,7 +604,7 @@ describe("PostShiba sending", () => {
 		const user = await customer("ps-suspended@example.com", "ps-suspended");
 		await importContacts(user, ["first-reader@example.org", "second-reader@example.org"]);
 		const id = await draft(user, "Suspended");
-		await withEnv(TELEGRAM, async () => {
+		await withEnv({ ...TELEGRAM, URGENT_REPLY_TO: "owner-help@example.com" }, async () => {
 			const before = { emails: platformEmails.length, telegram: telegramMessages.length };
 			const errors = ["first-reader@example.org: 550 domain_suspended\nstack traceback:\n\t[C]: in function 'kumo.reject'"];
 			fake.fail({ path: /^\/inject$/, status: 200, body: { success_count: 0, fail_count: 1, failed_recipients: ["first-reader@example.org"], errors } });
@@ -614,7 +614,9 @@ describe("PostShiba sending", () => {
 			assert.equal(await m.Message.countDocuments({ accountId: user.accountId, campaignId: id, status: "queued" }), 2, "both wait for the resume");
 
 			const emails = platformEmails.slice(before.emails);
-			assert.deepEqual(emails.filter(({ to }) => to.includes("ps-suspended@example.com")).map(({ subject }) => subject), ["[MailCheap] Campaign paused"]);
+			const toOwner = emails.filter(({ to }) => to.includes("ps-suspended@example.com"));
+			assert.deepEqual(toOwner.map(({ subject }) => subject), ["[MailCheap] Campaign paused"]);
+			assert.equal(toOwner[0].reply_to, "owner-help@example.com", "they can't lift it: their reply reaches an admin's own inbox");
 			const toAdmins = emails.filter(({ to }) => to.includes("admin@example.com"));
 			assert.deepEqual(toAdmins.map(({ subject }) => subject), ["[MailCheap] A paying customer can't send"]);
 			const telegram = telegramMessages.slice(before.telegram);
@@ -838,7 +840,12 @@ describe("PostShiba blocks", () => {
 		const id = await draft(user);
 		await m.Newsletter.updateOne({ accountId: user.accountId, _id: user.newsletterId }, { $set: { welcome: { enabled: true, subject: "Hi", markdown: "Welcome." } } });
 		const admin = await signIn("admin@example.com");
-		assert.deepEqual(await as(admin, () => m.admin.blockAccountAction(String(user.accountId), "Review")), { ok: true });
+		const emailsBefore = platformEmails.length;
+		await withEnv({ URGENT_REPLY_TO: "owner-help@example.com" }, async () => {
+			assert.deepEqual(await as(admin, () => m.admin.blockAccountAction(String(user.accountId), "Review")), { ok: true });
+		});
+		const blocked = platformEmails.slice(emailsBefore).find(({ to }) => to.includes("ps-pause@example.com"));
+		assert.deepEqual([blocked.subject, blocked.reply_to], ["[MailCheap] Account blocked", "owner-help@example.com"], "its owner's reply reaches an admin's own inbox");
 		const tenantId = user.account.postshiba.tenantId;
 		assert.equal(fake.state.tenants.get(tenantId).suspended, true);
 		assert.equal((await loadAccount(user)).postshiba.tenantStatus, "suspended");
