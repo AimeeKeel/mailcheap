@@ -69,15 +69,15 @@ export default function ContactsPage() {
 					<strong>Status</strong>: one of the statuses above, each with how many contacts have it.
 				</li>
 				<li>
-					<strong>Tag</strong>: everyone with a tag, once your contacts have tags.
-				</li>
-				<li>
 					<strong>Signed up</strong>: before a day, after one, or between two, both included. Days are in UTC, like the dates in the
 					list.
 				</li>
+				<li id="sources" className="scroll-mt-20">
+					<strong>Source</strong>: how they joined your list: your website&apos;s signup form, the form on your own site, an import,
+					by hand, the API, or a source an API call gave. It&apos;s set when they&apos;re added and doesn&apos;t change.
+				</li>
 				<li>
-					<strong>Source</strong>: where they came from: your website&apos;s signup form, the form on your own site, an import, by
-					hand, the API, or a source an API call gave.
+					<strong>Tag</strong>: everyone with a tag, once your contacts have tags. <a href="#tags">Tagging contacts</a>
 				</li>
 			</ul>
 			<p>

@@ -291,6 +291,13 @@ describe("the contacts and segments pages", () => {
 		assert.ok(theirs.error, "another account can't name this newsletter or segment");
 		assert.equal(await m.Contact.countDocuments({ accountId: user.accountId }), 3);
 	});
+
+	test("the filters come as status, signup date, source then tag", async () => {
+		await m.Contact.create({ accountId: user.accountId, newsletterId, email: "tagged@example.org", status: "active", source: "import", tags: ["vip"] });
+		const html = await render(m.contactsPage, { searchParams: Promise.resolve({}) });
+		const pills = [...html.matchAll(/<button[^>]*>(Status|Signed up|Source|Tag)<svg/g)].map(([, label]) => label);
+		assert.deepEqual(pills, ["Status", "Signed up", "Source", "Tag"]);
+	});
 });
 
 function ago(days) {
