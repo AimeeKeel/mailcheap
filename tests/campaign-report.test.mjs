@@ -34,6 +34,13 @@ test("the report's cards are delivered, opened, clicked, bounced and unsubscribe
 	assert.ok(admin.indexOf(card("Complaints")) < admin.indexOf(card("Unsubscribed")));
 });
 
+test("the Delivered card says how many emails weren't delivered, when bounces don't explain them all", () => {
+	const stats = { recipients: 22, sent: 22, delivered: 20, opened: 7, clicked: 0, bounced: 1, complained: 0, unsubscribed: 0 };
+	const html = renderReport({ campaign: { _id: "6ad87a2affc219b3be2cc72c", subject: "Hello", status: "sent", format: "markdown", markdown: "Hi", stats } });
+	assert.ok(html.includes(">20 · 1 not delivered</span>"), "one still on its way or refused for now, on top of the bounce");
+	assert.ok(!renderReport().includes("not delivered"), "every email delivered or bounced");
+});
+
 test("the report's links come below its results by inbox", () => {
 	const html = renderReport({
 		providers: [{ provider: "gmail", sent: 600, delivered: 595, opened: 300, clicked: 50, bounced: 5, complained: 0 }],

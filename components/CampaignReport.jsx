@@ -275,8 +275,14 @@ export default function CampaignReport({
 // What the email did: delivery, opens and clicks against the newsletter's average, bounces and unsubscribes, opens over
 // time, inboxes and links. Complaints are for an admin to act on: the owner, who can't, sees them by inbox.
 function EmailResults({ campaign, newsletter, html, stats, reached, comparison, timeline, timeZone, links, providers, showComplaints }) {
+	// Bounced is hard bounces only: the rest are on their way, or an inbox refused them for now, like a full mailbox.
+	const notDelivered = Math.max(0, stats.sent - stats.delivered - stats.bounced);
 	const cards = [
-		{ label: "Delivered", value: formatRate(stats.delivered, stats.sent), detail: formatNumber(stats.delivered) },
+		{
+			label: "Delivered",
+			value: formatRate(stats.delivered, stats.sent),
+			detail: notDelivered > 0 ? `${formatNumber(stats.delivered)} · ${formatNumber(notDelivered)} not delivered` : formatNumber(stats.delivered),
+		},
 		{ label: "Opened", value: formatRate(stats.opened, reached), detail: formatNumber(stats.opened), change: toChange(comparison, "opened") },
 		{ label: "Clicked", value: formatRate(stats.clicked, reached), detail: formatNumber(stats.clicked), change: toChange(comparison, "clicked") },
 		{
