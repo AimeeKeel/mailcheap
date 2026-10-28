@@ -135,7 +135,7 @@ export default function WritingPage() {
 				the menu, then First name, or click the person icon at the end of the subject. Both add <code>{"{{first_name|there}}"}</code>: the word
 				after the bar is what readers without a first name see, so &ldquo;Hi {"{{first_name|there}}"}&rdquo; reads &ldquo;Hi
 				Jane&rdquo; or &ldquo;Hi there&rdquo;. Change it, or remove it with the bar to show nothing. In the editor, names and fields
-				show on a gray background: point at one to see what it prints, with a value and without one.
+				show on a gray background: point at one to see its sentence as Jane reads it, and as a reader without a value does.
 			</p>
 			<p>
 				Your own <Link href={getHelpHref("contacts", "fields")}>contact fields</Link> work the same way, by their key:{" "}
