@@ -125,6 +125,25 @@ export default function ImportingContactsPage() {
 				which is final. An import never sends welcome emails.
 			</p>
 
+			<h2 id="bring-back">Bringing some back</h2>
+			<p>
+				On the <LinkApp href="/contacts">Contacts page</LinkApp>, open Left out on the import to see each address it left out and why,
+				and search them. Role addresses and throwaway inboxes are left out because they complain and bounce more than personal
+				addresses, which hurts your deliverability, but people do sign up with them, like a business with its info@ address. Click
+				Bring back next to the ones you know signed up: each is added with what its row had, as the import would have.
+			</p>
+			<p>
+				The others stay out, since your emails wouldn&apos;t reach someone who wants them: misspelled domains, spam traps and spam
+				domains, domains that can&apos;t receive email, and people who unsubscribed, bounced or complained before. Invalid addresses,
+				duplicates and addresses MailCheap knows can&apos;t receive email are only counted. Bringing one back checks it again as
+				adding one contact does, so an address that can&apos;t receive email, or that unsubscribed since, still stays out.
+			</p>
+			<p>
+				The list stays 7 days after the import, and the import shows on the Contacts page for a day: importing the file again shows
+				it again, and contacts already in your list keep their status. Through the API or an AI assistant, list_left_out and
+				bring_back_contacts do the same.
+			</p>
+
 			<h2 id="after">After the import</h2>
 			<p>
 				The first time you send to contacts who never got an email from you, they get it in steps {FIRST_SEND.waitMinutes} minutes

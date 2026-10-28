@@ -109,8 +109,8 @@ function connectApp(user, clientId = "app-client") {
 }
 
 // A paying customer with one of everything: Google as a sign-in method, a newsletter on the shared address, contacts
-// from an import and one deleted after it unsubscribed, a campaign with a test sent, a verified domain, an image on S3,
-// an API key, a connected app, problem events, suppressions and an alert.
+// from an import, one deleted after it unsubscribed and an address the import left out, a campaign with a test sent, a
+// verified domain, an image on S3, an API key, a connected app, problem events, suppressions and an alert.
 async function customer(email, slug) {
 	const user = await signIn(email);
 	await collection("auth_accounts").insertOne({ userId: user.userId, providerId: "google", accountId: `google-${slug}`, createdAt: new Date(), updatedAt: new Date() });
@@ -124,6 +124,7 @@ async function customer(email, slug) {
 				{ email: `reader@${slug}.org`, status: "active" },
 				{ email: `other@${slug}.org`, status: "active" },
 				{ email: `left@${slug}.org`, status: "unsubscribed" },
+				{ email: `info@${slug}.org`, status: "active" },
 			],
 		})
 	);
@@ -143,7 +144,7 @@ async function customer(email, slug) {
 	return user;
 }
 
-const ACCOUNT_MODELS = ["Newsletter", "Contact", "ContactImport", "DeletedContact", "Campaign", "Message", "Event", "Suppression", "Upload", "Domain", "ApiKey", "Alert"];
+const ACCOUNT_MODELS = ["Newsletter", "Contact", "ContactImport", "LeftOutContact", "DeletedContact", "Campaign", "Message", "Event", "Suppression", "Upload", "Domain", "ApiKey", "Alert"];
 
 async function countData(user) {
 	const counts = {};
@@ -188,6 +189,7 @@ before(async () => {
 		DeletionRecord: (await import("../models/DeletionRecord.js")).default,
 		Domain: (await import("../models/Domain.js")).default,
 		Event: (await import("../models/Event.js")).default,
+		LeftOutContact: (await import("../models/LeftOutContact.js")).default,
 		Message: (await import("../models/Message.js")).default,
 		Newsletter: (await import("../models/Newsletter.js")).default,
 		Suppression: (await import("../models/Suppression.js")).default,

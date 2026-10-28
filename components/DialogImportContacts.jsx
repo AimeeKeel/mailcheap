@@ -234,7 +234,8 @@ export default function DialogImportContacts({ newsletter, guides = [], label = 
 					<span>
 						{CONSENT_TEXT}
 						<span className="block text-xs text-muted-foreground">
-							Role addresses, throwaway inboxes and addresses that bounced or complained are left out.
+							Role addresses, throwaway inboxes and addresses that bounced or complained are left out. You can bring back role
+							addresses and throwaway inboxes after.
 						</span>
 					</span>
 				</label>

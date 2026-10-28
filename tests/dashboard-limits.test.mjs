@@ -85,6 +85,7 @@ test("the dashboard counts the hourly limits of what costs something each call",
 			.map(({ name }) => name)
 			.sort(),
 		[
+			"bring_back_contacts",
 			"count_segment",
 			"create_api_key",
 			"create_campaign",
@@ -99,7 +100,7 @@ test("the dashboard counts the hourly limits of what costs something each call",
 			"tag_contacts",
 			"untag_contacts",
 		],
-		"drafts, segments, fields, tags, keys, deletes, exports, counts and summaries stay inside MailCheap"
+		"drafts, segments, fields, tags, keys, deletes, contacts brought back, exports, counts and summaries stay inside MailCheap"
 	);
 	const imports = m.registry.getAction("import_contacts");
 	assert.equal(imports.limitDashboard({}), true, "a file's first chunk counts");
