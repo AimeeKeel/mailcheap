@@ -123,6 +123,8 @@ export default function FormCampaign({
 	const isCompact = useMediaQuery(COMPACT_SCREEN);
 	const rootRef = useRef(null);
 	const editorRef = useRef(null);
+	// The write step's card, beside which the editor's problems show (components/GutterProblems.jsx).
+	const writeRef = useRef(null);
 	const subjectRef = useRef(null);
 	const subjectSelectionRef = useRef(null);
 	const previewTextRef = useRef(null);
@@ -391,7 +393,7 @@ export default function FormCampaign({
 					/>
 				)}
 
-				<section aria-label="Write" hidden={step !== "write"}>
+				<section ref={writeRef} aria-label="Write" hidden={step !== "write"} className="relative">
 					<div className="overflow-hidden rounded-xl bg-card shadow-border animate-enter">
 						<div className="divide-y divide-border/60 border-b border-border/60">
 							<RowCampaign label="Subject">
@@ -436,6 +438,7 @@ export default function FormCampaign({
 						) : (
 							<EditorRich
 								ref={editorRef}
+								gutterRef={writeRef}
 								content={initialBody}
 								onChange={updateBody}
 								contactFields={contactFields}

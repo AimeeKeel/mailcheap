@@ -7,25 +7,26 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { isBeingWritten, problemsKey } from "@/lib/editor-problems";
 import { cn } from "@/lib/utils";
 
-// The blocks' grip and its gap before the text (lib/editor-block-handle.js), which the dots keep clear of.
+// The blocks' grip and its gap before the text (lib/editor-block-handle.js), which a dot in the editor keeps clear of.
 const GRIP_SPACE = 26;
-const DOT = { width: 16, height: 24, gap: 3 };
-// The message's width with its arrow: where the editor leaves less room on its left, as on a phone, it shows under the
-// line instead of over the words it's about.
-const MESSAGE_SPACE = 300;
+// outside: the room between a dot and the editor's card, inside: between a dot and the grip.
+const DOT = { width: 16, height: 24, outside: 8, inside: 3 };
+// The message's width with its arrow: where there's less room on a dot's left, it shows under the line instead.
+const MESSAGE_SPACE = 260;
 // A block with many problems lists its first few.
 const MAX_SHOWN = 3;
 // Each dot is measured again as the issue changes, so an issue with problems everywhere shows its first ones only: the
 // review step counts them all.
 const MAX_DOTS = 200;
 
-// A dot in the editor's left margin beside each block where something may look broken (lib/editor-problems.js), the way
-// code editors mark a line: amber for what the review step asks to check, red for what holds the send. Pointing at it
-// says what, as the review step does, and clicking it goes to it (onReveal). pinned: the block whose dot says what it's
-// about until the next key or click, once the review step brought it into view.
-export default function GutterProblems({ editor, pinned, onUnpin, onReveal }) {
-	const [container, setContainer] = useState(null);
-	const [dots, setDots] = useState([]);
+// A dot beside each block where something may look broken (lib/editor-problems.js), the way code editors mark a line:
+// amber for what the review step asks to check, red for what holds the send. It sits in the page's margin, just left of
+// the editor's card, or where the page has no room, as on a phone, in the editor's own left padding. Pointing at it says
+// what, as the review step does, and clicking it goes to it (onReveal). gutterRef: the element around the editor's
+// card, positioned, which holds the dots in the margin. pinned: the block whose dot says what it's about until the next
+// key or click, once the review step brought it into view.
+export default function GutterProblems({ editor, gutterRef, pinned, onUnpin, onReveal }) {
+	const [layout, setLayout] = useState({ container: null, dots: [] });
 	const [hovered, setHovered] = useState(null);
 
 	useEffect(() => {
@@ -35,14 +36,18 @@ export default function GutterProblems({ editor, pinned, onUnpin, onReveal }) {
 		function measure() {
 			frame = null;
 			// A step that's hidden lays nothing out: its dots, and any message they show, go until it shows again.
-			const next = view.dom.offsetParent ? readDots(view) : [];
-			setContainer(view.dom.parentElement);
-			setDots((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
+			const next = view.dom.offsetParent ? readDots(view, gutterRef?.current) : null;
+			if (!next) setHovered(null);
+			setLayout((current) => {
+				if (!next) return current.dots.length > 0 ? { ...current, dots: [] } : current;
+				const isSame = current.container === next.container && JSON.stringify(current.dots) === JSON.stringify(next.dots);
+				return isSame ? current : next;
+			});
 		}
 		function schedule() {
 			if (isActive) frame ??= requestAnimationFrame(measure);
 		}
-		schedule();
+		measure();
 		document.fonts?.ready.then(schedule);
 		editor.on("transaction", schedule);
 		// An HTML block open for editing hides its dot, and pictures and previews loading move the blocks below them.
@@ -58,7 +63,7 @@ export default function GutterProblems({ editor, pinned, onUnpin, onReveal }) {
 			view.dom.removeEventListener("focusout", schedule);
 			observer.disconnect();
 		};
-	}, [editor]);
+	}, [editor, gutterRef]);
 
 	useEffect(() => {
 		if (pinned === null) return;
@@ -73,14 +78,18 @@ export default function GutterProblems({ editor, pinned, onUnpin, onReveal }) {
 		};
 	}, [pinned, onUnpin]);
 
-	if (!container) return null;
-	const open = hovered ?? pinned;
+	if (!layout.container) return null;
+	// A pinned message stays until pointing at another dot shows that one's.
+	const open = pinned ?? hovered;
 	return createPortal(
-		dots.map((dot) => (
+		layout.dots.map((dot) => (
 			<Tooltip
 				key={dot.pos}
 				open={open === dot.pos}
-				onOpenChange={(isOpen) => setHovered((current) => (isOpen ? dot.pos : current === dot.pos ? null : current))}
+				onOpenChange={(isOpen) => {
+					if (isOpen && pinned !== null && pinned !== dot.pos) onUnpin();
+					setHovered((current) => (isOpen ? dot.pos : current === dot.pos ? null : current));
+				}}
 			>
 				<TooltipTrigger asChild>
 					<button
@@ -99,17 +108,22 @@ export default function GutterProblems({ editor, pinned, onUnpin, onReveal }) {
 						/>
 					</button>
 				</TooltipTrigger>
-				<TooltipContent
-					side={dot.side}
-					align={dot.side === "left" ? "center" : "start"}
-					className="flex-col items-stretch px-3 py-2.5"
-				>
+				<TooltipContent side={dot.side} align={dot.side === "left" ? "center" : "start"} className="px-2.5 py-1.5">
 					<ListProblems problems={dot.problems} />
 				</TooltipContent>
 			</Tooltip>
 		)),
-		container
+		layout.container
 	);
+}
+
+// Where the dots start across the window, x: in the page's margin, just left of the editor's card, when the page leaves
+// room for them (isOutside), else in the editor's own left padding, clear of the blocks' grip. editorLeft: the editor's
+// left edge, the card's. pageLeft: the page's, past the sidebar.
+export function placeDots({ editorLeft, paddingLeft, pageLeft, hasGutter = true }) {
+	const outside = editorLeft - DOT.outside - DOT.width;
+	if (hasGutter && outside - pageLeft >= DOT.outside) return { x: outside, isOutside: true };
+	return { x: editorLeft + Math.max(2, paddingLeft - GRIP_SPACE - DOT.width - DOT.inside), isOutside: false };
 }
 
 // What a screen reader says for a dot: the same first few problems as its message.
@@ -119,37 +133,36 @@ function describeDot({ severity, problems }) {
 	return `${severity === "error" ? "To fix" : "To check"}: ${messages.join(". ")}${more}`;
 }
 
-// Each problem's kind and what it says, with the review step's icon for it (components/ListChecks.jsx).
+// What each problem says, with the review step's icon for it (components/ListChecks.jsx).
 function ListProblems({ problems }) {
 	return (
-		<ul className="flex w-64 flex-col gap-2">
+		<ul className="flex max-w-56 flex-col gap-1.5">
 			{problems.slice(0, MAX_SHOWN).map((problem, index) => {
 				const isError = problem.severity === "error";
 				const Icon = isError ? CircleX : CircleAlert;
 				return (
-					<li key={index} className="flex gap-2">
-						<Icon aria-hidden="true" className={cn("mt-px size-3.5 shrink-0", isError ? "text-red-400" : "text-amber-400")} />
-						<span className="flex min-w-0 flex-col gap-0.5">
-							<span className="font-medium">{problem.label}</span>
-							<span className="text-pretty text-background/70">{problem.message}</span>
-						</span>
+					<li key={index} className="flex gap-1.5">
+						<Icon aria-hidden="true" className={cn("mt-0.5 size-3 shrink-0", isError ? "text-red-400" : "text-amber-400")} />
+						<span className="text-pretty">{problem.message}</span>
 					</li>
 				);
 			})}
-			{problems.length > MAX_SHOWN && <li className="pl-5.5 text-background/60">{problems.length - MAX_SHOWN} more</li>}
+			{problems.length > MAX_SHOWN && <li className="pl-4.5 text-background/60">{problems.length - MAX_SHOWN} more</li>}
 		</ul>
 	);
 }
 
-// Each block's dot, where its first line is, or the top of an HTML block, as the grip is.
-function readDots(view) {
+// Each block's dot, where its first line is, or the top of an HTML block, as the grip is, in the element that holds them.
+function readDots(view, gutter) {
 	const { blocks } = problemsKey.getState(view.state) ?? { blocks: [] };
-	const origin = view.dom.parentElement.getBoundingClientRect();
 	const paddingLeft = Number.parseFloat(getComputedStyle(view.dom).paddingLeft) || 0;
-	const left = Math.max(2, view.dom.getBoundingClientRect().left - origin.left + paddingLeft - GRIP_SPACE - DOT.width - DOT.gap);
-	const side = origin.left >= MESSAGE_SPACE ? "left" : "bottom";
+	const pageLeft = (view.dom.closest("main") ?? document.body).getBoundingClientRect().left;
+	const { x, isOutside } = placeDots({ editorLeft: view.dom.getBoundingClientRect().left, paddingLeft, pageLeft, hasGutter: Boolean(gutter) });
+	const container = isOutside ? gutter : view.dom.parentElement;
+	const origin = container.getBoundingClientRect();
+	const side = x - MESSAGE_SPACE >= pageLeft ? "left" : "bottom";
 	const { activeElement } = document;
-	return blocks.slice(0, MAX_DOTS).flatMap(({ pos, problems }) => {
+	const dots = blocks.slice(0, MAX_DOTS).flatMap(({ pos, problems }) => {
 		const node = view.state.doc.nodeAt(pos);
 		const element = view.nodeDOM(pos);
 		if (!node || !(element instanceof HTMLElement) || isBeingWritten(view.state, pos)) return [];
@@ -162,11 +175,12 @@ function readDots(view) {
 				problems,
 				severity: problems.some(({ severity }) => severity === "error") ? "error" : "warning",
 				side,
-				left: Math.round(left),
+				left: Math.round(x - origin.left),
 				top: Math.round(center - origin.top - DOT.height / 2),
 			},
 		];
 	});
+	return { container, dots };
 }
 
 function getLineCenter(view, node, pos, element) {

@@ -31,8 +31,9 @@ const MIN_HEIGHT = "min-h-[560px]";
 // contactFields: the account's fields, whose tags the editor draws as placeholders and its slash menu inserts.
 // newsletter: whose email design HTML blocks preview in, and whose button colors and corners buttons show.
 // ref: reveal({ id, message, words }), which goes to a review step's warning or check (lib/campaign-steps.js), else to
-// the first place the issue has the words, and says whether it found it.
-export default function EditorRich({ ref, content, onChange, contactFields = [], newsletter = null }) {
+// the first place the issue has the words, and says whether it found it. gutterRef: the positioned element around the
+// editor's card, whose problems' dots sit beside it in the page's margin (components/GutterProblems.jsx).
+export default function EditorRich({ ref, gutterRef, content, onChange, contactFields = [], newsletter = null }) {
 	const [isEditingLink, setIsEditingLink] = useState(false);
 	const [isEditingButtonLink, setIsEditingButtonLink] = useState(false);
 	const [isPickingImage, setIsPickingImage] = useState(false);
@@ -126,6 +127,7 @@ export default function EditorRich({ ref, content, onChange, contactFields = [],
 			<EditorContent editor={editor} className="relative" />
 			<GutterProblems
 				editor={editor}
+				gutterRef={gutterRef}
 				pinned={pinned}
 				onUnpin={unpin}
 				onReveal={({ pos, problems }) => reveal({ pos, problem: problems[0] })}

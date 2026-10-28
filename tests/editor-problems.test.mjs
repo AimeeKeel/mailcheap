@@ -4,6 +4,7 @@ import { getSchema } from "@tiptap/core";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { HtmlBlock } from "../components/BlockHtml.jsx";
+import { placeDots } from "../components/GutterProblems.jsx";
 import { getCheckFix } from "../lib/campaign-steps.js";
 import { findContentWarnings } from "../lib/content-warnings.js";
 import { ButtonBlock } from "../lib/editor-button.js";
@@ -102,6 +103,19 @@ describe("what the editor marks beside a block", () => {
 		const blocks = findDocProblems(content);
 		assert.ok(performance.now() - startedAt < 2000, `${Math.round(performance.now() - startedAt)} ms`);
 		assert.equal(blocks.length, 4002, "the brackets never close, so they're no placeholder");
+	});
+});
+
+describe("where the dots sit", () => {
+	test("in the page's margin, just left of the editor's card, when the page leaves room for them", () => {
+		assert.deepEqual(placeDots({ editorLeft: 400, paddingLeft: 48, pageLeft: 60 }), { x: 376, isOutside: true });
+		assert.deepEqual(placeDots({ editorLeft: 32, paddingLeft: 48, pageLeft: 0 }), { x: 8, isOutside: true });
+	});
+
+	test("in the editor's left padding, clear of the grip, where the page has no room, as on a phone, or no margin to give", () => {
+		assert.deepEqual(placeDots({ editorLeft: 31, paddingLeft: 48, pageLeft: 0 }), { x: 34, isOutside: false });
+		assert.deepEqual(placeDots({ editorLeft: 16, paddingLeft: 20, pageLeft: 0 }), { x: 18, isOutside: false });
+		assert.deepEqual(placeDots({ editorLeft: 400, paddingLeft: 48, pageLeft: 60, hasGutter: false }), { x: 403, isOutside: false });
 	});
 });
 
