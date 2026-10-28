@@ -82,7 +82,7 @@ export default function InputCampaignSlug({ campaignId, initialSlug = "", placeh
 				) : (
 					<span aria-live="polite" className="grid size-4 shrink-0 place-items-center text-muted-foreground">
 						{isSaving && <Loader2 className="size-3.5 animate-spin" />}
-						{!isSaving && isSaved && <Check key="saved" className="size-3.5 animate-icon-in" />}
+						{!isSaving && isSaved && <Check key="saved" className="size-3.5 animate-draw-check" />}
 						{!isSaving && isSaved && <span className="sr-only">URL saved</span>}
 					</span>
 				)}

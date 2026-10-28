@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { UserRound } from "lucide-react";
 import IconField from "@/components/IconField";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { FIRST_NAME_KEY, SAMPLE_FIRST_NAME, formatMergeValue } from "@/lib/merge-tags";
+import { FIRST_NAME_KEY, SAMPLE_FIRST_NAME, formatMergeValue, inSentence } from "@/lib/merge-tags";
 
 // Long enough that a pointer passing over a tag on its way elsewhere shows nothing.
 const DELAY_MS = 400;
@@ -168,11 +168,6 @@ function getExample({ key, type }) {
 	if (type === "number") return formatMergeValue("number", 1250);
 	if (type === "date") return formatMergeValue("date", "1991-04-12");
 	return null;
-}
-
-// "Company" reads "company" in a sentence, "VIP tier" or "URL" as they are.
-function inSentence(label) {
-	return /^\p{Lu}\p{Ll}/u.test(label) ? label[0].toLowerCase() + label.slice(1) : label;
 }
 
 function shorten(text) {

@@ -135,8 +135,9 @@ export default function WritingPage() {
 			<h2 id="problems">What may look broken</h2>
 			<p>
 				A dot to the left of a block marks something in it that may look broken to your readers. Amber is something to check, like a
-				link with no address or to a placeholder like example.com, an HTML block whose tags don&apos;t match up, or text left from a
-				template, like Lorem ipsum. Red is something to fix before the issue can go out, like a button without its link.
+				link with no address or to a placeholder like example.com, a <Link href={getHelpHref("writing", "first-name")}>name or field</Link>{" "}
+				that leaves a gap for readers without one, an HTML block whose tags don&apos;t match up, or text left from a template, like
+				Lorem ipsum. Red is something to fix before the issue can go out, like a button without its link.
 			</p>
 			<p>
 				Point at a dot to read what&apos;s wrong, or click it to go there: the words in question are selected, a button opens its link
@@ -150,8 +151,10 @@ export default function WritingPage() {
 				<code>{"{{first_name}}"}</code> shows each reader&apos;s first name. Type <kbd>/</kbd>, pick Contact fields at the bottom of
 				the menu, then First name, or click the person icon at the end of the subject. Both add <code>{"{{first_name|there}}"}</code>: the word
 				after the bar is what readers without a first name see, so &ldquo;Hi {"{{first_name|there}}"}&rdquo; reads &ldquo;Hi
-				Jane&rdquo; or &ldquo;Hi there&rdquo;. Change it, or remove it with the bar to show nothing. In the editor, names and fields
-				show on a gray background: point at one to see its sentence as Jane reads it, and as a reader without a value does.
+				Jane&rdquo; or &ldquo;Hi there&rdquo;. Change the word, or delete it and keep the bar, <code>{"{{first_name|}}"}</code>, to show
+				nothing. A name or field without a bar gets an <Link href={getHelpHref("writing", "problems")}>amber dot</Link> beside its line,
+				since readers without a value would see a gap. In the editor, names and fields show on a gray background: point at one to see
+				its sentence as Jane reads it, and as a reader without a value does.
 			</p>
 			<p>
 				You can also type them. After <kbd>{"{{"}</kbd>, the editor suggests the first name and your fields, narrowing them as you

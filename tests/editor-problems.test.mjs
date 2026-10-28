@@ -64,6 +64,37 @@ describe("what the editor marks beside a block", () => {
 		assert.equal(content.textBetween(problems[0].from, problems[0].to), "Join", "its text, where the caret goes");
 	});
 
+	test("a name or field without a fallback leaves a gap, in a paragraph or a button, and the review step goes to it", () => {
+		const fields = [{ key: "points", label: "Gift points", type: "number" }];
+		const content = doc(
+			paragraph(text("Hi {{first_name}}, you have {{points}}, {{first_name|}} and {{points|no}} points")),
+			button("Claim {{ points }}", "https://letters.test.dev"),
+			button("Claim {{points}}")
+		);
+		const blocks = findDocProblems(content, fields);
+		assert.deepEqual(
+			blocks.map(({ problems }) => problems.map(({ id, severity, from, to }) => [id, severity, content.textBetween(from, to)])),
+			[
+				[
+					["merge-tags", "warning", "{{first_name}}"],
+					["merge-tags", "warning", "{{points}}"],
+				],
+				[["merge-tags", "warning", "{{ points }}"]],
+				[
+					["buttons", "error", "Claim {{points}}"],
+					["merge-tags", "warning", "{{points}}"],
+				],
+			]
+		);
+		assert.equal(blocks[0].problems[1].message, "{{points}} leaves a gap for readers with no gift points: add | and a word inside the braces");
+
+		const input = { newsletter: { postalAddress: "1 Main St" }, rendered: { html: "{{unsubscribe_url}}", bytes: 100 }, isSendingEnabled: true };
+		const campaign = { subject: "News", previewText: "Hi", testSentAt: new Date(), format: "rich", body: "<p>Hi {{first_name}}, you have {{points}}</p>" };
+		const check = getPresendChecks({ ...input, campaign, contactFields: fields }).checks.find(({ id }) => id === "merge-tags");
+		const { problem } = getCheckFix(check, { newsletterId: "n1" });
+		assert.deepEqual(findProblem(blocks, problem), { pos: blocks[0].pos, problem: blocks[0].problems[0] });
+	});
+
 	test("an HTML block says what its review step warnings say, with no words of the editor's", () => {
 		const content = doc(htmlBlock("<table><tr><td>Hi"), htmlBlock('<p><a href="www.letters.test.dev">Site</a></p>'), htmlBlock("<p>Fine</p>"));
 		assert.deepEqual(

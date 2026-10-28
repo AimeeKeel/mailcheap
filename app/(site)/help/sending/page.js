@@ -44,6 +44,10 @@ export default function SendingPage() {
 					platform, which goes out as written;
 				</li>
 				<li>
+					a <Link href={getHelpHref("writing", "first-name")}>name or field</Link> without a fallback after its bar, which leaves a gap
+					for readers without a value;
+				</li>
+				<li>
 					a link with no address, one that isn&apos;t a working address or needs the full one, starting with https://, one to a
 					placeholder like example.com or to your own computer, and one whose text shows a website it doesn&apos;t open, which spam
 					filters distrust;
