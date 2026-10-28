@@ -600,6 +600,59 @@ describe("PostShiba sending", () => {
 		});
 	});
 
+	test("PostShiba refusing a paying customer's domain pauses their campaign and tells the admins on Telegram: the newsletter, its plan, the emails waiting and never a reader's address", async () => {
+		const user = await customer("ps-suspended@example.com", "ps-suspended");
+		await importContacts(user, ["first-reader@example.org", "second-reader@example.org"]);
+		const id = await draft(user, "Suspended");
+		await withEnv(TELEGRAM, async () => {
+			const before = { emails: platformEmails.length, telegram: telegramMessages.length };
+			const errors = ["first-reader@example.org: 550 domain_suspended\nstack traceback:\n\t[C]: in function 'kumo.reject'"];
+			fake.fail({ path: /^\/inject$/, status: 200, body: { success_count: 0, fail_count: 1, failed_recipients: ["first-reader@example.org"], errors } });
+			await as(user, () => m.campaigns.sendCampaign(id, {}));
+			await runJobs();
+			assert.equal((await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean()).status, "paused");
+			assert.equal(await m.Message.countDocuments({ accountId: user.accountId, campaignId: id, status: "queued" }), 2, "both wait for the resume");
+
+			const emails = platformEmails.slice(before.emails);
+			assert.deepEqual(emails.filter(({ to }) => to.includes("ps-suspended@example.com")).map(({ subject }) => subject), ["[MailCheap] Campaign paused"]);
+			const toAdmins = emails.filter(({ to }) => to.includes("admin@example.com"));
+			assert.deepEqual(toAdmins.map(({ subject }) => subject), ["[MailCheap] A paying customer can't send"]);
+			const telegram = telegramMessages.slice(before.telegram);
+			assert.deepEqual(telegram.map(({ text }) => text.split("\n")[0]), ["<b>MailCheap</b> · A paying customer can't send"]);
+			for (const text of [toAdmins[0].text, telegram[0].text]) {
+				assert.match(text, /ps-suspended \(ps-suspended\.dev, Starter plan\): PostShiba refuses its emails \(domain_suspended\)\. Its campaign paused with 2 emails waiting\./);
+				assert.match(text, /Nothing on their dashboard lifts it: ask PostShiba why, or lift it there\. Then they resume the campaign\./);
+				assert.match(text, new RegExp(`/admin/campaigns/${id}`));
+				assert.doesNotMatch(text, /reader@|stack traceback/);
+			}
+		});
+	});
+
+	test("PostShiba refusing a newsletter's signup emails tells the admins once a day, each refusal counted", async () => {
+		const user = await customer("ps-signups@example.com", "ps-signups");
+		await as(user, () =>
+			m.newsletters.saveNewsletter(
+				null,
+				form({ id: user.newsletterId, name: user.slug, slug: user.slug, fromName: "Jane", fromEmail: "hello@ps-signups.dev", postalAddress: "1 Main St", welcomeEnabled: "on", welcomeSubject: "Welcome", welcomeMarkdown: "Thanks for joining." })
+			)
+		);
+		await withEnv(TELEGRAM, async () => {
+			const before = { emails: platformEmails.length, telegram: telegramMessages.length };
+			fake.fail({ method: "POST", path: /\/sends$/, status: 403, body: { error: "domain_suspended", field: "from", message: "is suspended" }, times: 2 });
+			await welcomeNewContact(user, "signup-one@example.org");
+			await welcomeNewContact(user, "signup-two@example.org");
+			assert.equal(await m.Message.countDocuments({ accountId: user.accountId, kind: "welcome", status: "failed" }), 2);
+
+			const alert = await m.Alert.findOne({ accountId: null, key: `customer-blocked:${user.newsletterId}` }).lean();
+			assert.equal(alert.count, 2);
+			const toAdmins = platformEmails.slice(before.emails).filter(({ to }) => to.includes("admin@example.com"));
+			assert.deepEqual(toAdmins.map(({ subject }) => subject), ["[MailCheap] A paying customer can't send"], "once a day");
+			assert.match(toAdmins[0].text, /ps-signups \(ps-signups\.dev, Starter plan\): PostShiba refuses its emails \(domain_suspended\)\. Its welcome emails fail\./);
+			assert.match(toAdmins[0].text, new RegExp(`/admin/newsletters/${user.newsletterId}`));
+			assert.equal(telegramMessages.length - before.telegram, 1);
+		});
+	});
+
 	test("a welcome email PostShiba throttles is retried later with the same Idempotency-Key", async () => {
 		const user = await customer("ps-welcome@example.com", "ps-welcome");
 		await as(user, () =>

@@ -107,6 +107,7 @@ describe("which alerts reach Telegram", () => {
 	test("the admins' alerts that need them do; the others, an account's own alerts and unknown kinds don't, and those with nothing to do aren't emailed either", () => {
 		const needed = [
 			`account-blocked:${ACCOUNT_ID}:1792000000000`,
+			"customer-blocked:6a0000000000000000000002",
 			`tenant-hold:${ACCOUNT_ID}`,
 			`tenant-suspend-failed:${ACCOUNT_ID}`,
 			`purge-postponed:${ACCOUNT_ID}`,
@@ -400,6 +401,66 @@ describe("what alerts", () => {
 			fake.fail({ method: "GET", path: /\/status$/, status: 401, body: { error: "Invalid token or no user signed in" } });
 			await call(`Bearer ${CRON_SECRET}`);
 			assert.deepEqual(firstLines(telegramMessages.slice(-1)), ["<b>MailCheap</b> · PostShiba refused the status check"]);
+		});
+	});
+
+	test("the hourly check alerts for each newsletter with a plan that sends from a domain PostShiba suspended or holds, and for no other", async () => {
+		const call = () => m.cronRoute.GET(new Request("http://localhost:3000/api/cron/hourly", { headers: { authorization: `Bearer ${CRON_SECRET}` } }));
+		const Newsletter = (await import("../models/Newsletter.js")).default;
+		const paying = await signIn("suspended-domain@example.com");
+		await activate(paying, { plan: "growth" });
+		const unpaid = await signIn("unpaid-domain@example.com");
+		await m.Account.updateOne({ _id: paying.accountId }, { $set: { "postshiba.tenantId": "TnPaying1" } });
+		await m.Account.updateOne({ _id: unpaid.accountId }, { $set: { "postshiba.tenantId": "TnUnpaid1" } });
+		const [held, paused, noted] = await Newsletter.create([
+			{ accountId: paying.accountId, name: "Held letter", slug: "held-letter", fromEmail: "hello@held-letter.example.com" },
+			{ accountId: paying.accountId, name: "Paused letter", slug: "paused-letter", fromEmail: "hello@paused-letter.example.com" },
+			{ accountId: paying.accountId, name: "Noted letter", slug: "noted-letter", fromEmail: "hello@noted-letter.example.com" },
+			{ accountId: paying.accountId, name: "Moved letter", slug: "moved-letter", fromEmail: "hello@own-domain.example.com" },
+			{ accountId: unpaid.accountId, name: "Unpaid letter", slug: "unpaid-letter", fromEmail: "hello@unpaid-letter.example.com" },
+		]);
+		const domain = (id, name, tenantId, fields = {}) => ({ id, name, tenant_id: tenantId, sending_allowed: false, suspended: true, suspended_reason: "paused", operator_held: false, ...fields });
+		const added = [
+			domain("DmHeld01", "held-letter.example.com", "TnPaying1", { suspended_reason: "operator_hold", operator_held: true }),
+			domain("DmPaus01", "paused-letter.example.com", "TnPaying1"),
+			domain("DmNote01", "noted-letter.example.com", "TnPaying1", { suspended_reason: "Complaint from reader@example.org" }),
+			domain("DmMove01", "moved-letter.example.com", "TnPaying1"),
+			domain("DmUnpd01", "unpaid-letter.example.com", "TnUnpaid1"),
+			domain("DmOwn001", "own-domain.example.com", "TnPaying1", { suspended: false, suspended_reason: null, dkim_status: "pending" }),
+		];
+		for (const item of added) fake.state.domains.set(item.id, item);
+		await withEnv({ ...TELEGRAM, ...POSTSHIBA_ENV, CRON_SECRET }, async () => {
+			const before = { telegram: telegramMessages.length, emails: platformEmails.length };
+			try {
+				const { postshiba } = await (await call()).json();
+				assert.deepEqual(
+					postshiba.alerts,
+					[held, paused, noted].map(({ _id }) => `customer-blocked:${_id}`),
+					"not a domain no newsletter sends from, an unpaid account's or one still being set up"
+				);
+				const sent = telegramMessages.slice(before.telegram).map(({ text }) => text);
+				assert.deepEqual(firstLines(telegramMessages.slice(before.telegram)), Array(3).fill("<b>MailCheap</b> · A paying customer can't send"));
+				assert.match(
+					sent[0],
+					/\n\nHeld letter \(held-letter\.example\.com, Growth plan\): PostShiba's abuse team holds held-letter\.example\.com \(operator_hold\)\. Its campaigns pause and its signup and test emails fail until it's lifted\.\nAsk PostShiba's support why it's held\.\n/
+				);
+				assert.match(sent[1], /\n\nPaused letter \(paused-letter\.example\.com, Growth plan\): PostShiba suspended paused-letter\.example\.com \(paused\)\./);
+				assert.match(sent[1], new RegExp(`/admin/newsletters/${paused._id}$`));
+				assert.match(sent[2], /\n\nNoted letter \(noted-letter\.example\.com, Growth plan\): PostShiba suspended noted-letter\.example\.com\. Its campaigns/, "a reason that isn't a code isn't quoted");
+				const emailed = toAdmins(platformEmails.slice(before.emails));
+				assert.equal(emailed.length, 3);
+				assert.doesNotMatch([...sent, ...emailed.map(({ text }) => text)].join("\n"), /reader@/);
+
+				await call();
+				assert.equal(telegramMessages.length - before.telegram, 3, "the next hour finds the same blocks: nothing new");
+				assert.equal(toAdmins(platformEmails.slice(before.emails)).length, 3, "emailed once a day");
+				const attention = await m.adminStats.listAttention();
+				const listed = attention.blockedSends.filter(({ ownerEmail }) => ownerEmail === "suspended-domain@example.com");
+				assert.deepEqual(listed.map(({ timesThisWeek }) => timesThisWeek), [2, 2, 2]);
+				assert.match(listed.find(({ detail }) => detail.startsWith("Held letter")).detail, /: the email provider's abuse team holds held-letter\.example\.com/);
+			} finally {
+				for (const item of added) fake.state.domains.delete(item.id);
+			}
 		});
 	});
 
