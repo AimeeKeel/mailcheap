@@ -6,7 +6,7 @@ import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { formatNumber } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { getSignupScale } from "@/lib/plans";
-import { SIGNUP_FORM_LIMITS, SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
+import { SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
 
 export const metadata = getHelpPageMetadata("website");
 
@@ -138,8 +138,10 @@ export default function WebsitePage() {
 				<li>
 					<strong>From your own code</strong>: create an API key with the signups only level on the{" "}
 					<LinkApp href="/api-keys">API keys page</LinkApp>, then sign people
-					up with one request each. That key can only add contacts, so it&apos;s safe in your website&apos;s code. See{" "}
-					<Link href="/docs/api#add-contact">add a contact</Link> in the API reference.
+					up with one request each. A request can tag them too, like <code>blog</code> from your blog&apos;s form, so a{" "}
+					<Link href={getHelpHref("contacts", "segments")}>segment</Link> can pick them. That key can only add contacts, so
+					it&apos;s safe in your website&apos;s code. See <Link href="/docs/api#add-contact">add a contact</Link> in the API
+					reference.
 				</li>
 				<li>
 					<strong>By hand or from a file</strong>: under Add contacts, in the <strong>⋯</strong> menu of the{" "}
@@ -176,11 +178,6 @@ export default function WebsitePage() {
 				your newsletter&apos;s name and description, and follow them until you write your own. Clear one to hide it. Turn on First
 				name to ask for it above the email, so <code>{"{{first_name|there}}"}</code> can greet new readers by it; they can leave it
 				empty. <Link href={getHelpHref("writing", "first-name")}>Names and fields in your emails</Link>
-			</p>
-			<p>
-				Type tags under the switch, like <code>blog</code>, and everyone who signs up through the form gets them: new readers, and
-				contacts already on your list who sign up there again. A <Link href={getHelpHref("contacts", "segments")}>segment</Link> can
-				then pick them, to send them an issue or see how they read. Up to {SIGNUP_FORM_LIMITS.tags} tags.
 			</p>
 			<p>Where to paste it:</p>
 			<ul>

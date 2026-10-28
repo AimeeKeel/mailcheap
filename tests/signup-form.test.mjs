@@ -45,7 +45,6 @@ test("the form's settings fall back to their defaults and refuse what doesn't fi
 		buttonText: "Subscribe",
 		placeholder: "you@example.com",
 		allowedDomains: [],
-		tags: [],
 	});
 	const settings = (changes) => toSignupFormSettings({ enabled: true, ...changes });
 	assert.equal(getSignupFormProblem(settings({ buttonText: "x".repeat(31) })), "Keep the button under 30 characters");
@@ -53,11 +52,6 @@ test("the form's settings fall back to their defaults and refuse what doesn't fi
 	assert.equal(getSignupFormProblem(settings({ allowedDomains: ["not a site"] })), "not a site isn't a site's address. Use one like example.com");
 	assert.match(getSignupFormProblem(settings({ allowedDomains: Array.from({ length: 11 }, (_, i) => `site${i}.com`) })), /^List 10 sites at most/);
 	assert.equal(getSignupFormProblem(settings({ allowedDomains: ["example.com"] })), null);
-	assert.equal(getSignupFormProblem(settings({ tags: ["blog", "Landing page"] })), null);
-	assert.equal(getSignupFormProblem(settings({ tags: Array.from({ length: 11 }, (_, i) => `tag${i}`) })), "Add 10 tags at most");
-	for (const tag of ["", " , ", "x".repeat(41)]) {
-		assert.equal(getSignupFormProblem(settings({ tags: ["blog", tag] })), "Each tag needs 1 to 40 characters", JSON.stringify(tag));
-	}
 });
 
 test("the code to paste points at the server, escapes the owner's text and hides the bots' field", () => {
@@ -249,31 +243,11 @@ describe("signups from forms on other sites", () => {
 		assert.equal((await findContact(other, "unnamed@example.org")).firstName, undefined);
 	});
 
-	test("a form's tags go on everyone who signs up through it, new contacts and those already on the list", async () => {
-		const user = await customer("embed-tags@example.com", { signupForm: { tags: ["Blog", "landing page", "blog"] } });
-		const response = await post(user.newsletterId, { email: "tagged@example.org", token: token(user.newsletterId, "https://site.example") });
+	test("a visitor can't tag themselves: the form ignores tags it's sent, which only the API takes", async () => {
+		const user = await customer("embed-untagged@example.com");
+		const response = await post(user.newsletterId, { email: "picked@example.org", tags: ["paid"], token: token(user.newsletterId, "https://site.example") });
 		assert.equal(response.status, 200);
-		assert.deepEqual((await findContact(user, "tagged@example.org")).tags, ["blog", "landing page"], "lowercase, each once");
-
-		await m.Contact.create({
-			accountId: user.accountId,
-			newsletterId: user.newsletterId,
-			email: "known@example.org",
-			status: "active",
-			source: "import",
-			tags: ["vip", "blog"],
-		});
-		await post(user.newsletterId, { email: "known@example.org", token: token(user.newsletterId, "https://site.example") });
-		const known = await findContact(user, "known@example.org");
-		assert.deepEqual([known.tags, known.source], [["vip", "blog", "landing page"], "import"], "they keep their own tags and where they came from");
-
-		const forged = await post(user.newsletterId, { email: "forged@example.org", tags: ["paid"], token: token(user.newsletterId, "https://site.example") });
-		assert.equal(forged.status, 200);
-		assert.deepEqual((await findContact(user, "forged@example.org")).tags, ["blog", "landing page"], "only the owner picks them, never the visitor");
-
-		const other = await customer("embed-untagged@example.com");
-		await post(other.newsletterId, { email: "picked@example.org", tags: ["paid"], token: token(other.newsletterId, "https://site.example") });
-		assert.equal((await findContact(other, "picked@example.org")).tags, undefined, "a form without tags adds none, whatever the visitor sends");
+		assert.equal((await findContact(user, "picked@example.org")).tags, undefined);
 	});
 
 	test("someone who unsubscribed confirms by email before they're back, even with confirmed opt-in off", async () => {
@@ -488,11 +462,11 @@ describe("signups from forms on other sites", () => {
 		assert.equal(preflight.status, 204);
 		assert.equal(preflight.headers.get("access-control-allow-methods"), "POST, OPTIONS");
 
-		const user = await customer("embed-api@example.com", { signupForm: { buttonText: "Join", allowedDomains: ["example.com"], tags: ["blog"] } });
+		const user = await customer("embed-api@example.com", { signupForm: { buttonText: "Join", allowedDomains: ["example.com"] } });
 		const { key } = await as(user, () => m.apiKeys.createApiKey(null, form({ name: "Agent", level: "full" })));
 		const { status, body } = await callApi("GET", `/api/v1/newsletters/${user.newsletterId}/signup-form`, { key });
 		assert.equal(status, 200);
-		assert.deepEqual([body.enabled, body.buttonText, body.allowedDomains, body.tags], [true, "Join", ["example.com"], ["blog"]]);
+		assert.deepEqual([body.enabled, body.buttonText, body.allowedDomains], [true, "Join", ["example.com"]]);
 		assert.equal(body.endpoint, `http://localhost:3000/api/embed/${user.newsletterId}`);
 		assert.ok(body.script.includes(`data-form="${user.newsletterId}"`));
 		assert.equal(body.html, null, "with sites listed, only the script works");
@@ -503,20 +477,6 @@ describe("signups from forms on other sites", () => {
 		const refused = await callApi("PATCH", `/api/v1/newsletters/${user.newsletterId}`, { key, body: { signupForm: { allowedDomains: ["not a site"] } } });
 		assert.equal(refused.status, 400);
 		assert.match(refused.body.error.message, /not a site isn't a site's address/);
-
-		const retagged = await callApi("PATCH", `/api/v1/newsletters/${user.newsletterId}`, { key, body: { signupForm: { tags: ["Podcast", "blog"] } } });
-		assert.equal(retagged.status, 200);
-		assert.deepEqual(retagged.body.signupForm.tags, ["podcast", "blog"]);
-		const emptyTag = await callApi("PATCH", `/api/v1/newsletters/${user.newsletterId}`, { key, body: { signupForm: { tags: [" "] } } });
-		assert.equal(emptyTag.status, 400);
-		assert.match(emptyTag.body.error.message, /Each tag needs 1 to 40 characters/);
-		const tooMany = await callApi("PATCH", `/api/v1/newsletters/${user.newsletterId}`, {
-			key,
-			body: { signupForm: { tags: Array.from({ length: 11 }, (_, i) => `tag${i}`) } },
-		});
-		assert.equal(tooMany.status, 400);
-		const untagged = await callApi("PATCH", `/api/v1/newsletters/${user.newsletterId}`, { key, body: { signupForm: { tags: [] } } });
-		assert.deepEqual(untagged.body.signupForm.tags, []);
 	});
 
 	test("the done page only says what the form did, and nothing for a link someone changed", async () => {
@@ -550,8 +510,5 @@ describe("signups from forms on other sites", () => {
 		assert.deepEqual([reset.signupForm.headline, reset.signupForm.subheadline], [null, ""], "null follows the newsletter's name again");
 		const tooLong = await as(user, () => m.newsletters.saveSignupForm(user.newsletterId, { headline: "x".repeat(81) }));
 		assert.ok(tooLong.error);
-
-		const tagged = await as(user, () => m.newsletters.saveSignupForm(user.newsletterId, { tags: [" Blog ", "blog", "Landing page"] }));
-		assert.deepEqual([tagged.signupForm.tags, tagged.signupForm.headline], [["blog", "landing page"], null], "lowercase, each once, the rest kept");
 	});
 });

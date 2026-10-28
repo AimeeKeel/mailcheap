@@ -168,10 +168,9 @@ export default function ContactsPage() {
 				have it. Click one, or use the arrow keys then Enter. Click × on a tag to take it off, then save.
 			</p>
 			<p>
-				To tag many contacts at once, tag everyone an import adds, give the{" "}
-				<Link href={getHelpHref("website", "form-on-your-site")}>form on your site</Link> tags for everyone who signs up through it,
-				or use the <Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>. Click a tag on a contact&apos;s page to list
-				everyone who has it.
+				To tag many contacts at once, tag everyone an import adds, or use the{" "}
+				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>, which can also tag people as they sign up from your own
+				site. Click a tag on a contact&apos;s page to list everyone who has it.
 			</p>
 
 			<h2 id="fields">Adding fields, step by step</h2>
@@ -275,7 +274,7 @@ export default function ContactsPage() {
 			<ul>
 				<li>
 					<strong>Form for your site</strong> opens the <LinkApp href="/newsletters/form">signup form</LinkApp> to paste on your site,
-					blog or link page: readers who sign up there join on their own, and it can tag them.{" "}
+					blog or link page: readers who sign up there join on their own.{" "}
 					<Link href={getHelpHref("website", "form-on-your-site")}>A signup form on your own site</Link>
 				</li>
 				<li>
@@ -284,7 +283,8 @@ export default function ContactsPage() {
 				</li>
 				<li>
 					<strong>With the API</strong> shows the request that signs someone up from your own site or app, with your newsletter in
-					it, and where to create its key. <Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
+					it, and where to create its key. A request can tag them too.{" "}
+					<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
 				</li>
 				<li>
 					<strong>By hand</strong> adds one person, as below.

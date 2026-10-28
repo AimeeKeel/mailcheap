@@ -119,7 +119,6 @@ export async function POST(request, { params }) {
 		source: EMBED_SOURCE,
 		sourceDomain: host,
 		firstName: settings.askFirstName ? cleanFirstName(fields.firstName) : "",
-		tags: settings.tags,
 		country: readCountry(request.headers),
 		confirmReturning: true,
 	});

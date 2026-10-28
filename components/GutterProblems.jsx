@@ -100,7 +100,7 @@ export default function GutterProblems({ editor, gutterRef, pinned, onUnpin, onR
 						aria-label={describeDot(dot)}
 						onClick={() => onReveal(dot)}
 						style={{ width: dot.width, transform: `translate(${dot.left}px, ${dot.top}px)` }}
-						className="group/dot absolute top-0 left-0 z-10 grid h-8 cursor-pointer place-items-center rounded-full outline-none transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+						className="group/dot absolute top-0 left-0 z-10 grid h-8 cursor-pointer place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
 						<span
 							className={cn(
