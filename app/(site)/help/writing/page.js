@@ -154,6 +154,10 @@ export default function WritingPage() {
 				show on a gray background: point at one to see its sentence as Jane reads it, and as a reader without a value does.
 			</p>
 			<p>
+				You can also type them. After <kbd>{"{{"}</kbd>, the editor suggests the first name and your fields, narrowing them as you
+				type: press <kbd>Enter</kbd> or click one to finish its tag, or keep typing to ignore them. <kbd>Esc</kbd> hides them.
+			</p>
+			<p>
 				Your own <Link href={getHelpHref("contacts", "fields")}>contact fields</Link> work the same way, by their key:{" "}
 				<code>{"{{birthday}}"}</code>, <code>{"{{plan|free}}"}</code>. Contact fields lists them after the first name, and typing a
 				field&apos;s name after the slash, like <kbd>/birthday</kbd>, finds it right away. The person icon in the subject lists them

@@ -11,7 +11,7 @@ import GutterProblems from "@/components/GutterProblems";
 import MenuButton from "@/components/MenuButton";
 import MenuFormat from "@/components/MenuFormat";
 import MenuImage from "@/components/MenuImage";
-import { SlashCommand } from "@/components/MenuSlash";
+import { MergeTagSuggestion, SlashCommand } from "@/components/MenuSlash";
 import TooltipMergeTag from "@/components/TooltipMergeTag";
 import { isButtonLink } from "@/lib/buttons";
 import { BlockHandle } from "@/lib/editor-block-handle";
@@ -75,6 +75,7 @@ export default function EditorRich({ ref, content, onChange, contactFields = [],
 				onPaste: (current, files) => insertImages(current, files),
 			}),
 			SlashCommand.configure({ onPickImage: () => setIsPickingImage(true), contactFields }),
+			MergeTagSuggestion.configure({ contactFields }),
 		],
 		editorProps: {
 			// With a mouse, the left padding holds the blocks' drag handle (lib/editor-block-handle.js).

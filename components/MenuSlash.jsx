@@ -3,6 +3,7 @@
 import { useId, useImperativeHandle, useRef, useState } from "react";
 import { flip, shift } from "@floating-ui/dom";
 import { Extension } from "@tiptap/core";
+import { PluginKey } from "@tiptap/pm/state";
 import { ReactRenderer } from "@tiptap/react";
 import Suggestion from "@tiptap/suggestion";
 import {
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import IconField from "@/components/IconField";
 import LinkHelpFields from "@/components/LinkHelpFields";
+import { findMergeTagMatch, matchFields } from "@/lib/editor-merge-tags";
 import { SLASH_BACK, SLASH_FIELDS, SLASH_HELP, fitMenu, getSlashMenu, listSlashOptions } from "@/lib/editor-slash-menu";
 import { FIRST_NAME_KEY, fieldTag, firstNameTag } from "@/lib/merge-tags";
 import { cn } from "@/lib/utils";
@@ -33,6 +35,8 @@ const GAP = 4;
 // The scrolling list's own padding, kept in view around the option the keys select.
 const LIST_PADDING = 4;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+const MENU =
+	"flex max-h-[min(20rem,var(--slash-menu-height,20rem))] w-60 origin-top-left flex-col overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-lg animate-in duration-150 fade-in-0 zoom-in-95 in-data-[side=top]:origin-bottom-left";
 const ROW = "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm";
 const SELECTED = "bg-accent text-accent-foreground";
 const ICON = "grid size-7 shrink-0 place-items-center rounded-md border bg-background text-muted-foreground";
@@ -97,7 +101,7 @@ export default function MenuSlash({ items, query, command, ref }) {
 	}
 
 	return (
-		<div className="flex max-h-[min(20rem,var(--slash-menu-height,20rem))] w-60 origin-top-left flex-col overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-lg animate-in duration-150 fade-in-0 zoom-in-95 in-data-[side=top]:origin-bottom-left">
+		<div className={MENU}>
 			{menu.header && (
 				<div className="shrink-0 border-b p-1">
 					<RowBack {...optionProps(SLASH_BACK)} />
@@ -151,7 +155,8 @@ function GroupSlash({ label, children }) {
 	);
 }
 
-function OptionSlash({ item, isSelected, onPoint, onPick }) {
+// hint: what the option is, in the words the editor takes, like a field's key.
+function OptionSlash({ item, hint, isSelected, onPoint, onPick }) {
 	return (
 		<button
 			type="button"
@@ -166,7 +171,8 @@ function OptionSlash({ item, isSelected, onPoint, onPick }) {
 			<span className={ICON}>
 				<item.icon className="size-4" type={item.type} />
 			</span>
-			<span className="min-w-0 truncate">{item.title}</span>
+			<span className="min-w-0 flex-1 truncate">{item.title}</span>
+			{hint && <span className="max-w-[45%] shrink-0 truncate font-mono text-xs text-muted-foreground">{hint}</span>}
 		</button>
 	);
 }
@@ -222,25 +228,113 @@ export const SlashCommand = Extension.create({
 				items: () => items,
 				allow: ({ state, range }) => state.doc.resolve(range.from).parent.type.name !== "button",
 				command: ({ editor, range, props: item }) => {
-					item.run(editor.chain().focus().deleteRange(range)).run();
+					runPick(editor, range, item);
 					if (item.isImage) this.options.onPickImage(editor);
 				},
-				offset: { mainAxis: GAP },
-				flip: false,
-				floatingUi: { middleware: [flip(getFlipOptions), shift({ padding: 8 })] },
-				render: renderMenu,
+				...MENU_OPTIONS,
+				render: () => renderMenu(MenuSlash),
+			}),
+		];
+	},
+});
+
+// The fields a tag being typed could be, under its "{{" as the key is typed (lib/editor-merge-tags.js): a suggestion
+// only, which typing on ignores, and which a |, }} or no field matching closes. The editor keeps the focus and passes
+// the keys on: the arrows move, Enter or Tab picks, and Escape closes it until the next tag (@tiptap/suggestion).
+export function MenuMergeTag({ items, query, command, ref }) {
+	const [state, setState] = useState({ query, index: 0 });
+	const index = Math.min(state.query === query ? state.index : 0, items.length - 1);
+
+	useImperativeHandle(ref, () => ({
+		onKeyDown({ event }) {
+			if (!items.length) return false;
+			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+				const step = event.key === "ArrowDown" ? 1 : -1;
+				setState({ query, index: (index + step + items.length) % items.length });
+				return true;
+			}
+			if (event.key === "Enter" || event.key === "Tab") {
+				command(items[index]);
+				return true;
+			}
+			return false;
+		},
+	}));
+
+	if (!items.length) return null;
+
+	return (
+		<div className={cn(MENU, "w-64")}>
+			<p className="shrink-0 px-3 pt-2.5 pb-1 text-xs font-medium text-muted-foreground">{SLASH_FIELDS.title}</p>
+			<div data-slash-scroll className="min-h-0 overflow-y-auto overscroll-contain p-1 pt-0">
+				<div role="listbox" aria-label={SLASH_FIELDS.title}>
+					{items.map((item, position) => (
+						<OptionSlash
+							key={item.id}
+							item={item}
+							hint={item.key}
+							isSelected={position === index}
+							onPoint={() => position !== index && setState({ query, index: position })}
+							onPick={() => command(item)}
+						/>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// Typing "{{" opens MenuMergeTag, anywhere text goes, buttons included. contactFields: the account's fields, offered
+// after the first name.
+export const MergeTagSuggestion = Extension.create({
+	name: "mergeTagSuggestion",
+	addOptions() {
+		return { contactFields: [] };
+	},
+	addProseMirrorPlugins() {
+		const items = getFieldItems(this.options.contactFields);
+		return [
+			Suggestion({
+				editor: this.editor,
+				pluginKey: new PluginKey("mergeTagSuggestion"),
+				char: "{{",
+				findSuggestionMatch: findMergeTagMatch,
+				initialItems: items,
+				items: ({ query }) => matchFields(items, query),
+				command: ({ editor, range, props: item }) => runPick(editor, range, item),
+				...MENU_OPTIONS,
+				render: () => renderMenu(MenuMergeTag),
 			}),
 		];
 	},
 });
 
 export function getSlashItems(contactFields = []) {
-	return [...SLASH_ITEMS, FIRST_NAME, ...contactFields.map(toFieldItem)];
+	return [...SLASH_ITEMS, ...getFieldItems(contactFields)];
 }
 
-// Hidden until it's placed with its options. The page scrolls only as they change, and only when the menu wouldn't show
-// whole (lib/editor-slash-menu.js): never as the page itself scrolls. One for the editor, each opening starting afresh.
-function renderMenu() {
+// The first name, then the account's fields, each with the key its tag prints.
+export function getFieldItems(contactFields = []) {
+	return [FIRST_NAME, ...contactFields.map(toFieldItem)];
+}
+
+// What was typed gives way to the item picked. The editor takes its focus back first: the chain's own focus waits a
+// frame, and meanwhile the browser would leave the caret where the typed text was.
+function runPick(editor, range, item) {
+	editor.view.focus();
+	item.run(editor.chain().focus().deleteRange(range)).run();
+}
+
+// Below the caret, or above it where only there it fits (lib/editor-slash-menu.js).
+const MENU_OPTIONS = {
+	offset: { mainAxis: GAP },
+	flip: false,
+	floatingUi: { middleware: [flip(getFlipOptions), shift({ padding: 8 })] },
+};
+
+// Component, hidden until it's placed with its options. The page scrolls only as they change, and only when the menu
+// wouldn't show whole (lib/editor-slash-menu.js): never as the page itself scrolls. Each opening starts afresh.
+function renderMenu(Component) {
 	let component;
 	let unmount;
 	let clientRect;
@@ -267,7 +361,7 @@ function renderMenu() {
 		onStart(props) {
 			clientRect = props.clientRect;
 			shownHeight = 0;
-			component = new ReactRenderer(MenuSlash, { props, editor: props.editor });
+			component = new ReactRenderer(Component, { props, editor: props.editor });
 			Object.assign(component.element.style, { position: "absolute", top: "0", left: "0", zIndex: "50", visibility: "hidden" });
 			unmount = props.mount(component.element, { onPosition: place });
 		},
@@ -334,6 +428,7 @@ function keepEditorFocus(event) {
 function toFieldItem({ key, label, type }) {
 	return {
 		id: `field:${key}`,
+		key,
 		title: label,
 		keywords: `${key} contact field personalize merge tag`,
 		icon: IconField,
@@ -374,6 +469,7 @@ const SLASH_ITEMS = [
 ];
 const FIRST_NAME = {
 	id: `field:${FIRST_NAME_KEY}`,
+	key: FIRST_NAME_KEY,
 	title: "First name",
 	keywords: "name contact field personalize merge tag hello",
 	icon: UserRound,
