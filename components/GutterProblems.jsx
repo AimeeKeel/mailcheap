@@ -7,10 +7,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { isBeingWritten, problemsKey } from "@/lib/editor-problems";
 import { cn } from "@/lib/utils";
 
-// The blocks' grip and its gap before the text (lib/editor-block-handle.js), which a dot in the editor keeps clear of.
-const GRIP_SPACE = 26;
-// outside: the room between a dot and the editor's card, inside: between a dot and the grip.
-const DOT = { width: 16, height: 24, outside: 8, inside: 3 };
+// The blocks' grip, with its gap before the text, and its height (lib/editor-block-handle.js): a dot in the editor keeps
+// clear of it, and lines up with it.
+const GRIP = { space: 26, height: 24 };
+// What the pointer can rest on to show a dot's message, around the dot: wide in the page's margin, narrower in the
+// editor's own padding, which it shares with the grip. gap: the room it leaves before the card, or before the grip.
+const TARGET = { height: 32, outside: { width: 32, gap: 2 }, inside: { width: 16, gap: 3 } };
 // The message's width with its arrow: where there's less room on a dot's left, it shows under the line instead.
 const MESSAGE_SPACE = 260;
 // A block with many problems lists its first few.
@@ -97,8 +99,8 @@ export default function GutterProblems({ editor, gutterRef, pinned, onUnpin, onR
 						data-problem-dot=""
 						aria-label={describeDot(dot)}
 						onClick={() => onReveal(dot)}
-						style={{ transform: `translate(${dot.left}px, ${dot.top}px)` }}
-						className="group/dot absolute top-0 left-0 z-10 grid h-6 w-4 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						style={{ width: dot.width, transform: `translate(${dot.left}px, ${dot.top}px)` }}
+						className="group/dot absolute top-0 left-0 z-10 grid h-8 cursor-pointer place-items-center rounded-full outline-none transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
 					>
 						<span
 							className={cn(
@@ -117,13 +119,14 @@ export default function GutterProblems({ editor, gutterRef, pinned, onUnpin, onR
 	);
 }
 
-// Where the dots start across the window, x: in the page's margin, just left of the editor's card, when the page leaves
-// room for them (isOutside), else in the editor's own left padding, clear of the blocks' grip. editorLeft: the editor's
-// left edge, the card's. pageLeft: the page's, past the sidebar.
+// Where the dots' targets start across the window, x, and how wide they are: in the page's margin, just left of the
+// editor's card, when the page leaves room for them (isOutside), else in the editor's own left padding, clear of the
+// blocks' grip. editorLeft: the editor's left edge, the card's. pageLeft: the page's, past the sidebar.
 export function placeDots({ editorLeft, paddingLeft, pageLeft, hasGutter = true }) {
-	const outside = editorLeft - DOT.outside - DOT.width;
-	if (hasGutter && outside - pageLeft >= DOT.outside) return { x: outside, isOutside: true };
-	return { x: editorLeft + Math.max(2, paddingLeft - GRIP_SPACE - DOT.width - DOT.inside), isOutside: false };
+	const { outside, inside } = TARGET;
+	const x = editorLeft - outside.gap - outside.width;
+	if (hasGutter && x >= pageLeft) return { x, width: outside.width, isOutside: true };
+	return { x: editorLeft + Math.max(2, paddingLeft - GRIP.space - inside.width - inside.gap), width: inside.width, isOutside: false };
 }
 
 // What a screen reader says for a dot: the same first few problems as its message.
@@ -157,7 +160,7 @@ function readDots(view, gutter) {
 	const { blocks } = problemsKey.getState(view.state) ?? { blocks: [] };
 	const paddingLeft = Number.parseFloat(getComputedStyle(view.dom).paddingLeft) || 0;
 	const pageLeft = (view.dom.closest("main") ?? document.body).getBoundingClientRect().left;
-	const { x, isOutside } = placeDots({ editorLeft: view.dom.getBoundingClientRect().left, paddingLeft, pageLeft, hasGutter: Boolean(gutter) });
+	const { x, width, isOutside } = placeDots({ editorLeft: view.dom.getBoundingClientRect().left, paddingLeft, pageLeft, hasGutter: Boolean(gutter) });
 	const container = isOutside ? gutter : view.dom.parentElement;
 	const origin = container.getBoundingClientRect();
 	const side = x - MESSAGE_SPACE >= pageLeft ? "left" : "bottom";
@@ -176,7 +179,8 @@ function readDots(view, gutter) {
 				severity: problems.some(({ severity }) => severity === "error") ? "error" : "warning",
 				side,
 				left: Math.round(x - origin.left),
-				top: Math.round(center - origin.top - DOT.height / 2),
+				top: Math.round(center - origin.top - TARGET.height / 2),
+				width,
 			},
 		];
 	});
@@ -186,7 +190,7 @@ function readDots(view, gutter) {
 function getLineCenter(view, node, pos, element) {
 	if (node.isAtom) {
 		const rect = element.getBoundingClientRect();
-		return rect.height < DOT.height * 2 ? rect.top + rect.height / 2 : rect.top + 4 + DOT.height / 2;
+		return rect.height < GRIP.height * 2 ? rect.top + rect.height / 2 : rect.top + 4 + GRIP.height / 2;
 	}
 	const line = view.coordsAtPos(pos + 1);
 	return (line.top + line.bottom) / 2;

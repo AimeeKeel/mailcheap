@@ -138,15 +138,15 @@ describe("what the editor marks beside a block", () => {
 });
 
 describe("where the dots sit", () => {
-	test("in the page's margin, just left of the editor's card, when the page leaves room for them", () => {
-		assert.deepEqual(placeDots({ editorLeft: 400, paddingLeft: 48, pageLeft: 60 }), { x: 376, isOutside: true });
-		assert.deepEqual(placeDots({ editorLeft: 32, paddingLeft: 48, pageLeft: 0 }), { x: 8, isOutside: true });
+	test("in the page's margin, just left of the editor's card, on a target wide enough to find, when the page leaves room", () => {
+		assert.deepEqual(placeDots({ editorLeft: 400, paddingLeft: 48, pageLeft: 60 }), { x: 366, width: 32, isOutside: true });
+		assert.deepEqual(placeDots({ editorLeft: 34, paddingLeft: 48, pageLeft: 0 }), { x: 0, width: 32, isOutside: true });
 	});
 
 	test("in the editor's left padding, clear of the grip, where the page has no room, as on a phone, or no margin to give", () => {
-		assert.deepEqual(placeDots({ editorLeft: 31, paddingLeft: 48, pageLeft: 0 }), { x: 34, isOutside: false });
-		assert.deepEqual(placeDots({ editorLeft: 16, paddingLeft: 20, pageLeft: 0 }), { x: 18, isOutside: false });
-		assert.deepEqual(placeDots({ editorLeft: 400, paddingLeft: 48, pageLeft: 60, hasGutter: false }), { x: 403, isOutside: false });
+		assert.deepEqual(placeDots({ editorLeft: 33, paddingLeft: 48, pageLeft: 0 }), { x: 36, width: 16, isOutside: false });
+		assert.deepEqual(placeDots({ editorLeft: 16, paddingLeft: 20, pageLeft: 0 }), { x: 18, width: 16, isOutside: false });
+		assert.deepEqual(placeDots({ editorLeft: 400, paddingLeft: 48, pageLeft: 60, hasGutter: false }), { x: 403, width: 16, isOutside: false });
 	});
 });
 
