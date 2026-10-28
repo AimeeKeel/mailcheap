@@ -220,6 +220,17 @@ describe("PostShiba tenants", () => {
 });
 
 describe("PostShiba domains", () => {
+	test("a domain another PostShiba account verified says so and what to do instead of asking to try again, and a subdomain goes through", async () => {
+		const user = await signIn("ps-elsewhere@example.com");
+		await activate(user);
+		fake.fail({ method: "POST", path: /\/sending_domains$/, status: 422, body: { errors: ["Name is already verified on another account"] } });
+		assert.deepEqual(await as(user, () => m.domains.addDomainAction(null, form({ domain: "elsewhere.dev" }))), {
+			error: "elsewhere.dev is already verified in another PostShiba account, the email provider MailCheap sends through. Remove it from that account, or add a subdomain instead, like mail.elsewhere.dev.",
+		});
+		assert.equal(await m.Domain.exists({ accountId: user.accountId, domain: "elsewhere.dev" }), null, "nothing kept, so it can be added once it's free");
+		assert.deepEqual(await as(user, () => m.domains.addDomainAction(null, form({ domain: "mail.elsewhere.dev" }))), { ok: true, domain: "mail.elsewhere.dev" });
+	});
+
 	test("an own domain gets PostShiba's DKIM and rp. CNAMEs, in the account's tenant, and Check now stays within the budget", async () => {
 		const user = await signIn("ps-domain@example.com");
 		await activate(user);
