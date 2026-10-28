@@ -12,7 +12,7 @@ export default function WritingPage() {
 		<ArticleHelp slug="writing">
 			<h2 id="steps">Write, review, send</h2>
 			<p>
-				Start a draft from the <LinkApp href="/campaigns">Campaigns page</LinkApp>. A campaign goes through three steps, shown at the
+				Start a draft with New, on the <LinkApp href="/campaigns">Campaigns page</LinkApp>. A campaign goes through three steps, shown at the
 				top: Write, where you type the
 				subject, the preview text and the issue; Review, a checklist of what to fix before it can go out and of what may look broken;
 				and Send, where you pick
@@ -25,6 +25,11 @@ export default function WritingPage() {
 				)}
 				. Everything saves as you type, and a check shows each time it&apos;s saved. While you edit, the{" "}
 				<Link href={getHelpHref("getting-started", "sidebar")}>sidebar</Link> folds down to its icons to leave the issue more room.
+			</p>
+			<p>
+				Once you have a campaign, New asks how to start: Blank, or Copy a campaign, which lists your campaigns, sent or not. The one
+				you pick opens as a new draft with its subject, followed by (copy), its preview text and its content. The campaign you copied
+				stays as it is.
 			</p>
 			<p>
 				The preview text is what inboxes show after the subject. Without one, they show your issue&apos;s first words.
@@ -205,6 +210,10 @@ export default function WritingPage() {
 				The <strong>⋯</strong> menu also duplicates a campaign into a new draft, or discards a draft. A sent campaign can&apos;t be
 				changed, but it can come off your website.{" "}
 				<Link href={getHelpHref("website", "remove-issue")}>Removing an issue</Link>
+			</p>
+			<p>
+				To start every issue from the same layout, keep a draft with its sections and your sign-off, and copy it each time: New, then
+				Copy a campaign.
 			</p>
 			<p>
 				A campaign made with the API or an AI assistant can be a whole HTML document. The dashboard then shows its HTML to edit, and it
