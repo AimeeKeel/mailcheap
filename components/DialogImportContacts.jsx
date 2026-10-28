@@ -60,12 +60,14 @@ const PREVIEW_ROWS = 6;
 // column goes, then its rows go to MailCheap in chunks and are imported in the background, which the contacts page
 // follows (CardImports). Closing the dialog while the rows are sent doesn't stop them. A CSV dropped on the dialog, or
 // anywhere on the page, is read like one picked; without a plan, the page drop opens the paywall, like the button.
-// guides: how to export the file from other platforms, under the drop zone (siteExtensions.importGuides).
-export default function DialogImportContacts({ newsletter, guides = [], label = "Import", variant = "outline" }) {
+// guides: how to export the file from other platforms, under the drop zone (siteExtensions.importGuides). isOpen and
+// onOpenChange: for a page that also opens it from elsewhere, like the Contacts page's ⋯ menu.
+export default function DialogImportContacts({ newsletter, guides = [], label = "Import", variant = "outline", isOpen: isOpenProp, onOpenChange }) {
 	const router = useRouter();
 	const paywall = usePaywall();
 	const { fields, tags: tagOptions } = useContactOptions();
-	const [isOpen, setIsOpen] = useState(false);
+	const [isOpenState, setIsOpenState] = useState(false);
+	const isOpen = isOpenProp ?? isOpenState;
 	const [file, setFile] = useState(null);
 	const [parsed, setParsed] = useState(null);
 	const [plan, setPlan] = useState([]);
@@ -89,6 +91,11 @@ export default function DialogImportContacts({ newsletter, guides = [], label = 
 		}
 		return { rows: [...byEmail.values()], invalidRows: invalid, duplicates: parsed.rows.length - invalid.length - byEmail.size };
 	}, [parsed, columns, profile, mode, importTags]);
+
+	function setIsOpen(open) {
+		setIsOpenState(open);
+		onOpenChange?.(open);
+	}
 
 	function reset() {
 		setFile(null);

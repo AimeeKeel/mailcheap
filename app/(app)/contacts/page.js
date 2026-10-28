@@ -4,9 +4,7 @@ import { Users } from "lucide-react";
 import ButtonsContacts from "@/components/ButtonsContacts";
 import CardAddContacts from "@/components/CardAddContacts";
 import CardImports from "@/components/CardImports";
-import DialogImportContacts from "@/components/DialogImportContacts";
 import FilterContacts from "@/components/FilterContacts";
-import GatePlan from "@/components/GatePlan";
 import HeaderPage from "@/components/HeaderPage";
 import ProviderContactOptions from "@/components/ProviderContactOptions";
 import StateEmpty from "@/components/StateEmpty";
@@ -62,6 +60,7 @@ export default async function ContactsPage({ searchParams }) {
 	const hasContacts = listCount > 0;
 	const newsletter = selected && toNewsletterOption(selected);
 	const importGuides = isCloud() ? siteExtensions.importGuides : [];
+	const curl = getAddContactCurl(getAppUrl(), selected?.slug);
 
 	function hrefFor(target) {
 		return `/contacts${toFilterQuery(filters, { page: target > 1 && target })}`;
@@ -73,11 +72,14 @@ export default async function ContactsPage({ searchParams }) {
 	return (
 		<ProviderContactOptions fields={fields} tags={tags}>
 			<HeaderPage title="Contacts">
-				<ButtonsContacts header={getContactsHeader(listCount)} newsletter={newsletter} filters={filters} count={total}>
-					<GatePlan reason="import">
-						<DialogImportContacts newsletter={newsletter} guides={importGuides} />
-					</GatePlan>
-				</ButtonsContacts>
+				<ButtonsContacts
+					header={getContactsHeader(listCount)}
+					newsletter={newsletter}
+					filters={filters}
+					count={total}
+					curl={curl}
+					importGuides={importGuides}
+				/>
 			</HeaderPage>
 
 			<div className="flex flex-col gap-4">
@@ -96,7 +98,7 @@ export default async function ContactsPage({ searchParams }) {
 				)}
 
 				{!hasContacts ? (
-					<CardAddContacts newsletter={newsletter} curl={getAddContactCurl(getAppUrl(), selected?.slug)} importGuides={importGuides} />
+					<CardAddContacts newsletter={newsletter} curl={curl} importGuides={importGuides} />
 				) : contacts.length === 0 ? (
 					<StateEmpty icon={Users} title="No contacts match" />
 				) : (

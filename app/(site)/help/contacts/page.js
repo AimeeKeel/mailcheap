@@ -168,9 +168,10 @@ export default function ContactsPage() {
 				have it. Click one, or use the arrow keys then Enter. Click × on a tag to take it off, then save.
 			</p>
 			<p>
-				To tag many contacts at once, tag everyone an import adds, or use the{" "}
-				<Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>. Click a tag on a contact&apos;s page to list everyone who
-				has it.
+				To tag many contacts at once, tag everyone an import adds, give the{" "}
+				<Link href={getHelpHref("website", "form-on-your-site")}>form on your site</Link> tags for everyone who signs up through it,
+				or use the <Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>. Click a tag on a contact&apos;s page to list
+				everyone who has it.
 			</p>
 
 			<h2 id="fields">Adding fields, step by step</h2>
@@ -266,15 +267,38 @@ export default function ContactsPage() {
 				can&apos;t be deleted until that issue goes elsewhere.
 			</p>
 
-			<h2 id="add">Adding someone by hand</h2>
+			<h2 id="add">Adding contacts</h2>
 			<p>
-				On the <LinkApp href="/contacts">Contacts page</LinkApp>, click Add contact, type their email address and tick that they
-				agreed to get your emails. They join at once, without a confirmation email, and get your welcome email if it&apos;s on.
-				Once your list has {LIST_STARTED_AT} contacts, Add contact is in the <strong>⋯</strong> menu at the top of the page.
-				{isCloud() && ` Without a plan, you can add ${TRIAL_CONTACTS.limit} contacts a day, enough to try it on yourself.`}
+				Add contacts, in the <strong>⋯</strong> menu at the top of the <LinkApp href="/contacts">Contacts page</LinkApp>, has every
+				way to add people to your list:
+			</p>
+			<ul>
+				<li>
+					<strong>Form for your site</strong> opens the <LinkApp href="/newsletters/form">signup form</LinkApp> to paste on your site,
+					blog or link page: readers who sign up there join on their own, and it can tag them.{" "}
+					<Link href={getHelpHref("website", "form-on-your-site")}>A signup form on your own site</Link>
+				</li>
+				<li>
+					<strong>Import a CSV</strong> brings in a whole list, like an export from beehiiv, Substack or Mailchimp.{" "}
+					<Link href={getHelpHref("importing-contacts")}>Importing contacts</Link>
+				</li>
+				<li>
+					<strong>With the API</strong> shows the request that signs someone up from your own site or app, with your newsletter in
+					it, and where to create its key. <Link href={getHelpHref("api-and-ai")}>API and AI assistants</Link>
+				</li>
+				<li>
+					<strong>By hand</strong> adds one person, as below.
+				</li>
+			</ul>
+			<p>
+				Your newsletter&apos;s <Link href={getHelpHref("website", "signups")}>website</Link> takes signups too, from its home page and
+				its issue pages.
 			</p>
 			<p>
-				For a whole list, import a CSV file instead: <Link href={getHelpHref("importing-contacts")}>Importing contacts</Link>.
+				To add someone by hand, pick By hand, type their email address and tick that they agreed to get your emails. They join at
+				once, without a confirmation email, and get your welcome email if it&apos;s on. Until your list has {LIST_STARTED_AT}{" "}
+				contacts, Add contact is also a button at the top of the page.
+				{isCloud() && ` Without a plan, you can add ${TRIAL_CONTACTS.limit} contacts a day, enough to try it on yourself.`}
 			</p>
 
 			<h2 id="actions">Changing a status, and deleting</h2>

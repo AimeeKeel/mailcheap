@@ -7,11 +7,13 @@ import BarSave from "@/components/BarSave";
 import BlockCode from "@/components/BlockCode";
 import { Segmented } from "@/components/FieldsTheme";
 import { Field, Section } from "@/components/FormNewsletter";
+import InputTags from "@/components/InputTags";
 import LinkHelp from "@/components/LinkHelp";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { firstNameTag } from "@/lib/merge-tags";
 import { getSectionPath } from "@/lib/newsletter-sections";
 import { SIGNUP_FORM_DEFAULTS, SIGNUP_FORM_LIMITS, getEmbedCode, getSignupFormHeading, toSignupFormSettings } from "@/lib/signup-form";
 import { renderFormPage } from "@/lib/signup-form-page";
@@ -22,8 +24,9 @@ import { usePaywall } from "@/lib/use-paywall";
 // Form for your site: the signup form owners paste on their own site (lib/signup-form.js), previewed in its frame as a
 // reader sees it, with the code to paste and the sites it works on. Saved with the bar like the other settings; the
 // sites are typed one per line and come back from the server as it keeps them. hasBotCheck: Vercel BotID runs on this
-// server, which is what stops a script from naming a listed site (lib/bot-check.js).
-export default function FormEmbed({ newsletter, appUrl, hasBotCheck = true }) {
+// server, which is what stops a script from naming a listed site (lib/bot-check.js). tagOptions: the tags the
+// newsletter's contacts have, to pick the form's from.
+export default function FormEmbed({ newsletter, appUrl, tagOptions = [], hasBotCheck = true }) {
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const [saved, setSaved] = useState(() => toDraft(newsletter.signupForm, newsletter));
@@ -82,6 +85,16 @@ export default function FormEmbed({ newsletter, appUrl, hasBotCheck = true }) {
 						</>
 					)}
 				</p>
+				<Field label="Tags" as="div" hint="Everyone who signs up here gets them, so a segment can pick them.">
+					<InputTags
+						value={draft.tags}
+						onChange={(tags) => set("tags", tags)}
+						suggestions={tagOptions}
+						maxSuggestions={6}
+						max={SIGNUP_FORM_LIMITS.tags}
+						placeholder="Optional, e.g. blog"
+					/>
+				</Field>
 			</Section>
 			<Section
 				title="Preview"
@@ -111,7 +124,17 @@ export default function FormEmbed({ newsletter, appUrl, hasBotCheck = true }) {
 						</Field>
 					</>
 				)}
-				<Field label="First name" as="div">
+				<Field
+					label="First name"
+					as="div"
+					hint={
+						<>
+							Saved as their first name, which{" "}
+							<code className="rounded bg-muted px-1 py-0.5 font-mono text-foreground">{firstNameTag()}</code> prints in your
+							emails. <LinkHelp article="writing" section="first-name" />
+						</>
+					}
+				>
 					<label className="flex items-center gap-3 text-sm text-muted-foreground sm:pt-2">
 						<Switch checked={draft.askFirstName} onCheckedChange={(isChecked) => set("askFirstName", isChecked)} />
 						Ask for it above the email, optional for readers
@@ -280,6 +303,7 @@ function toInput(draft, newsletter) {
 			.split(/[\s,]+/)
 			.map((domain) => domain.trim())
 			.filter(Boolean),
+		tags: draft.tags,
 	};
 }
 

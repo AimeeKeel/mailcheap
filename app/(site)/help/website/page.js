@@ -6,7 +6,7 @@ import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { formatNumber } from "@/lib/format";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { getSignupScale } from "@/lib/plans";
-import { SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
+import { SIGNUP_FORM_LIMITS, SIGNUP_FORM_RATE_LIMITS } from "@/lib/signup-form";
 
 export const metadata = getHelpPageMetadata("website");
 
@@ -142,8 +142,9 @@ export default function WebsitePage() {
 					<Link href="/docs/api#add-contact">add a contact</Link> in the API reference.
 				</li>
 				<li>
-					<strong>By hand or from a file</strong>: on the <LinkApp href="/contacts">Contacts page</LinkApp>.{" "}
-					<Link href={getHelpHref("contacts")}>Contacts</Link>
+					<strong>By hand or from a file</strong>: under Add contacts, in the <strong>⋯</strong> menu of the{" "}
+					<LinkApp href="/contacts">Contacts page</LinkApp>, which lists every way to add them.{" "}
+					<Link href={getHelpHref("contacts", "add")}>Adding contacts</Link>
 				</li>
 			</ul>
 			<p>
@@ -173,7 +174,13 @@ export default function WebsitePage() {
 			<p>
 				Inline is the email field and its button alone. Card puts them in a box under a headline and a line of text: they start as
 				your newsletter&apos;s name and description, and follow them until you write your own. Clear one to hide it. Turn on First
-				name to ask for it above the email, so <code>{"{{first_name}}"}</code> can greet new readers; they can leave it empty.
+				name to ask for it above the email, so <code>{"{{first_name|there}}"}</code> can greet new readers by it; they can leave it
+				empty. <Link href={getHelpHref("writing", "first-name")}>Names and fields in your emails</Link>
+			</p>
+			<p>
+				Type tags under the switch, like <code>blog</code>, and everyone who signs up through the form gets them: new readers, and
+				contacts already on your list who sign up there again. A <Link href={getHelpHref("contacts", "segments")}>segment</Link> can
+				then pick them, to send them an issue or see how they read. Up to {SIGNUP_FORM_LIMITS.tags} tags.
 			</p>
 			<p>Where to paste it:</p>
 			<ul>

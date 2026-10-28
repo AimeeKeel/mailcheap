@@ -94,6 +94,8 @@ const newsletterSchema = new mongoose.Schema(
 			buttonText: { type: String, trim: true },
 			placeholder: { type: String, trim: true },
 			allowedDomains: { type: [String], default: undefined },
+			// Added to everyone who signs up through it, new or already a contact.
+			tags: { type: [String], default: undefined },
 		},
 		// Dashboard helpers its owner closed: ownDomain, the step the own-domain helper suggested (lib/sender-rules.js), and
 		// inboxCheck, when the settings card about getting MailCheap's emails in their inbox went (lib/inbox-check.js).

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { after, before, describe, test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -7,12 +8,12 @@ import { as, catchRedirect, form, signIn, startTestApp } from "./helpers/app.mjs
 
 // The actions at the top of the Contacts page follow how far along the newsletter's list is (lib/contacts-header.js):
 // the stages, the page that counts the list for them, and the help center that says where each action is.
-const ONE = { buttons: ["fields", "add", "import"], menu: ["fields", "export", "help"] };
-const TWO = { buttons: ["segments", "fields", "add", "import"], menu: ["segments", "fields", "export", "help"] };
+const ONE = { buttons: ["fields", "add", "import"], menu: ["add", "fields", "export", "help"] };
+const TWO = { buttons: ["segments", "fields", "add", "import"], menu: ["add", "segments", "fields", "export", "help"] };
 const LIST = { buttons: ["segments", "fields", "import"], menu: ["add", "segments", "fields", "export", "help"] };
 
-test("an empty list has Import and a ⋯ menu with the fields, as its card has Add contact and there's nothing to export", () => {
-	assert.deepEqual(getContactsHeader(0), { buttons: ["import"], menu: ["fields", "help"] });
+test("an empty list has Import and a ⋯ menu with the ways to add contacts and the fields, as there's nothing to export", () => {
+	assert.deepEqual(getContactsHeader(0), { buttons: ["import"], menu: ["add", "fields", "help"] });
 });
 
 test("one or two contacts make Fields and Add contact buttons, and put Export in the menu", () => {
@@ -30,23 +31,47 @@ test("from 2 contacts, segments have people to tell apart: Segments is a button,
 	}
 });
 
-test("from 3 contacts, the list came from an import or signups, and Add contact moves into the menu", () => {
+test("from 3 contacts, the list came from an import or signups, and adding one by hand is only in the menu", () => {
 	assert.equal(LIST_STARTED_AT, 3);
 	assert.deepEqual(getContactsHeader(3), LIST);
 	assert.deepEqual(getContactsHeader(20), LIST);
 	assert.deepEqual(getContactsHeader(50_000), LIST);
 });
 
-test("at every stage, Import is a button, each action has one place, and the menu ends on the help article", () => {
+test("at every stage, Import is a button, and the menu starts on the ways to add contacts and ends on the help article", () => {
 	for (const count of [0, 1, 2, 3, 20]) {
 		const { buttons, menu } = getContactsHeader(count);
 		assert.ok(buttons.includes("import"), `${count}`);
+		assert.equal(menu[0], "add", `${count}`);
 		assert.equal(menu.at(-1), "help", `${count}`);
 		assert.ok(menu.includes("fields"), `${count}: Fields is in the menu, on phones at least`);
-		assert.equal(buttons.includes("add") || menu.includes("add"), count > 0, `${count}`);
-		assert.ok(!(buttons.includes("add") && menu.includes("add")), `${count}`);
+		assert.equal(buttons.includes("add"), count > 0 && count < LIST_STARTED_AT, `${count}: Add contact is a button while the list starts`);
 		assert.equal(menu.includes("export"), count > 0, `${count}`);
 	}
+});
+
+// The menu only renders once opened, so its source says what it has.
+test("Add contacts, at the top of the menu, has every way: the form for the owner's site, an import, the API, then by hand", async () => {
+	const source = await readFile(new URL("../components/ButtonsContacts.jsx", import.meta.url), "utf8");
+	const menu = source.match(/<DropdownMenuContent\b[\s\S]*?<\/DropdownMenuContent>/)?.[0] ?? "";
+	const group = menu.match(/<DropdownMenuGroup aria-labelledby=\{addLabelId\}>([\s\S]*?)<\/DropdownMenuGroup>/)?.[1] ?? "";
+	assert.ok(menu.indexOf(group) < menu.indexOf("<DropdownMenuItem asChild className"), "before the other actions");
+	assert.match(group, /^\s*<DropdownMenuLabel id=\{addLabelId\}>Add contacts<\/DropdownMenuLabel>/);
+	const ways = [...group.matchAll(/<DropdownMenuItem\b((?:[^>{}]|\{[^{}]*\})*)>([\s\S]*?)<\/DropdownMenuItem>/g)].map(([, attributes, inner]) => ({
+		attributes,
+		inner,
+		label: inner.replace(/<[^>]+>/g, "").trim(),
+	}));
+	assert.deepEqual(
+		ways.map(({ label }) => label),
+		["{FORM_SECTION.label}", "Import a CSV", "With the API", "By hand"]
+	);
+	assert.match(ways[0].inner, /<Link href=\{getSectionPath\(FORM_SECTION\.id\)\}>/, "the form opens its settings");
+	assert.match(ways[1].attributes, /onSelect=\{openImport\}/, "the import opens its dialog, or the paywall without a plan");
+	assert.match(ways[2].attributes, /openFromMenu\("api"\)/);
+	assert.match(ways[3].attributes, /openFromMenu\("add"\)/);
+	for (const { label, attributes } of ways) assert.match(attributes, /disabled=\{!newsletter\}/, `${label}, without a newsletter to add to`);
+	assert.match(source, /function openImport\(\) \{\s*if \(paywall && !paywall\.hasPlan\) return void paywall\.open\("import"\);/);
 });
 
 describe("the Contacts page", () => {
@@ -94,6 +119,10 @@ describe("the Contacts page", () => {
 		const empty = await render();
 		assert.deepEqual(readHeader(empty), ["Import", "More"]);
 		assert.match(empty, /Add yourself as a contact/, "the card under it has Add contact");
+		assert.match(empty, /Add them in one of three ways\./);
+		assert.match(empty, /Take signups on your site/);
+		assert.match(empty, /<a [^>]*href="\/newsletters\/form"[^>]*>(?:(?!<\/a>)[\s\S])*Set up the form<\/a>/, "and the form for their site");
+		assert.match(empty, /-d &#x27;\{&quot;email&quot;:&quot;jane@example\.com&quot;,&quot;newsletter&quot;:&quot;header-news&quot;\}&#x27;/, "and the API");
 
 		await addContacts(["reader1@example.com"]);
 		assert.deepEqual(readHeader(await render()), ["Fields", "Add contact", "Import", "More"], "one contact: no segments yet");
@@ -116,10 +145,12 @@ describe("the Contacts page", () => {
 		assert.deepEqual(readHeader(await render({ signedUpBefore: "2000-01-01" })), list, "a signup date with no one");
 	});
 
-	test("the help center says where each action is, and from how many contacts Add contact is in the menu", () => {
+	test("the help center says where each action is, and until how many contacts Add contact is a button too", () => {
 		const text = renderToStaticMarkup(createElement(m.helpPage.default)).replace(/<[^>]+>/g, "");
 		assert.match(text, /Click Fields at the top of the Contacts page\. Before your list has contacts, and on a phone, it&#x27;s Contact fields in the ⋯ menu there\./);
-		assert.match(text, new RegExp(`Once your list has ${LIST_STARTED_AT} contacts, Add contact is in the ⋯ menu at the top of the page\\.`));
+		assert.match(text, /Add contacts, in the ⋯ menu at the top of the Contacts page, has every way to add people to your list:/);
+		for (const way of ["Form for your site", "Import a CSV", "With the API", "By hand"]) assert.ok(text.includes(way), way);
+		assert.match(text, new RegExp(`Until your list has ${LIST_STARTED_AT} contacts, Add contact is also a button at the top of the page\\.`));
 		assert.match(text, new RegExp(`Once your list has ${SEGMENTS_FROM} contacts, Segments at the top of the Contacts page opens yours,`));
 		assert.match(text, /Export, in the ⋯ menu at the top of the Contacts page, downloads the contacts that match your filters/);
 		assert.match(text, /They join at once, without a confirmation email, and get your welcome email if it&#x27;s on\./);

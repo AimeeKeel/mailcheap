@@ -5,6 +5,7 @@ import LayoutNarrow from "@/components/LayoutNarrow";
 import { scoped } from "@/lib/account-scope";
 import { isBotIdEnabled } from "@/lib/bot-check";
 import { getAppUrl } from "@/lib/config";
+import { listContactTags } from "@/lib/contacts";
 import { FORM_SECTION, SETTINGS_PARENT } from "@/lib/newsletter-sections";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
@@ -16,14 +17,23 @@ export const metadata = { title: FORM_SECTION.label };
 export default async function FormPage() {
 	const { account, selected } = await getSelectedNewsletter();
 	if (!selected) redirect(ADD_NEWSLETTER_PATH);
-	const newsletter = await Newsletter.findOne(scoped(account, { _id: selected._id }))
-		.select({ name: 1, description: 1, theme: 1, requireConfirmation: 1, "welcome.enabled": 1, signupForm: 1 })
-		.lean();
+	const [newsletter, tags] = await Promise.all([
+		Newsletter.findOne(scoped(account, { _id: selected._id }))
+			.select({ name: 1, description: 1, theme: 1, requireConfirmation: 1, "welcome.enabled": 1, signupForm: 1 })
+			.lean(),
+		listContactTags(account, selected._id),
+	]);
 
 	return (
 		<LayoutNarrow>
 			<HeaderPage title={FORM_SECTION.label} parent={SETTINGS_PARENT} />
-			<FormEmbed key={String(newsletter._id)} newsletter={serialize(newsletter)} appUrl={getAppUrl()} hasBotCheck={isBotIdEnabled()} />
+			<FormEmbed
+				key={String(newsletter._id)}
+				newsletter={serialize(newsletter)}
+				appUrl={getAppUrl()}
+				tagOptions={tags}
+				hasBotCheck={isBotIdEnabled()}
+			/>
 		</LayoutNarrow>
 	);
 }
