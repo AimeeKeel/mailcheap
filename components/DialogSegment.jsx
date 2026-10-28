@@ -153,8 +153,9 @@ function FormSegment({ newsletterId, segment, onSaved, isPicking, onDeleted }) {
 		<form onSubmit={save} className="flex flex-col gap-5">
 			<DialogHeader>
 				<DialogTitle>{segment ? "Edit segment" : "New segment"}</DialogTitle>
-				<DialogDescription>
-					Contacts who meet these conditions, kept up to date. <LinkHelp article="contacts" section="segments" />
+				<DialogDescription className="text-pretty">
+					A segment groups the contacts who meet these conditions, like those who opened lately, and keeps up to date as they
+					change. Send a campaign to it, or see how its people read. <LinkHelp article="contacts" section="segments" />
 				</DialogDescription>
 			</DialogHeader>
 

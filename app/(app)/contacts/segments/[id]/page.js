@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import ButtonsSegment from "@/components/ButtonsSegment";
 import CardStat from "@/components/CardStat";
 import FilterContacts from "@/components/FilterContacts";
@@ -62,21 +62,20 @@ export default async function SegmentPage({ params, searchParams }) {
 		<ProviderContactOptions fields={fields} tags={tags}>
 			<header className="mb-8 flex flex-col gap-1 animate-enter">
 				<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-					<div className="flex min-w-0 items-center gap-2">
-						<Link
-							href="/contacts/segments"
-							aria-label="Segments"
-							className="-ml-2 grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
-						>
-							<ChevronLeft className="size-5" />
+					<div className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
+						<Link href="/contacts/segments" className="shrink-0 text-muted-foreground transition-colors duration-150 hover:text-foreground">
+							Segments
 						</Link>
-						<h1 className="truncate text-2xl font-semibold tracking-tight">{segment.name}</h1>
+						<span aria-hidden="true" className="shrink-0 font-normal text-muted-foreground/50">
+							/
+						</span>
+						<h1 className="truncate">{segment.name}</h1>
 					</div>
 					<div className="flex items-center gap-2">
 						<ButtonsSegment newsletterId={newsletterId} segment={rules} filters={filters} count={total} />
 					</div>
 				</div>
-				<p className="text-sm text-pretty text-muted-foreground sm:pl-9">{describeSegment(segment, fields)}</p>
+				<p className="text-sm text-pretty text-muted-foreground">{describeSegment(segment, fields)}</p>
 			</header>
 
 			<div className="flex flex-col gap-6">

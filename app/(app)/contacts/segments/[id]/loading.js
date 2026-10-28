@@ -6,13 +6,16 @@ export default function Loading() {
 		<>
 			<header className="mb-8 flex flex-col gap-2">
 				<div className="flex items-center justify-between gap-4">
-					<div className="flex items-center gap-2">
-						<span className="-ml-2 size-9" />
+					<div className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-muted-foreground">
+						Segments
+						<span aria-hidden="true" className="font-normal text-muted-foreground/50">
+							/
+						</span>
 						<Skeleton className="h-7 w-40" />
 					</div>
 					<Skeleton className="h-9 w-20 rounded-lg" />
 				</div>
-				<Skeleton className="h-3.5 w-64 sm:ml-9" />
+				<Skeleton className="h-3.5 w-64" />
 			</header>
 			<div aria-hidden="true" className="flex flex-col gap-6">
 				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
