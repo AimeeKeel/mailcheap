@@ -58,7 +58,9 @@ export default function SenderAddressesPage() {
 				</li>
 				<li>
 					<strong>DMARC</strong>: tells inboxes what to do with emails that fail the checks. Gmail and Yahoo require one from bulk
-					senders. Start with <code>p=none</code>, then move to <code>p=quarantine</code> once your reports look clean.
+					senders. Start with <code>p=none</code>, then move to <code>p=quarantine</code> once your reports look clean. A record on
+					the domain you registered covers its subdomains too: for <code>news.example.com</code>, the page says Found on{" "}
+					<code>example.com</code>.
 				</li>
 			</ol>
 			<p>
