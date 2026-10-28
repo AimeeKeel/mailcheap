@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Users } from "lucide-react";
 import ButtonsSegment from "@/components/ButtonsSegment";
 import CardStat from "@/components/CardStat";
 import FilterContacts from "@/components/FilterContacts";
+import { TitlePage } from "@/components/HeaderPage";
 import ProviderContactOptions from "@/components/ProviderContactOptions";
 import StateEmpty from "@/components/StateEmpty";
 import TableContacts, { NavPages } from "@/components/TableContacts";
@@ -62,20 +62,12 @@ export default async function SegmentPage({ params, searchParams }) {
 		<ProviderContactOptions fields={fields} tags={tags}>
 			<header className="mb-8 flex flex-col gap-1 animate-enter">
 				<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-					<div className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
-						<Link href="/contacts/segments" className="shrink-0 text-muted-foreground transition-colors duration-150 hover:text-foreground">
-							Segments
-						</Link>
-						<span aria-hidden="true" className="shrink-0 font-normal text-muted-foreground/50">
-							/
-						</span>
-						<h1 className="truncate">{segment.name}</h1>
-					</div>
+					<TitlePage title={segment.name} parent={{ label: "Segments", href: "/contacts/segments" }} />
 					<div className="flex items-center gap-2">
 						<ButtonsSegment newsletterId={newsletterId} segment={rules} filters={filters} count={total} />
 					</div>
 				</div>
-				<p className="text-sm text-pretty text-muted-foreground">{describeSegment(segment, fields)}</p>
+				<p className="text-sm text-pretty text-muted-foreground sm:pl-9">{describeSegment(segment, fields)}</p>
 			</header>
 
 			<div className="flex flex-col gap-6">

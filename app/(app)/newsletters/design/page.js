@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import FormTheme from "@/components/FormTheme";
 import HeaderPage from "@/components/HeaderPage";
-import { DESIGN_SECTION, SETTINGS_PATH } from "@/lib/newsletter-sections";
+import { DESIGN_SECTION, SETTINGS_PARENT } from "@/lib/newsletter-sections";
 import { scoped } from "@/lib/account-scope";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { getPostalAddress } from "@/lib/postal-address";
@@ -26,7 +26,7 @@ export default async function DesignPage() {
 	return (
 		<div className="mx-auto w-full max-w-5xl">
 			<style dangerouslySetInnerHTML={{ __html: FONT_FACES }} />
-			<HeaderPage title={DESIGN_SECTION.label} backHref={SETTINGS_PATH} />
+			<HeaderPage title={DESIGN_SECTION.label} parent={SETTINGS_PARENT} />
 			<FormTheme
 				key={String(newsletter._id)}
 				newsletter={serialize(newsletter)}

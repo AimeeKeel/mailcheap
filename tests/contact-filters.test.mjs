@@ -266,7 +266,11 @@ describe("the contacts and segments pages", () => {
 	test("a segment's page has its numbers next to the list's and its contacts of every status", async () => {
 		const html = await render(m.segmentPage, { params: Promise.resolve({ id: segmentId }), searchParams: Promise.resolve({}) });
 		assert.match(html, /<h1[^>]*>From the form<\/h1>/);
-		assert.match(html, /<a href="\/contacts\/segments"[^>]*>Segments<\/a><span aria-hidden="true"[^>]*>\/<\/span><h1/, "a title under Segments");
+		assert.match(
+			html,
+			/<a href="\/contacts\/segments" aria-label="Back"[^>]*>[\s\S]*?<\/a><span[^>]*><a href="\/contacts\/segments"[^>]*>Segments<\/a><span aria-hidden="true"[^>]*>\/<\/span><\/span><h1/,
+			"the back arrow, then a title under Segments"
+		);
 		for (const email of ["reader", "fan", "gone"]) assert.match(html, new RegExp(`${email}@example\\.org`));
 		assert.doesNotMatch(html, /quiet@example\.org/);
 		assert.match(html, /Active contacts/);

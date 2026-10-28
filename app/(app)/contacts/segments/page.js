@@ -37,7 +37,7 @@ export default async function SegmentsPage() {
 
 	return (
 		<>
-			<HeaderPage title="Segments" backHref="/contacts">
+			<HeaderPage title="Segments" parent={{ label: "Contacts", href: "/contacts" }}>
 				{segments.length > 0 && newSegment}
 			</HeaderPage>
 

@@ -5,7 +5,7 @@ import LayoutNarrow from "@/components/LayoutNarrow";
 import { scoped } from "@/lib/account-scope";
 import { isBotIdEnabled } from "@/lib/bot-check";
 import { getAppUrl } from "@/lib/config";
-import { FORM_SECTION, SETTINGS_PATH } from "@/lib/newsletter-sections";
+import { FORM_SECTION, SETTINGS_PARENT } from "@/lib/newsletter-sections";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
 import { serialize } from "@/lib/serialize";
@@ -22,7 +22,7 @@ export default async function FormPage() {
 
 	return (
 		<LayoutNarrow>
-			<HeaderPage title={FORM_SECTION.label} backHref={SETTINGS_PATH} />
+			<HeaderPage title={FORM_SECTION.label} parent={SETTINGS_PARENT} />
 			<FormEmbed key={String(newsletter._id)} newsletter={serialize(newsletter)} appUrl={getAppUrl()} hasBotCheck={isBotIdEnabled()} />
 		</LayoutNarrow>
 	);

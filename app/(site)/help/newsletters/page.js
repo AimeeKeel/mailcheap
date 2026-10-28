@@ -26,8 +26,8 @@ export default function NewslettersPage() {
 			</p>
 			<p>
 				<LinkApp href="/newsletters">Settings</LinkApp> opens on an overview of the newsletter: a card for each section below, with
-				where it stands, like double opt-in on or the website&apos;s address. A card opens its section&apos;s page, and once you change
-				something there, a bar offers to save or discard it.
+				where it stands, like double opt-in on or the website&apos;s address. A card opens its section&apos;s page, like Settings /
+				General, whose back arrow returns to the overview. Once you change something there, a bar offers to save or discard it.
 			</p>
 
 			<h2 id="general">General</h2>

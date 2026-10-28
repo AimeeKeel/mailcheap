@@ -254,8 +254,8 @@ export default function ContactsPage() {
 				<Link href={getHelpHref("sending", "who")}>Who gets it</Link>
 			</p>
 			<p>
-				Click a segment to open its page, whose title starts with Segments, a link back to all of them. At the top: its active
-				contacts, the share of them who opened and clicked in the last{" "}
+				Click a segment to open its page, like Segments / Engaged, whose back arrow returns to all of them. At the top: its
+				active contacts, the share of them who opened and clicked in the last{" "}
 				{ACTIVITY_DAYS} days next to your whole list, and the campaigns sent to it. Below, its contacts of every status, with the
 				search and filters of the Contacts page. Edit changes its name and conditions, and the <strong>⋯</strong> menu exports its
 				contacts, deletes them, or deletes the segment, whose contacts stay.

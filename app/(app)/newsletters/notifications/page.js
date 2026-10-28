@@ -4,7 +4,7 @@ import HeaderPage from "@/components/HeaderPage";
 import LayoutNarrow from "@/components/LayoutNarrow";
 import { scoped } from "@/lib/account-scope";
 import { APP_NAME, getEmailFrom, isCloud } from "@/lib/config";
-import { NOTIFICATIONS_SECTION, SETTINGS_PATH } from "@/lib/newsletter-sections";
+import { NOTIFICATIONS_SECTION, SETTINGS_PARENT, SETTINGS_PATH } from "@/lib/newsletter-sections";
 import { ADD_NEWSLETTER_PATH } from "@/lib/newsletters";
 import { getSelectedNewsletter } from "@/lib/selected-newsletter";
 import { SUMMARY_HOUR, getSummaryFrequency, isSummaryEligible } from "@/lib/summary";
@@ -23,7 +23,7 @@ export default async function NotificationsPage() {
 
 	return (
 		<LayoutNarrow>
-			<HeaderPage title={NOTIFICATIONS_SECTION.label} backHref={SETTINGS_PATH} />
+			<HeaderPage title={NOTIFICATIONS_SECTION.label} parent={SETTINGS_PARENT} />
 			<div className="flex flex-col gap-4">
 				<CardSummaryEmail
 					key={newsletterId}
