@@ -16,8 +16,8 @@ test("new contacts go 2% first, then 5% more, then the rest, each step within it
 });
 
 test("new contacts over a campaign's levels stop the rest", () => {
-	assert.equal(getFirstSendProblem({ sent: 250, bounced: 5 }), null, "2% is the pause limit");
-	assert.deepEqual(getFirstSendProblem({ sent: 250, bounced: 6 }), { level: "pause", reason: "The first 250 new contacts had a bounce rate of 2.40% (limit 2.00%)" });
+	assert.equal(getFirstSendProblem({ sent: 240, bounced: 6 }), null, "2.5% is the pause limit");
+	assert.deepEqual(getFirstSendProblem({ sent: 240, bounced: 7 }), { level: "pause", reason: "The first 240 new contacts had a bounce rate of 2.92% (limit 2.50%)" });
 	assert.equal(getFirstSendProblem({ sent: 2000, complained: 2 }).level, "pause");
 	assert.equal(getFirstSendProblem({ sent: 2000, complained: 1 }), null, "one complaint");
 	assert.equal(getFirstSendProblem({ sent: 0 }), null);
@@ -178,7 +178,7 @@ describe("first sends in steps", () => {
 		assert.deepEqual([check.result.paused, check.result.blocked], [true, undefined]);
 		const paused = await campaignOf(user);
 		assert.equal(paused.pauseCode, "first_send_slice");
-		assert.match(paused.pauseReason, /^The first 200 new contacts had a bounce rate of 3.00% \(limit 2.00%\)\. The rest of the new contacts wait: clean the list/);
+		assert.match(paused.pauseReason, /^The first 200 new contacts had a bounce rate of 3.00% \(limit 2.50%\)\. The rest of the new contacts wait: clean the list/);
 		assert.equal((await m.Account.findById(user.accountId).lean()).status, "active", "6 bounces don't block");
 		const emails = platformEmails.slice(emailsBefore);
 		assert.deepEqual(emails.map(({ to, subject }) => [to, subject]), [[["warm-list@example.com"], "[MailCheap] Campaign paused"]]);
