@@ -230,7 +230,7 @@ export default function SendingPage() {
 				opens after those {TIMELINE_HOURS / 24} days are counted under the chart.
 			</p>
 			<p>
-				Its links come last, below the results by inbox provider, each with its website&apos;s icon, most clicked first: how many
+				Its links come below the results by inbox provider, each with its website&apos;s icon, most clicked first: how many
 				contacts clicked each one, every click, and each link&apos;s share of the contacts who clicked a link. A link counts once
 				whatever its tracking parameters, like utm_source, and link scanners and the unsubscribe link don&apos;t count. An issue
 				sent before clicks were counted per link only has the clicks since then. The API and AI assistants get the same numbers,
@@ -244,6 +244,20 @@ export default function SendingPage() {
 			<p>
 				A web-only issue&apos;s page shows its views on the website instead, once per reader a day, and when it went live. Web-only
 				issues don&apos;t count in the comparison with your last issues.
+			</p>
+
+			<h2 id="recipients">Who opened and clicked</h2>
+			<p>
+				Under the links, Recipients lists everyone an issue went to and what each did with it: when it reached them, when they
+				first opened and clicked it, the links they clicked, and whether it bounced, they marked it as spam or they unsubscribed
+				through it. Pick Opened, Clicked or Didn&apos;t open to see only them, and Not delivered, Bounced or Unsubscribed once
+				someone is there. People come in the order they joined your list, and each one opens their contact&apos;s page. An
+				unsubscribe counts for the latest issue they got, and a contact you deleted shows without their address.
+			</p>
+			<p>
+				Opens there are an estimate too: Gmail and some other inboxes load an email&apos;s images as it arrives, so an open within
+				seconds of it reaching them can be their inbox rather than them. Link scanners&apos; visits don&apos;t count as clicks. The API
+				and AI assistants list recipients the same way.
 			</p>
 		</ArticleHelp>
 	);

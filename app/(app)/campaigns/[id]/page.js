@@ -7,12 +7,15 @@ import { scoped } from "@/lib/account-scope";
 import { getAccountSendProblem, hasActiveSubscription, isBlocked } from "@/lib/account-state";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 import { findCampaignLinks } from "@/lib/campaign-links";
+import { readRecipientFilter } from "@/lib/campaign-recipient-rules";
+import { listCampaignRecipients } from "@/lib/campaign-recipients";
 import { getCampaignActivity, getCampaignComparison } from "@/lib/campaign-report";
 import { countCampaignGmail, countRemainingContacts, sendTimesPipeline } from "@/lib/campaign-queries";
 import { getSharedDomain, isSendingEnabled } from "@/lib/config";
 import { getFieldOptions } from "@/lib/contact-fields";
 import { getStoredTips } from "@/lib/content-review";
 import { getPostalAddress } from "@/lib/postal-address";
+import { sendsEmail } from "@/lib/publish-to";
 import { countAudience, countSegmentCards, findCampaignSegmentFilter, listLiveSegments } from "@/lib/segment-queries";
 import { compileSegment, describeSegment } from "@/lib/segments";
 import { getSelectedNewsletter, openNewsletter } from "@/lib/selected-newsletter";
@@ -29,8 +32,12 @@ import Newsletter from "@/models/Newsletter";
 
 export const metadata = { title: "Campaign" };
 
-export default async function CampaignPage({ params }) {
-	const [{ id }, view] = await Promise.all([params, getSelectedNewsletter()]);
+// The recipients a sent campaign's report lists at first, and how many more each Show more adds (?shown=).
+const RECIPIENTS_STEP = 50;
+const MAX_RECIPIENTS = 500;
+
+export default async function CampaignPage({ params, searchParams }) {
+	const [{ id }, query, view] = await Promise.all([params, searchParams, getSelectedNewsletter()]);
 	const { user, account } = view;
 	if (!isValidObjectId(id)) notFound();
 
@@ -44,12 +51,15 @@ export default async function CampaignPage({ params }) {
 	const plan = await getPlanState(account);
 
 	if (!["draft", "scheduled"].includes(campaign.status)) {
-		const [{ providers, timeline }, comparison, remainingCount, links, cookieStore] = await Promise.all([
+		const filter = readRecipientFilter(query.recipients);
+		const shown = Math.min(MAX_RECIPIENTS, Math.max(RECIPIENTS_STEP, Number.parseInt(query.shown, 10) || RECIPIENTS_STEP));
+		const [{ providers, timeline, recipients: counts }, comparison, remainingCount, links, cookieStore, list] = await Promise.all([
 			getCampaignActivity(campaign),
 			getCampaignComparison(campaign),
 			countRemainingContacts(campaign),
 			findCampaignLinks(campaign),
 			cookies(),
+			sendsEmail(campaign) ? listCampaignRecipients(account, campaign, { filter, limit: shown }) : null,
 		]);
 		// For a next step's dialog, and how a send going out reaches Gmail's readers.
 		const isGoingOut = ["sending", "paused"].includes(campaign.status);
@@ -65,6 +75,16 @@ export default async function CampaignPage({ params }) {
 				contactFields={getFieldOptions(account)}
 				providers={providers}
 				links={serialize(links)}
+				recipients={
+					list && {
+						filter,
+						counts,
+						recipients: list.recipients,
+						hasMore: Boolean(list.nextCursor) && shown < MAX_RECIPIENTS,
+						shown,
+						step: RECIPIENTS_STEP,
+					}
+				}
 				timeline={timeline}
 				comparison={comparison}
 				timeZone={resolveTimeZone(cookieStore.get(TIME_ZONE_COOKIE)?.value)}

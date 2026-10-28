@@ -93,8 +93,8 @@ export default function ContactsPage() {
 			</p>
 			<ul>
 				<li>
-					<strong>Activity</strong>, newest first: every email they got, when they opened it, the links they clicked, and when they
-					signed up, confirmed or changed status.
+					<strong>Activity</strong>, newest first: every email they got, when they opened it, the links they clicked, any their inbox
+					never took, and when they signed up, confirmed or changed status.
 				</li>
 				<li>
 					<strong>About</strong>: when they subscribed, where they came from, their email provider (Gmail, Outlook, or their own

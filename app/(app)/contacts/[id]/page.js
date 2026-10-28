@@ -5,15 +5,10 @@ import {
 	Ban,
 	ChevronLeft,
 	ChevronRight,
-	Clock,
 	History,
-	Mail,
 	MailCheck,
-	MailOpen,
 	MailX,
 	Moon,
-	MousePointerClick,
-	Send,
 	ShieldAlert,
 	Tags as TagsIcon,
 	UserCheck,
@@ -32,6 +27,7 @@ import ButtonMergeTag from "@/components/ButtonMergeTag";
 import CardLocation from "@/components/CardLocation";
 import CardSettings from "@/components/CardSettings";
 import CardStat from "@/components/CardStat";
+import { EMAIL_OUTCOME_LOOKS, ICON_TONES } from "@/components/IconEmailOutcome";
 import ImageFavicon from "@/components/ImageFavicon";
 import LinkHelpFields from "@/components/LinkHelpFields";
 import LinkHelpTags from "@/components/LinkHelpTags";
@@ -437,14 +433,14 @@ function ItemTimeline({ icon: Icon, tone = "muted", title, at, before = null, ti
 // An email, by what it came to: the furthest of delivered, opened and clicked, or what stopped it. Its subject shows as
 // they got it, with their first name and field values.
 function ItemEmail({ email, contact, contactFields, timeZone }) {
-	const outcome = getOutcome(email);
-	const { verb, icon, tone } = OUTCOMES[outcome];
+	const { outcome } = email;
+	const { verb, icon, tone } = EMAIL_OUTCOME_LOOKS[outcome];
 	const links = email.clickedLinks.filter((url) => /^https?:\/\//i.test(url));
 	const moments = [
 		email.openedAt && `Opened ${formatMoment(email.openedAt, timeZone)}`,
 		email.clickedAt && `Clicked ${formatMoment(email.clickedAt, timeZone)}`,
 	].filter(Boolean);
-	const note = outcome === "unsent" ? UNSENT_REASONS[email.status] : outcome === "waiting" ? "Waiting to go out" : moments.join(" · ");
+	const note = OUTCOME_NOTES[outcome] ?? (outcome === "unsent" ? UNSENT_REASONS[email.status] : moments.join(" · "));
 
 	return (
 		<ItemTimeline
@@ -529,16 +525,6 @@ function getTimeline({ emails, hasMore, history }) {
 			.filter(({ at }) => new Date(at).getTime() >= oldest)
 			.map((event, index) => ({ key: `${event.type}-${index}`, at: event.at, event })),
 	].toSorted((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-}
-
-function getOutcome(email) {
-	if (email.complainedAt || email.status === "complained") return "complained";
-	if (email.bouncedAt || email.status === "bounced") return "bounced";
-	if (email.clickedAt) return "clicked";
-	if (email.openedAt) return "opened";
-	if (email.deliveredAt || email.status === "delivered") return "delivered";
-	if (email.sentAt || email.status === "sent") return "sent";
-	return ["held", "queued"].includes(email.status) ? "waiting" : "unsent";
 }
 
 function describeEvent(event, contact) {
@@ -644,24 +630,7 @@ function formatMoment(value, timeZone) {
 	return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone });
 }
 
-const ICON_TONES = {
-	muted: "bg-muted text-muted-foreground",
-	green: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
-	blue: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
-	amber: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
-	red: "bg-red-500/10 text-red-600 dark:text-red-400",
-};
-
-const OUTCOMES = {
-	complained: { verb: "Marked as spam", icon: ShieldAlert, tone: "red" },
-	bounced: { verb: "Bounced", icon: MailX, tone: "red" },
-	clicked: { verb: "Clicked", icon: MousePointerClick, tone: "green" },
-	opened: { verb: "Opened", icon: MailOpen, tone: "blue" },
-	delivered: { verb: "Received", icon: Mail, tone: "muted" },
-	sent: { verb: "Sent", icon: Send, tone: "muted" },
-	waiting: { verb: "Sending", icon: Clock, tone: "muted" },
-	unsent: { verb: "Not sent", icon: Ban, tone: "muted" },
-};
+const OUTCOME_NOTES = { waiting: "Waiting to go out", undelivered: "It never reached their inbox" };
 
 const UNSENT_REASONS = {
 	failed: "It couldn't be sent",

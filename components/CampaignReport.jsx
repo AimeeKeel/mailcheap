@@ -17,6 +17,7 @@ import LinkHelp from "@/components/LinkHelp";
 import ListLegend from "@/components/ListLegend";
 import MenuReport from "@/components/MenuReport";
 import NoticeWarmup from "@/components/NoticeWarmup";
+import SectionRecipients from "@/components/SectionRecipients";
 import TableCampaignLinks from "@/components/TableCampaignLinks";
 import TextEmpty from "@/components/TextEmpty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -39,13 +40,15 @@ import { cn } from "@/lib/utils";
 import { BACKOFF_WHY, GMAIL_WHY, STEPS_WHY, getGmailLaterTrack, getGmailTrack, getStepItems } from "@/lib/warmup-status";
 
 // readOnly: an admin looking at a customer's campaign (app/admin/campaigns/[id]): its numbers without its owner's
-// actions, and children above them. contactFields: the account's, for the preview to fill in.
+// actions, and children above them. contactFields: the account's, for the preview to fill in. recipients: who it went to
+// and what they did (components/SectionRecipients.jsx), for its owner only.
 export default function CampaignReport({
 	campaign,
 	newsletter,
 	contactFields = [],
 	providers,
 	links,
+	recipients = null,
 	timeline = null,
 	comparison = null,
 	timeZone,
@@ -255,6 +258,7 @@ export default function CampaignReport({
 						timeZone={timeZone}
 						links={links}
 						providers={providers}
+						recipients={readOnly ? null : recipients}
 						showComplaints={readOnly}
 					/>
 				)}
@@ -280,8 +284,21 @@ export default function CampaignReport({
 }
 
 // What the email did: delivery, opens and clicks against the newsletter's average, bounces and unsubscribes, opens over
-// time, inboxes and links. Complaints are for an admin to act on: the owner, who can't, sees them by inbox.
-function EmailResults({ campaign, newsletter, html, stats, reached, comparison, timeline, timeZone, links, providers, showComplaints }) {
+// time, inboxes, links and recipients. Complaints are for an admin to act on: the owner, who can't, sees them by inbox.
+function EmailResults({
+	campaign,
+	newsletter,
+	html,
+	stats,
+	reached,
+	comparison,
+	timeline,
+	timeZone,
+	links,
+	providers,
+	recipients,
+	showComplaints,
+}) {
 	// Bounced is hard bounces only: the rest are on their way, or an inbox refused them for now, like a full mailbox.
 	const notDelivered = Math.max(0, stats.sent - stats.delivered - stats.bounced);
 	const cards = [
@@ -322,6 +339,10 @@ function EmailResults({ campaign, newsletter, html, stats, reached, comparison, 
 
 			{links?.links.length > 0 && (
 				<TableCampaignLinks style={{ "--stagger": 5 }} stats={links} html={html} webUrl={getIssueWebUrl({ campaign, newsletter })} />
+			)}
+
+			{recipients?.counts.all > 0 && (
+				<SectionRecipients style={{ "--stagger": 6 }} campaignId={campaign._id.toString()} timeZone={timeZone} {...recipients} />
 			)}
 		</>
 	);
