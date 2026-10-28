@@ -27,6 +27,7 @@ import { REVIEW_CODES, REVIEW_PAUSE_CODE } from "@/lib/content-review-codes";
 import { formatCount, formatDate, formatNumber, formatRate, formatRateChange, formatWeekdayHour } from "@/lib/format";
 import { rateTone } from "@/lib/health";
 import { toPreviewFrame } from "@/lib/email-preview";
+import { withLinkKeys } from "@/lib/link-stats";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
 import { describePublishTo, isOnWebsite, readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
@@ -87,6 +88,7 @@ export default function CampaignReport({
 	const gmailLater = campaign.status === "sending" && gmail?.later > 0 ? getGmailLaterTrack({ domain: newsletter.sendingDomain, ...gmail }) : null;
 	const isSpread = campaign.status === "sending" && !isInSteps && Boolean(campaign.sendingUntil) && campaign.spreadHours > 0;
 	const backoffTrack = gmail ? getGmailTrack(pace?.sender ?? null, gmail.waiting) : null;
+	// With the Read online link its emails had, whose clicks the preview shows with the others'.
 	const { html } = renderEmail({
 		format: campaign.format,
 		markdown: campaign.markdown,
@@ -94,7 +96,11 @@ export default function CampaignReport({
 		subject: campaign.subject,
 		previewText: campaign.previewText,
 		newsletter,
+		webUrl: getIssueWebUrl({ campaign, newsletter }),
 	});
+	const clicks = links?.links.length
+		? { clickers: links.clickers, links: links.links.map(({ key, clickers }) => ({ key, clickers })) }
+		: null;
 	const sender = {
 		name: newsletter.name,
 		fromName: newsletter.fromName,
@@ -152,12 +158,13 @@ export default function CampaignReport({
 						)}
 						{!isWebOnly && (
 							<ButtonPreview
-								html={toPreviewFrame(html)}
+								html={toPreviewFrame(clicks ? withLinkKeys(html) : html)}
 								sender={sender}
 								subject={campaign.subject}
 								previewText={campaign.previewText}
 								newsletterId={String(newsletter._id)}
 								contactFields={contactFields}
+								clicks={clicks}
 							/>
 						)}
 						<MenuReport

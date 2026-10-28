@@ -237,6 +237,11 @@ export default function SendingPage() {
 				the comparison and the hours included, in the campaign&apos;s report.
 			</p>
 			<p>
+				Preview shows those clicks on the email itself, so you see where in the issue people clicked: by each link that got
+				some, how many contacts clicked it and its share. Point at one to outline its link. A link the email has twice shows its
+				clicks on both, counted together. Clicks, at the top of the preview, hides them.
+			</p>
+			<p>
 				A web-only issue&apos;s page shows its views on the website instead, once per reader a day, and when it went live. Web-only
 				issues don&apos;t count in the comparison with your last issues.
 			</p>

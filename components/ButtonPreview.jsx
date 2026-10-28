@@ -6,7 +6,8 @@ import DialogPreviewEmail from "@/components/DialogPreviewEmail";
 import { Button } from "@/components/ui/button";
 
 // The campaign editor's preview, in a mail app's window or in Gmail on a phone, for an email rendered on the server.
-export default function ButtonPreview({ html, sender, subject, previewText, newsletterId, contactFields }) {
+// clicks: a sent issue's clicked links, for the preview to show on its email.
+export default function ButtonPreview({ html, sender, subject, previewText, newsletterId, contactFields, clicks }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const buttonRef = useRef(null);
 
@@ -29,6 +30,7 @@ export default function ButtonPreview({ html, sender, subject, previewText, news
 				previewText={previewText}
 				newsletterId={newsletterId}
 				contactFields={contactFields}
+				clicks={clicks}
 			/>
 		</>
 	);
