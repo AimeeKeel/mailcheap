@@ -1,23 +1,26 @@
 "use client";
 
-import { useImperativeHandle, useState } from "react";
+import { useCallback, useImperativeHandle, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import FileHandler from "@tiptap/extension-file-handler";
 import { Placeholder } from "@tiptap/extensions";
 import StarterKit from "@tiptap/starter-kit";
-import { HtmlBlock } from "@/components/BlockHtml";
+import { HtmlBlock, editHtmlBlock } from "@/components/BlockHtml";
 import DialogImagePicker from "@/components/DialogImagePicker";
+import GutterProblems from "@/components/GutterProblems";
 import MenuButton from "@/components/MenuButton";
 import MenuFormat from "@/components/MenuFormat";
 import MenuImage from "@/components/MenuImage";
 import { SlashCommand } from "@/components/MenuSlash";
 import TooltipMergeTag from "@/components/TooltipMergeTag";
+import { isButtonLink } from "@/lib/buttons";
 import { BlockHandle } from "@/lib/editor-block-handle";
 import { ButtonBlock, findButton } from "@/lib/editor-button";
 import { Callout } from "@/lib/editor-callout";
 import { findWords } from "@/lib/editor-find";
 import { ImageAligned } from "@/lib/editor-image";
 import { MergeTags } from "@/lib/editor-merge-tags";
+import { Problems, findDocProblems, findProblem, revealProblem } from "@/lib/editor-problems";
 import { UndoDelete } from "@/lib/editor-undo-delete";
 import { toast } from "@/lib/toast";
 import { IMAGE_TYPES, IMAGE_TYPE_ERROR, getDisplaySize, prepareImage, uploadImage } from "@/lib/upload-image";
@@ -27,11 +30,15 @@ const MIN_HEIGHT = "min-h-[560px]";
 
 // contactFields: the account's fields, whose tags the editor draws as placeholders and its slash menu inserts.
 // newsletter: whose email design HTML blocks preview in, and whose button colors and corners buttons show.
-// ref: select(words), which selects the first place the issue has them and says whether it found one.
+// ref: reveal({ id, message, words }), which goes to a review step's warning or check (lib/campaign-steps.js), else to
+// the first place the issue has the words, and says whether it found it.
 export default function EditorRich({ ref, content, onChange, contactFields = [], newsletter = null }) {
 	const [isEditingLink, setIsEditingLink] = useState(false);
 	const [isEditingButtonLink, setIsEditingButtonLink] = useState(false);
 	const [isPickingImage, setIsPickingImage] = useState(false);
+	// The block whose dot says what it's about, once brought into view.
+	const [pinned, setPinned] = useState(null);
+	const unpin = useCallback(() => setPinned(null), []);
 	const editor = useEditor({
 		immediatelyRender: false,
 		content,
@@ -57,6 +64,7 @@ export default function EditorRich({ ref, content, onChange, contactFields = [],
 			BlockHandle,
 			UndoDelete,
 			MergeTags.configure({ contactFields }),
+			Problems.configure({ contactFields }),
 			Placeholder.configure({
 				placeholder: ({ node }) => (node.type.name === "heading" ? "Heading" : "Write, or press / for commands"),
 			}),
@@ -90,13 +98,37 @@ export default function EditorRich({ ref, content, onChange, contactFields = [],
 		onUpdate: ({ editor: current }) => onChange(current.getHTML()),
 	});
 	useFileDropGuard();
-	useImperativeHandle(ref, () => ({ select: (words) => Boolean(editor && selectWords(editor, words)) }), [editor]);
+
+	// A button whose link is missing or looks broken opens its link field, an HTML block its HTML, which says what's wrong
+	// under it, and words get their dot's message beside them.
+	function reveal(found) {
+		if (!revealProblem(editor, found)) return false;
+		const node = editor.state.doc.nodeAt(found.pos);
+		if (node.type.name === "htmlBlock") editHtmlBlock(editor.view, found.pos);
+		else if (node.type.name === "button") setIsEditingButtonLink(found.problem.id === "links" || !isButtonLink(node.attrs.href));
+		else setPinned(found.pos);
+		return true;
+	}
+
+	useImperativeHandle(ref, () => ({
+		reveal: ({ id, message, words }) => {
+			if (!editor || editor.isDestroyed) return false;
+			const found = findProblem(findDocProblems(editor.state.doc, contactFields), { id, message });
+			return found ? reveal(found) : Boolean(words && selectWords(editor, words));
+		},
+	}));
 
 	if (!editor) return <div className={MIN_HEIGHT} />;
 
 	return (
 		<>
 			<EditorContent editor={editor} className="relative" />
+			<GutterProblems
+				editor={editor}
+				pinned={pinned}
+				onUnpin={unpin}
+				onReveal={({ pos, problems }) => reveal({ pos, problem: problems[0] })}
+			/>
 			<MenuFormat editor={editor} isEditingLink={isEditingLink} onEditLink={setIsEditingLink} />
 			<MenuButton editor={editor} isEditingLink={isEditingButtonLink} onEditLink={setIsEditingButtonLink} />
 			<MenuImage editor={editor} />

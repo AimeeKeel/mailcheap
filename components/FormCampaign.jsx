@@ -233,10 +233,11 @@ export default function FormCampaign({
 		window.scrollTo({ top: scrollsRef.current[next] ?? 0 });
 	}
 
-	// words: a tip's or a warning's, selected where the field has them as they are, so typing replaces them.
-	function editField(field, words) {
+	// words: a tip's or a warning's, selected where the field has them as they are, so typing replaces them. problem: a
+	// check of the issue's, which the editor goes to (components/EditorRich.jsx).
+	function editField(field, words, problem) {
 		goToStep("write");
-		if (field === "body" && words && editorRef.current?.select(words)) return;
+		if (field === "body" && (words || problem) && editorRef.current?.reveal({ ...problem, words })) return;
 		const target =
 			field === "subject"
 				? subjectRef.current
@@ -685,10 +686,10 @@ function BarAction({ action, status, onEdit, side = "bottom", className }) {
 	const Icon = action.icon;
 	const problems = action.problems ?? [];
 
-	function fix(field) {
+	function fix(field, words, problem) {
 		isFixingRef.current = true;
 		setIsOpen(false);
-		onEdit(field);
+		onEdit(field, words, problem);
 	}
 
 	function returnFocus(event) {
@@ -753,7 +754,7 @@ function ButtonFix({ fix, onEdit, onTest, isTesting, isTestDisabled }) {
 		);
 	}
 	return (
-		<Button variant="outline" size="sm" onClick={() => onEdit(fix.field, fix.words)}>
+		<Button variant="outline" size="sm" onClick={() => onEdit(fix.field, fix.words, fix.problem)}>
 			{fix.label}
 		</Button>
 	);

@@ -356,6 +356,15 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   }
 }
 
+/* A block in the editor brought into view by its problem's dot or the review step: lit, then fading to nothing. */
+@keyframes flash-problem {
+  0%,
+  35% {
+    background-color: color-mix(in oklab, var(--flash) 16%, transparent);
+    box-shadow: 0 0 0 0.375rem color-mix(in oklab, var(--flash) 16%, transparent);
+  }
+}
+
 /* Streamed content taking its skeleton's place: same size, so it only fades. */
 @keyframes fade-in {
   from {
@@ -867,8 +876,26 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
     background-color: color-mix(in oklab, var(--ring) 14%, transparent);
     box-shadow: 0 0 0 0.375rem color-mix(in oklab, var(--ring) 14%, transparent);
   }
+  /* A block the review step or its dot brought into view (lib/editor-problems.js), lit a moment so the eye finds it, in
+     its dot's color. Without motion, it stays lit as long. */
+  & [data-flash] {
+    --flash: var(--color-amber-500);
+    border-radius: 0.375rem;
+    animation: flash-problem 1.8s ease-out;
+  }
+  & [data-flash="error"] {
+    --flash: var(--color-red-500);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & [data-flash] {
+      animation: none;
+      background-color: color-mix(in oklab, var(--flash) 16%, transparent);
+      box-shadow: 0 0 0 0.375rem color-mix(in oklab, var(--flash) 16%, transparent);
+    }
+  }
   /* Buttons (lib/editor-button.js) are written on like text, a placeholder in them while they're empty, and placed
-     as flex items, so their text is a block to the caret. Once the writing moves on, one without a link says so. */
+     as flex items, so their text is a block to the caret. A dot beside one without a link says so
+     (components/GutterProblems.jsx), as nothing beside it would move it off its place. */
   & [data-button] {
     display: flex;
     align-items: center;
@@ -889,22 +916,6 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
     height: 0;
     pointer-events: none;
     opacity: 0.6;
-  }
-  & [data-button][data-no-link]:not([data-editing])::after {
-    content: "No link";
-    display: inline-block;
-    margin-left: 0.5rem;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.375rem;
-    vertical-align: middle;
-    font-size: 0.75rem;
-    font-weight: 500;
-    line-height: 1rem;
-    color: var(--color-amber-700);
-    background: color-mix(in oklab, var(--color-amber-500) 10%, transparent);
-  }
-  .dark & [data-button][data-no-link]::after {
-    color: var(--color-amber-400);
   }
   & [data-button] .merge-tag {
     background-color: color-mix(in oklab, currentColor 20%, transparent);

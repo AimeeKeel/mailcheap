@@ -236,7 +236,11 @@ describe("what holds an issue with a button", () => {
 		const check = checks.find(({ id }) => id === "buttons");
 		assert.deepEqual(check, { id: "buttons", label: "Buttons", isOk: false, message: BUTTON_PROBLEM });
 		assert.deepEqual(blocking.map(({ id }) => id), ["buttons"]);
-		assert.deepEqual(getCheckFix(check, { newsletterId: NEWSLETTER._id }), { label: "Edit content", field: "body" });
+		assert.deepEqual(getCheckFix(check, { newsletterId: NEWSLETTER._id }), {
+			label: "Edit content",
+			field: "body",
+			problem: { id: "buttons", message: BUTTON_PROBLEM },
+		});
 
 		const complete = getPresendChecks({ ...input, campaign: { ...campaign, body: `<p>Hi</p>${button("Join", STORY)}` } });
 		assert.equal(complete.checks.some(({ id }) => id === "buttons"), false, "no check to show while every button works");

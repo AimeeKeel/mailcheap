@@ -84,7 +84,8 @@ export default function WritingPage() {
 				Buttons take your newsletter&apos;s <Link href={getHelpHref("design", "customize")}>theme</Link>: its accent color, with text
 				that reads on it, and its corners, in your emails and on your website. Change them in{" "}
 				<LinkApp href="/newsletters/design">Design</LinkApp>, and every button follows. A button needs its text and its link before the
-				issue can go out: the review step says when one is missing, and the button shows No link.
+				issue can go out: a <Link href={getHelpHref("writing", "problems")}>red dot</Link> beside it says which is missing once
+				you move on, and so does the review step.
 			</p>
 
 			<h2 id="html">HTML blocks</h2>
@@ -105,8 +106,10 @@ export default function WritingPage() {
 				<code>https://</code>. Names and fields work in its text and its links.
 			</p>
 			<p>
-				The <Link href={getHelpHref("sending", "review")}>review step</Link> points out a block whose tags don&apos;t match up, like a{" "}
-				<code>&lt;table&gt;</code> never closed, which can take in everything after it, and what the cleaning removes.
+				While you edit a block, the line under its HTML points out tags that don&apos;t match up, like a <code>&lt;table&gt;</code>{" "}
+				never closed, which can take in everything after it, and what the cleaning removes. Once you click Done, an{" "}
+				<Link href={getHelpHref("writing", "problems")}>amber dot</Link> beside the block does, and so does the{" "}
+				<Link href={getHelpHref("sending", "review")}>review step</Link>.
 			</p>
 			<p>
 				Embeds that need a script, like a video player or a signup form from another site, can&apos;t work in an email: link to
@@ -127,6 +130,19 @@ export default function WritingPage() {
 				Pictures, buttons and HTML blocks go as soon as you delete them, from their bin or with the keyboard. A message at the top of
 				the page says so for a few seconds: click Undo in it to bring the block back, or press <kbd>⌘ Z</kbd> (<kbd>Ctrl Z</kbd> on
 				Windows), as its button shows. The message goes once you change something else, since undo would take that back first.
+			</p>
+
+			<h2 id="problems">What may look broken</h2>
+			<p>
+				A dot to the left of a block marks something in it that may look broken to your readers. Amber is something to check, like a
+				link with no address or to a placeholder like example.com, an HTML block whose tags don&apos;t match up, or text left from a
+				template, like Lorem ipsum. Red is something to fix before the issue can go out, like a button without its link.
+			</p>
+			<p>
+				Point at a dot to read what&apos;s wrong, or click it to go there: the words in question are selected, a button opens its link
+				and an HTML block its HTML, with what&apos;s wrong under it. The{" "}
+				<Link href={getHelpHref("sending", "review")}>review step</Link> lists them all, and its Edit content brings you back to each,
+				lit for a moment.
 			</p>
 
 			<h2 id="first-name">Names and fields in your emails</h2>

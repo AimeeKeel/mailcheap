@@ -56,7 +56,8 @@ export default function SendingPage() {
 				<li>HTML or Markdown pasted as text, like **bold**, which readers would see as it is.</li>
 			</ul>
 			<p>
-				Edit content takes you to the words in question. Warnings don&apos;t stop you.
+				Edit content takes you to each one in the issue, lit for a moment, where a{" "}
+				<Link href={getHelpHref("writing", "problems")}>dot beside it</Link> says what&apos;s wrong. Warnings don&apos;t stop you.
 				{isCloud() &&
 					" Problems with your account show in red above the steps: your plan's limits, and on the send step a send bigger than what your plan has left this month."}{" "}
 				A web-only issue sends no email, so it only needs a subject, content and the website on.
