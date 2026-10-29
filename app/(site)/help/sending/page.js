@@ -223,6 +223,10 @@ export default function SendingPage() {
 				and its address, which you can change there.
 			</p>
 			<p>
+				Preview, in the <strong>⋯</strong> menu at the top of the page, shows the email as it went out, in a mail app or in Gmail
+				on a phone, as a sample reader or as one of your contacts.
+			</p>
+			<p>
 				Opened and clicked compare with the newsletter&apos;s last {COMPARED_ISSUES} issues: &ldquo;+4.2% vs avg&rdquo; when an
 				issue opened at 46.2% and they averaged 42%. Their average is all their opens or clicks over all the contacts they
 				reached, so a small send barely counts. The comparison shows once a send is {TIMELINE_HOURS / 24} days old, since its

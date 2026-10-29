@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const { default: CampaignReport } = await import("../components/CampaignReport.jsx");
+const { default: ButtonClickMap } = await import("../components/ButtonClickMap.jsx");
+const { default: MenuReport } = await import("../components/MenuReport.jsx");
 const { TooltipProvider } = await import("../components/ui/tooltip.jsx");
+const { UNSUBSCRIBE_PLACEHOLDER } = await import("../lib/render-email.js");
 
 const STATS = { recipients: 1000, sent: 1000, delivered: 990, opened: 462, clicked: 70, bounced: 10, complained: 1, unsubscribed: 4 };
 
@@ -88,7 +92,7 @@ test("the report's numbers stay on top, and its details are in tabs: Timeline op
 	assert.match(panelOf(html, "inboxes"), />Inbox<\/th>/);
 	assert.match(panelOf(html, "website"), />1,204</, "the page's views");
 	assert.match(panelOf(html, "website"), /value="hello"/, "and its address, to change");
-	assert.doesNotMatch(html, />Preview</, "no Preview at the top any more");
+	assert.doesNotMatch(html, />Preview</, "no Preview button at the top: it's in the ⋯ menu");
 
 	const quiet = renderReport({ campaign: { _id: "6ad87a2affc219b3be2cc72c", subject: "Hello", status: "sent", format: "markdown", markdown: "Hi", stats: STATS } });
 	assert.deepEqual(
@@ -101,6 +105,55 @@ test("the report's numbers stay on top, and its details are in tabs: Timeline op
 	assert.doesNotMatch(admin, />Click map</, "an admin reads the email on their own page");
 	const unsent = renderReport({ campaign: { _id: "6ad87a2affc219b3be2cc72c", subject: "Hello", status: "paused", format: "markdown", markdown: "Hi", stats: { recipients: 0, sent: 0 } }, readOnly: true });
 	assert.doesNotMatch(unsent, /role="tablist"/, "nothing to break down before an email goes out");
+});
+
+// The first element of a type in a rendered tree, through each element's props: its children and the elements it's given.
+function findElement(node, type) {
+	if (Array.isArray(node)) return node.reduce((found, child) => found ?? findElement(child, type), null);
+	if (!node?.props) return null;
+	return node.type === type ? node : findElement(Object.values(node.props), type);
+}
+
+test("Preview, right above Duplicate in a sent campaign's ⋯ menu, shows the email as it went out, without its clicks", async () => {
+	const campaign = {
+		_id: "6ad87a2affc219b3be2cc72c",
+		subject: "Hello",
+		previewText: "This week",
+		status: "sent",
+		format: "markdown",
+		markdown: "Read [the story](https://example.com/story)",
+		stats: STATS,
+		archiveSlug: "hello",
+	};
+	const newsletter = { _id: "6ad87a2affc219b3be2cc72d", name: "Weekly", slug: "weekly", fromName: "Weekly", fromEmail: "hi@example.com", archiveEnabled: true };
+	const links = { links: [{ key: "story", url: "https://example.com/story", clickers: 40, clicks: 50 }], clickers: 40, isComplete: true };
+	const report = CampaignReport({ campaign, newsletter, contactFields: [{ key: "city", label: "City" }], providers: [], links, timeZone: "UTC" });
+	const { html, ...email } = findElement(report, MenuReport).props.preview;
+	const { html: clickMapHtml, clicks, ...clickMapEmail } = findElement(report, ButtonClickMap).props;
+	assert.deepEqual(email, clickMapEmail, "the same email as the click map, its reader picker included");
+	assert.ok(clicks && !("clicks" in email), "without the clicks the click map shows on it");
+	assert.match(html, /href="https:\/\/example\.com\/story"/);
+	assert.match(html, />Read online<\/a>/, "with the Read online link its emails had");
+	assert.ok(!html.includes(UNSUBSCRIBE_PLACEHOLDER), "an unsubscribe link that goes nowhere");
+	assert.doesNotMatch(html, /data-link-key/);
+	assert.match(clickMapHtml, /data-link-key/);
+
+	const webOnly = CampaignReport({ campaign: { ...campaign, publishTo: "web" }, newsletter, providers: [], links: null, timeZone: "UTC" });
+	assert.equal(findElement(webOnly, MenuReport).props.preview, null, "a web-only issue sent no email: View page shows it");
+
+	// The menu only renders once opened, so its source says where Preview is.
+	const source = await readFile(new URL("../components/MenuReport.jsx", import.meta.url), "utf8");
+	const menu = source.match(/<DropdownMenuContent\b[\s\S]*?<\/DropdownMenuContent>/)[0];
+	const items = [...menu.matchAll(/<DropdownMenuItem\b((?:[^>{}]|\{[^{}]*\})*)>([\s\S]*?)<\/DropdownMenuItem>/g)];
+	const labels = items.map(([, , inner]) => inner.replace(/<[^>]+>/g, "").trim());
+	const at = labels.indexOf("Preview");
+	assert.equal(labels[at + 1], "Duplicate", "right above Duplicate");
+	assert.doesNotMatch(menu.slice(items[at].index, items[at + 1].index), /<DropdownMenuSeparator/, "in the same group");
+	assert.match(items[at][1], /onSelect=\{openPreview\}/);
+	assert.match(source, /<DialogPreviewEmail isOpen=\{isPreviewOpen\} [^>]*\{\.\.\.preview\} \/>/, "the email, and nothing else");
+
+	const help = await readFile(new URL("../app/(site)/help/sending/page.js", import.meta.url), "utf8");
+	assert.match(help, /Preview, in the <strong>⋯<\/strong> menu at the top of the page, shows the email as it went out/);
 });
 
 test("Gmail's row in the inbox table shows Gmail's logo, and other inboxes their favicon", () => {

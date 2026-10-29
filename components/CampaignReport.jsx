@@ -42,7 +42,7 @@ import { BACKOFF_WHY, GMAIL_WHY, STEPS_WHY, getGmailLaterTrack, getGmailTrack, g
 
 // A sent campaign: its numbers on top, the details in tabs under them. readOnly: an admin looking at a customer's
 // campaign (app/admin/campaigns/[id]): its numbers without its owner's actions, and children above them. contactFields:
-// the account's, for the click map to fill in. recipients: who it went to and what they did
+// the account's, for the preview and the click map to fill in. recipients: who it went to and what they did
 // (components/SectionRecipients.jsx), for its owner only.
 export default function CampaignReport({
 	campaign,
@@ -106,22 +106,22 @@ export default function CampaignReport({
 	const clicks = links?.links.length
 		? { clickers: links.clickers, links: links.links.map(({ key, clickers }) => ({ key, clickers })) }
 		: null;
-	const sender = {
-		name: newsletter.name,
-		fromName: newsletter.fromName,
-		fromEmail: newsletter.fromEmail,
-		imageUrl: newsletter.imageUrl,
+	// The email as it went out, for Preview in the ⋯ menu and for the click map, which shows its clicks on it.
+	const email = {
+		html: toPreviewFrame(html),
+		sender: {
+			name: newsletter.name,
+			fromName: newsletter.fromName,
+			fromEmail: newsletter.fromEmail,
+			imageUrl: newsletter.imageUrl,
+		},
+		subject: campaign.subject,
+		previewText: campaign.previewText,
+		newsletterId: String(newsletter._id),
+		contactFields,
 	};
 	const clickMap = !readOnly && !isWebOnly && (
-		<ButtonClickMap
-			html={toPreviewFrame(clicks ? withLinkKeys(html) : html)}
-			sender={sender}
-			subject={campaign.subject}
-			previewText={campaign.previewText}
-			newsletterId={String(newsletter._id)}
-			contactFields={contactFields}
-			clicks={clicks}
-		/>
+		<ButtonClickMap {...email} html={clicks ? toPreviewFrame(withLinkKeys(html)) : email.html} clicks={clicks} />
 	);
 	const page = !readOnly && hasPage && <RowPageUrl id={id} slug={campaign.archiveSlug} newsletter={newsletter} />;
 
@@ -179,6 +179,7 @@ export default function CampaignReport({
 							pageUrl={isOnArchive ? getArchiveUrls(newsletter).post(campaign.archiveSlug) : null}
 							isPinned={Boolean(campaign.archivePinned)}
 							isWebOnly={isWebOnly}
+							preview={isWebOnly ? null : email}
 						/>
 					</>
 				)}
