@@ -34,9 +34,9 @@ import LinkHelpTags from "@/components/LinkHelpTags";
 import MenuContactMore from "@/components/MenuContactMore";
 import MenuContactStatus from "@/components/MenuContactStatus";
 import ProviderContactOptions from "@/components/ProviderContactOptions";
+import TabsPage, { PanelTab } from "@/components/TabsPage";
 import TextEmpty from "@/components/TextEmpty";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { scoped } from "@/lib/account-scope";
 import { countContactEmails, listContactEmails } from "@/lib/contact-emails";
 import { MAX_CONTACT_FIELDS, contactFieldValues } from "@/lib/contact-fields";
@@ -154,23 +154,7 @@ export default async function ContactPage({ params, searchParams }) {
 					</div>
 				</div>
 
-				{/* Every tab is rendered, the others hidden: they open at once, and the server's HTML has them all. */}
-				<Tabs defaultValue="activity" style={{ "--stagger": 3 }} className="gap-4 animate-enter">
-					<TabsList
-						variant="line"
-						className="w-full justify-start gap-6 overflow-x-auto rounded-none border-b border-border/60 p-0 group-data-horizontal/tabs:h-11 [scrollbar-width:none]"
-					>
-						<TriggerTab value="activity" icon={History}>
-							Activity
-						</TriggerTab>
-						<TriggerTab value="about" icon={UserRound}>
-							About
-						</TriggerTab>
-						<TriggerTab value="fields" icon={TagsIcon}>
-							Fields and tags
-						</TriggerTab>
-					</TabsList>
-
+				<TabsPage tabs={CONTACT_TABS} style={{ "--stagger": 3 }}>
 					<PanelTab value="activity">
 						<section aria-label="Activity" className="rounded-xl bg-card shadow-border">
 							<ol className="flex flex-col p-4">
@@ -318,29 +302,9 @@ export default async function ContactPage({ params, searchParams }) {
 							</div>
 						</CardSettings>
 					</PanelTab>
-				</Tabs>
+				</TabsPage>
 			</div>
 		</ProviderContactOptions>
-	);
-}
-
-function TriggerTab({ value, icon: Icon, children }) {
-	return (
-		<TabsTrigger
-			value={value}
-			className="h-full flex-none gap-2 px-0.5 group-data-horizontal/tabs:after:-bottom-px [&_svg:not([class*='size-'])]:size-3.5"
-		>
-			<Icon aria-hidden="true" />
-			{children}
-		</TabsTrigger>
-	);
-}
-
-function PanelTab({ value, className, children }) {
-	return (
-		<TabsContent value={value} forceMount className={cn("animate-fade-in data-[state=inactive]:hidden", className)}>
-			{children}
-		</TabsContent>
 	);
 }
 
@@ -629,6 +593,12 @@ function formatDay(value, timeZone) {
 function formatMoment(value, timeZone) {
 	return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone });
 }
+
+const CONTACT_TABS = [
+	{ value: "activity", icon: History, label: "Activity" },
+	{ value: "about", icon: UserRound, label: "About" },
+	{ value: "fields", icon: TagsIcon, label: "Fields and tags" },
+];
 
 const OUTCOME_NOTES = { waiting: "Waiting to go out", undelivered: "It never reached their inbox" };
 

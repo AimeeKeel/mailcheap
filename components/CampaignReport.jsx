@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Globe, Pause, Play } from "lucide-react";
+import { ChartColumn, Globe, Inbox, Link2, Pause, Play, Users } from "lucide-react";
 import { pauseCampaign, resumeCampaign } from "@/app/(app)/campaigns/actions";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
 import ButtonCampaignAction from "@/components/ButtonCampaignAction";
+import ButtonClickMap from "@/components/ButtonClickMap";
 import ButtonCopy from "@/components/ButtonCopy";
-import ButtonPreview from "@/components/ButtonPreview";
 import CardStat from "@/components/CardStat";
 import ChartOpens from "@/components/ChartOpens";
 import DialogSendMore from "@/components/DialogSendMore";
@@ -19,6 +19,7 @@ import MenuReport from "@/components/MenuReport";
 import NoticeWarmup from "@/components/NoticeWarmup";
 import SectionRecipients from "@/components/SectionRecipients";
 import TableCampaignLinks from "@/components/TableCampaignLinks";
+import TabsPage, { PanelTab } from "@/components/TabsPage";
 import TextEmpty from "@/components/TextEmpty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { isPlanLimitCode } from "@/lib/account-state";
@@ -39,9 +40,10 @@ import { timeZoneLabel } from "@/lib/time-zone";
 import { cn } from "@/lib/utils";
 import { BACKOFF_WHY, GMAIL_WHY, STEPS_WHY, getGmailLaterTrack, getGmailTrack, getStepItems } from "@/lib/warmup-status";
 
-// readOnly: an admin looking at a customer's campaign (app/admin/campaigns/[id]): its numbers without its owner's
-// actions, and children above them. contactFields: the account's, for the preview to fill in. recipients: who it went to
-// and what they did (components/SectionRecipients.jsx), for its owner only.
+// A sent campaign: its numbers on top, the details in tabs under them. readOnly: an admin looking at a customer's
+// campaign (app/admin/campaigns/[id]): its numbers without its owner's actions, and children above them. contactFields:
+// the account's, for the click map to fill in. recipients: who it went to and what they did
+// (components/SectionRecipients.jsx), for its owner only.
 export default function CampaignReport({
 	campaign,
 	newsletter,
@@ -110,6 +112,18 @@ export default function CampaignReport({
 		fromEmail: newsletter.fromEmail,
 		imageUrl: newsletter.imageUrl,
 	};
+	const clickMap = !readOnly && !isWebOnly && (
+		<ButtonClickMap
+			html={toPreviewFrame(clicks ? withLinkKeys(html) : html)}
+			sender={sender}
+			subject={campaign.subject}
+			previewText={campaign.previewText}
+			newsletterId={String(newsletter._id)}
+			contactFields={contactFields}
+			clicks={clicks}
+		/>
+	);
+	const page = !readOnly && hasPage && <RowPageUrl id={id} slug={campaign.archiveSlug} newsletter={newsletter} />;
 
 	return (
 		<>
@@ -158,17 +172,6 @@ export default function CampaignReport({
 									Resume
 								</ButtonCampaignAction>
 							</GatePlan>
-						)}
-						{!isWebOnly && (
-							<ButtonPreview
-								html={toPreviewFrame(clicks ? withLinkKeys(html) : html)}
-								sender={sender}
-								subject={campaign.subject}
-								previewText={campaign.previewText}
-								newsletterId={String(newsletter._id)}
-								contactFields={contactFields}
-								clicks={clicks}
-							/>
 						)}
 						<MenuReport
 							id={id}
@@ -240,12 +243,10 @@ export default function CampaignReport({
 				{children}
 
 				{isWebOnly ? (
-					!reviewCode && (
-						<div style={{ "--stagger": 1 }} className="grid grid-cols-2 gap-3 animate-enter sm:grid-cols-3">
-							<CardStat label="Page views" value={formatNumber(campaign.webViews ?? 0)} detail="Once per reader a day" />
-							<CardStat label="Published" value={formatDate(campaign.sentAt ?? campaign.startedAt)} detail="No email went out" />
-						</div>
-					)
+					<>
+						{!reviewCode && <CardsPage campaign={campaign} detail="No email went out" className="animate-enter" style={{ "--stagger": 1 }} />}
+						{page}
+					</>
 				) : (
 					<EmailResults
 						campaign={campaign}
@@ -259,32 +260,20 @@ export default function CampaignReport({
 						links={links}
 						providers={providers}
 						recipients={readOnly ? null : recipients}
+						clickMap={clickMap}
+						page={page}
 						showComplaints={readOnly}
 					/>
-				)}
-
-				{!readOnly && hasPage && (
-					<div
-						style={{ "--stagger": 6 }}
-						className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-xl bg-card px-4 shadow-border transition-colors duration-150 animate-enter focus-within:bg-muted/40"
-					>
-						<span className="text-sm text-muted-foreground">URL</span>
-						<InputCampaignSlug
-							campaignId={id}
-							initialSlug={campaign.archiveSlug}
-							urlBase={getArchiveUrls(newsletter).absolutePost("")}
-							isPublished
-						/>
-						<ButtonCopy value={getArchiveUrls(newsletter).absolutePost(campaign.archiveSlug)} label="Copy link" />
-					</div>
 				)}
 			</div>
 		</>
 	);
 }
 
-// What the email did: delivery, opens and clicks against the newsletter's average, bounces and unsubscribes, opens over
-// time, inboxes, links and recipients. Complaints are for an admin to act on: the owner, who can't, sees them by inbox.
+// What the email did, always on top: delivery, opens and clicks against the newsletter's average, bounces and
+// unsubscribes. Once it has gone out, its details in tabs under them: opens and clicks over time, its links with their
+// click map, who it went to, its inboxes, and its page on the website. Complaints are for an admin to act on: the
+// owner, who can't, sees them by inbox.
 function EmailResults({
 	campaign,
 	newsletter,
@@ -297,6 +286,8 @@ function EmailResults({
 	links,
 	providers,
 	recipients,
+	clickMap,
+	page,
 	showComplaints,
 }) {
 	// Bounced is hard bounces only: the rest are on their way, or an inbox refused them for now, like a full mailbox.
@@ -324,6 +315,10 @@ function EmailResults({
 		{ label: "Unsubscribed", value: formatQuietRate(stats.unsubscribed, reached, 2), detail: formatNumber(stats.unsubscribed) },
 	].filter(Boolean);
 	const isRow = cards.length === 5;
+	const hasRecipients = recipients?.counts.all > 0;
+	const tabs = [TABS.timeline, TABS.links, hasRecipients && TABS.recipients, TABS.inboxes, page && TABS.website].filter(Boolean);
+	// Picking whom to show, or showing more of them, reloads the page on its recipients.
+	const isOnRecipients = hasRecipients && (recipients.filter !== "all" || recipients.shown > recipients.step);
 
 	return (
 		<>
@@ -333,23 +328,66 @@ function EmailResults({
 				))}
 			</div>
 
-			{timeline && reached > 0 && <CardOpens style={{ "--stagger": 3 }} timeline={timeline} timeZone={timeZone} />}
-
-			{providers.length > 0 && <TableProviders style={{ "--stagger": 4 }} providers={providers} />}
-
-			{links?.links.length > 0 && (
-				<TableCampaignLinks style={{ "--stagger": 5 }} stats={links} html={html} webUrl={getIssueWebUrl({ campaign, newsletter })} />
-			)}
-
-			{recipients?.counts.all > 0 && (
-				<SectionRecipients style={{ "--stagger": 6 }} campaignId={campaign._id.toString()} timeZone={timeZone} {...recipients} />
+			{(stats.sent > 0 || hasRecipients) && (
+				<TabsPage tabs={tabs} defaultValue={isOnRecipients ? "recipients" : "timeline"} style={{ "--stagger": 2 }}>
+					<PanelTab value="timeline">{timeline && reached > 0 && <CardOpens timeline={timeline} timeZone={timeZone} />}</PanelTab>
+					<PanelTab value="links" className="flex flex-col gap-3">
+						<div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+							<p className="text-sm text-muted-foreground tabular-nums">
+								{links?.clickers > 0 ? `${formatCount(links.clickers, "contact")} clicked a link` : "No clicks yet"}
+							</p>
+							{clickMap}
+						</div>
+						{links?.links.length > 0 && <TableCampaignLinks stats={links} html={html} webUrl={getIssueWebUrl({ campaign, newsletter })} />}
+					</PanelTab>
+					{hasRecipients && (
+						<PanelTab value="recipients">
+							<SectionRecipients campaignId={campaign._id.toString()} timeZone={timeZone} {...recipients} />
+						</PanelTab>
+					)}
+					<PanelTab value="inboxes">
+						{providers.length > 0 ? <TableProviders providers={providers} /> : <TextPanelEmpty>No emails sent yet</TextPanelEmpty>}
+					</PanelTab>
+					{page && (
+						<PanelTab value="website" className="flex flex-col gap-3">
+							<CardsPage campaign={campaign} detail="On your website" />
+							{page}
+						</PanelTab>
+					)}
+				</TabsPage>
 			)}
 		</>
 	);
 }
 
+// The issue's page on the website: its views, and when it went live.
+function CardsPage({ campaign, detail, className, style }) {
+	return (
+		<div style={style} className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3", className)}>
+			<CardStat label="Page views" value={formatNumber(campaign.webViews ?? 0)} detail="Once per reader a day" />
+			<CardStat label="Published" value={formatDate(campaign.sentAt ?? campaign.startedAt)} detail={detail} />
+		</div>
+	);
+}
+
+// Its address on the website, which its owner can change, with a copy of it.
+function RowPageUrl({ id, slug, newsletter }) {
+	const urls = getArchiveUrls(newsletter);
+	return (
+		<div className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-xl bg-card px-4 shadow-border transition-colors duration-150 focus-within:bg-muted/40">
+			<span className="text-sm text-muted-foreground">URL</span>
+			<InputCampaignSlug campaignId={id} initialSlug={slug} urlBase={urls.absolutePost("")} isPublished />
+			<ButtonCopy value={urls.absolutePost(slug)} label="Copy link" />
+		</div>
+	);
+}
+
+function TextPanelEmpty({ children }) {
+	return <p className="rounded-xl bg-card px-4 py-10 text-center text-sm text-muted-foreground shadow-border">{children}</p>;
+}
+
 // Opens and clicks hour by hour after sending, with when most came and how fast half of the opens did.
-function CardOpens({ timeline, timeZone, style }) {
+function CardOpens({ timeline, timeZone }) {
 	const peak = findPeak(timeline.hours);
 	const half = hoursToHalf(timeline);
 	const summary = [
@@ -360,7 +398,7 @@ function CardOpens({ timeline, timeZone, style }) {
 		.join(" · ");
 
 	return (
-		<section style={style} className="flex flex-col gap-5 rounded-xl bg-card p-5 shadow-border animate-enter sm:p-6">
+		<section className="flex flex-col gap-5 rounded-xl bg-card p-5 shadow-border sm:p-6">
 			<div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
 				<div className="flex flex-col gap-1">
 					<h2 className="text-sm font-medium text-muted-foreground">After sending</h2>
@@ -381,11 +419,11 @@ function CardOpens({ timeline, timeZone, style }) {
 }
 
 // Results by inbox provider, each with its share of the send.
-function TableProviders({ providers, style }) {
+function TableProviders({ providers }) {
 	const total = providers.reduce((sum, { sent }) => sum + sent, 0);
 
 	return (
-		<div style={style} className="overflow-hidden rounded-xl shadow-border animate-enter">
+		<div className="overflow-hidden rounded-xl shadow-border">
 			<Table>
 				<TableHeader>
 					<TableRow className="hover:bg-transparent">
@@ -481,6 +519,14 @@ function formatSpan(hours) {
 	if (hours < 48) return `${hours} h`;
 	return `${Math.round(hours / 24)} days`;
 }
+
+const TABS = {
+	timeline: { value: "timeline", icon: ChartColumn, label: "Timeline" },
+	links: { value: "links", icon: Link2, label: "Links" },
+	recipients: { value: "recipients", icon: Users, label: "Recipients" },
+	inboxes: { value: "inboxes", icon: Inbox, label: "Inboxes" },
+	website: { value: "website", icon: Globe, label: "Website" },
+};
 
 // Whole hours left, at least one: the last batch's time is approximate.
 function hoursUntil(date) {

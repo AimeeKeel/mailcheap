@@ -1,21 +1,21 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Eye } from "lucide-react";
+import { MousePointerClick } from "lucide-react";
 import DialogPreviewEmail from "@/components/DialogPreviewEmail";
 import { Button } from "@/components/ui/button";
 
-// The campaign editor's preview, in a mail app's window or in Gmail on a phone, for an email rendered on the server.
-// clicks: a sent issue's clicked links, for the preview to show on its email.
-export default function ButtonPreview({ html, sender, subject, previewText, newsletterId, contactFields, clicks }) {
+// A sent issue's email as it went out, in a mail app's window or in Gmail on a phone, rendered on the server. clicks:
+// its clicked links, which the preview shows on the email.
+export default function ButtonClickMap({ html, sender, subject, previewText, newsletterId, contactFields, clicks }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const buttonRef = useRef(null);
 
 	return (
 		<>
 			<Button ref={buttonRef} variant="outline" onClick={() => setIsOpen(true)}>
-				<Eye data-icon="inline-start" />
-				Preview
+				<MousePointerClick data-icon="inline-start" />
+				Click map
 			</Button>
 			<DialogPreviewEmail
 				isOpen={isOpen}

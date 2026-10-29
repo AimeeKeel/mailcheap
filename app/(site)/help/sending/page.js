@@ -210,13 +210,17 @@ export default function SendingPage() {
 
 			<h2 id="report">The report</h2>
 			<p>
-				Each sent campaign&apos;s page shows how many emails were delivered, opened and clicked, and how many bounced or led to an
-				unsubscribe, with results by inbox provider, like Gmail or Outlook, where you also see how many were marked as spam. It
-				counts the list cleanup&apos;s last-chance emails apart. Bounced only counts hard bounces, like an address that doesn&apos;t
-				exist: an email still on its way, or that an inbox refused for another reason, like a full mailbox, shows under Delivered
-				as not delivered. Opens are an estimate: some inboxes, like Gmail, load an email&apos;s images as it arrives, which counts
-				as an open within seconds whether or not it&apos;s read, and some readers block images. Preview, at the top, shows the
-				email as it went out, in a mail app or in Gmail on a phone, as a sample reader or as one of your contacts.
+				Each sent campaign&apos;s page shows at the top how many emails were delivered, opened and clicked, and how many bounced or
+				led to an unsubscribe. It counts the list cleanup&apos;s last-chance emails apart. Bounced only counts hard bounces, like an
+				address that doesn&apos;t exist: an email still on its way, or that an inbox refused for another reason, like a full
+				mailbox, shows under Delivered as not delivered. Opens are an estimate: some inboxes, like Gmail, load an email&apos;s
+				images as it arrives, which counts as an open within seconds whether or not it&apos;s read, and some readers block images.
+			</p>
+			<p>
+				Under those numbers, tabs break the send down: Timeline, its opens and clicks hour by hour; Links, what readers clicked,
+				with the click map; Recipients, who it went to and what each did; Inboxes, its results by inbox provider, like Gmail or
+				Outlook, where you also see how many were marked as spam; and Website, for an issue on your website, its page&apos;s views
+				and its address, which you can change there.
 			</p>
 			<p>
 				Opened and clicked compare with the newsletter&apos;s last {COMPARED_ISSUES} issues: &ldquo;+4.2% vs avg&rdquo; when an
@@ -225,21 +229,22 @@ export default function SendingPage() {
 				opens keep coming until then.
 			</p>
 			<p>
-				A chart shows the opens and clicks hour by hour for the first {TIMELINE_HOURS / 24} days after sending, in your timezone:
+				Timeline shows the opens and clicks hour by hour for the first {TIMELINE_HOURS / 24} days after sending, in your timezone:
 				when most opens came, and how fast half of them did. Each contact counts once, at their first open and first click. The
 				opens after those {TIMELINE_HOURS / 24} days are counted under the chart.
 			</p>
 			<p>
-				Its links come below the results by inbox provider, each with its website&apos;s icon, most clicked first: how many
-				contacts clicked each one, every click, and each link&apos;s share of the contacts who clicked a link. A link counts once
+				Links lists the links readers clicked, each with its website&apos;s icon, most clicked first: how many contacts clicked
+				each one, every click, and each link&apos;s share of the contacts who clicked a link. A link counts once
 				whatever its tracking parameters, like utm_source, and link scanners and the unsubscribe link don&apos;t count. An issue
 				sent before clicks were counted per link only has the clicks since then. The API and AI assistants get the same numbers,
 				the comparison and the hours included, in the campaign&apos;s report.
 			</p>
 			<p>
-				Preview shows those clicks on the email itself, so you see where in the issue people clicked: by each link that got
-				some, how many contacts clicked it and its share. Point at one to outline its link. A link the email has twice shows its
-				clicks on both, counted together. Clicks, at the top of the preview, hides them.
+				Click map, in Links, shows the email as it went out, in a mail app or in Gmail on a phone, as a sample reader or as one
+				of your contacts, with those clicks on it, so you see where in the issue people clicked: by each link that got some, how
+				many contacts clicked it and its share. Point at one to outline its link. A link the email has twice shows its clicks on
+				both, counted together. Clicks, at its top, hides them.
 			</p>
 			<p>
 				A web-only issue&apos;s page shows its views on the website instead, once per reader a day, and when it went live. Web-only
@@ -248,7 +253,7 @@ export default function SendingPage() {
 
 			<h2 id="recipients">Who opened and clicked</h2>
 			<p>
-				Under the links, Recipients lists everyone an issue went to and what each did with it: when it reached them, when they
+				Recipients lists everyone an issue went to and what each did with it: when it reached them, when they
 				first opened and clicked it, the links they clicked, and whether it bounced, they marked it as spam or they unsubscribed
 				through it. Pick Opened, Clicked or Didn&apos;t open to see only them, and Not delivered, Bounced or Unsubscribed once
 				someone is there. People come in the order they joined your list, and each one opens their contact&apos;s page. An

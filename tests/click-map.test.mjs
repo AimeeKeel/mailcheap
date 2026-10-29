@@ -122,5 +122,5 @@ test("the report's preview shows the clicks until Clicks hides them, and the hel
 		const body = preview.slice(preview.indexOf(`function ${frame}`));
 		assert.match(body.slice(0, body.indexOf("\n}\n")), /<FrameEmail html=\{html\} clicks=\{clicks\} \/>/, frame);
 	}
-	assert.match(read("app/(site)/help/sending/page.js"), /Preview shows those clicks on the email itself/);
+	assert.match(read("app/(site)/help/sending/page.js"), /Click map, in Links, shows the email as it went out/);
 });

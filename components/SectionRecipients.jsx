@@ -26,7 +26,7 @@ const OUTCOME_AT = { complained: "complainedAt", bounced: "bouncedAt", clicked: 
 
 // Who a sent campaign went to and what each did with it (lib/campaign-recipients.js), a filter at a time, kept in the
 // page's address like Show more: ?recipients= and ?shown=. Each person opens their contact's page.
-export default function SectionRecipients({ campaignId, filter, counts, recipients, hasMore, shown, step, timeZone, style }) {
+export default function SectionRecipients({ campaignId, filter, counts, recipients, hasMore, shown, step, timeZone }) {
 	const filters = RECIPIENT_FILTERS.filter((key) => ALWAYS_SHOWN.has(key) || counts[key] > 0 || key === filter);
 
 	function hrefFor(key, count = step) {
@@ -35,12 +35,9 @@ export default function SectionRecipients({ campaignId, filter, counts, recipien
 	}
 
 	return (
-		<section id="recipients" aria-labelledby="recipients-title" style={style} className="flex flex-col gap-2 animate-enter">
+		<section id="recipients" aria-label="Recipients" className="flex flex-col gap-2">
 			<div className="overflow-hidden rounded-xl bg-card shadow-border">
-				<div className="flex flex-col gap-3 p-4 sm:px-5">
-					<h2 id="recipients-title" className="text-sm font-medium text-muted-foreground">
-						Recipients
-					</h2>
+				<div className="p-4 sm:px-5">
 					<nav aria-label="Recipients to show" className="-m-1 flex gap-1.5 overflow-x-auto p-1 [scrollbar-width:none]">
 						{filters.map((key) => (
 							<Link

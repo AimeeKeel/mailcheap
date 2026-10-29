@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const { default: CampaignReport } = await import("../components/CampaignReport.jsx");
+const { TooltipProvider } = await import("../components/ui/tooltip.jsx");
 
 const STATS = { recipients: 1000, sent: 1000, delivered: 990, opened: 462, clicked: 70, bounced: 10, complained: 1, unsubscribed: 4 };
 
@@ -41,14 +42,65 @@ test("the Delivered card says how many emails weren't delivered, when bounces do
 	assert.ok(!renderReport().includes("not delivered"), "every email delivered or bounced");
 });
 
-test("the report's links come below its results by inbox", () => {
-	const html = renderReport({
-		providers: [{ provider: "gmail", sent: 600, delivered: 595, opened: 300, clicked: 50, bounced: 5, complained: 0 }],
-		links: { links: [{ key: "post", url: "https://example.com/post", clickers: 40, clicks: 50 }], clickers: 40, isComplete: true },
-	});
-	const inbox = html.indexOf(">Inbox</th>");
-	assert.ok(inbox > -1, "the inbox table shows");
-	assert.ok(html.indexOf(">Link</th>") > inbox, "the links table follows it");
+// Each tab's label and whether it's the open one, in order.
+function tabsOf(html) {
+	return [...html.matchAll(/<button([^>]*role="tab"[^>]*)>([\s\S]*?)<\/button>/g)].map(([, attributes, inner]) => [
+		inner.replace(/<[^>]*>/g, ""),
+		attributes.includes('aria-selected="true"'),
+	]);
+}
+
+// What a tab's panel holds, up to the next one.
+function panelOf(html, value) {
+	const start = html.search(new RegExp(`id="[^"]*-content-${value}"`));
+	if (start < 0) return "";
+	const end = html.indexOf('role="tabpanel"', start);
+	return html.slice(start, end < 0 ? undefined : end);
+}
+
+test("the report's numbers stay on top, and its details are in tabs: Timeline open, then Links with the click map, Inboxes and Website", () => {
+	const html = renderToStaticMarkup(
+		createElement(
+			TooltipProvider,
+			null,
+			createElement(CampaignReport, {
+				campaign: { _id: "6ad87a2affc219b3be2cc72c", subject: "Hello", status: "sent", format: "markdown", markdown: "Hi", stats: STATS, archiveSlug: "hello", webViews: 1204 },
+				newsletter: { _id: "6ad87a2affc219b3be2cc72d", name: "Weekly", slug: "weekly", fromName: "Weekly", fromEmail: "hi@example.com", archiveEnabled: true },
+				providers: [{ provider: "gmail", sent: 600, delivered: 595, opened: 300, clicked: 50, bounced: 5, complained: 0 }],
+				links: { links: [{ key: "post", url: "https://example.com/post", clickers: 40, clicks: 50 }], clickers: 40, isComplete: true },
+				timeline: { hours: [{ at: new Date(), opens: 3, clicks: 1 }], later: { opens: 0, clicks: 0 } },
+				timeZone: "UTC",
+			})
+		)
+	);
+	assert.deepEqual(tabsOf(html), [
+		["Timeline", true],
+		["Links", false],
+		["Inboxes", false],
+		["Website", false],
+	]);
+	assert.ok(html.indexOf(card("Unsubscribed")) < html.indexOf('role="tablist"'), "the numbers come first, whatever tab is open");
+	assert.match(panelOf(html, "timeline"), />After sending</);
+	const links = panelOf(html, "links");
+	assert.match(links, /40 contacts clicked a link/);
+	assert.match(links, />Click map</, "the click map opens from the links");
+	assert.match(links, />Link<\/th>/);
+	assert.match(panelOf(html, "inboxes"), />Inbox<\/th>/);
+	assert.match(panelOf(html, "website"), />1,204</, "the page's views");
+	assert.match(panelOf(html, "website"), /value="hello"/, "and its address, to change");
+	assert.doesNotMatch(html, />Preview</, "no Preview at the top any more");
+
+	const quiet = renderReport({ campaign: { _id: "6ad87a2affc219b3be2cc72c", subject: "Hello", status: "sent", format: "markdown", markdown: "Hi", stats: STATS } });
+	assert.deepEqual(
+		tabsOf(quiet).map(([label]) => label),
+		["Timeline", "Links", "Inboxes"],
+		"no Website tab for an issue that isn't on the website"
+	);
+	assert.match(panelOf(quiet, "links"), /No clicks yet[\s\S]*>Click map</, "the email as it went out, before any click");
+	const admin = renderReport({ readOnly: true });
+	assert.doesNotMatch(admin, />Click map</, "an admin reads the email on their own page");
+	const unsent = renderReport({ campaign: { _id: "6ad87a2affc219b3be2cc72c", subject: "Hello", status: "paused", format: "markdown", markdown: "Hi", stats: { recipients: 0, sent: 0 } }, readOnly: true });
+	assert.doesNotMatch(unsent, /role="tablist"/, "nothing to break down before an email goes out");
 });
 
 test("Gmail's row in the inbox table shows Gmail's logo, and other inboxes their favicon", () => {

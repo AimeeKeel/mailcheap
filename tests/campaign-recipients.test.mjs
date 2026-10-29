@@ -154,9 +154,16 @@ describe("a campaign's recipients", () => {
 		return renderToStaticMarkup(createElement(m.TooltipProvider, null, element));
 	}
 
-	test("the campaign's page lists them under its links, a filter at a time, each opening their contact", async () => {
+	// The label of the tab open on the page.
+	function openTab(html) {
+		const [, inner] = /<button[^>]*role="tab"[^>]*aria-selected="true"[^>]*>([\s\S]*?)<\/button>/.exec(html) ?? [];
+		return inner?.replace(/<[^>]*>/g, "");
+	}
+
+	test("the campaign's page lists them in its Recipients tab, a filter at a time, each opening their contact", async () => {
 		const html = await renderPage();
-		assert.ok(html.includes(">Recipients</h2>"));
+		assert.match(html, /role="tab"[^>]*>(<svg[\s\S]*?<\/svg>)?Recipients<\/button>/);
+		assert.equal(openTab(html), "Timeline", "the page opens on its timeline");
 		for (const label of ["Everyone", "Opened", "Clicked", "Didn&#x27;t open", "Not delivered", "Bounced", "Unsubscribed"]) {
 			assert.ok(html.includes(`>${label}<`), label);
 		}
@@ -168,6 +175,8 @@ describe("a campaign's recipients", () => {
 		assert.ok(html.includes('href="/help/sending#recipients"'));
 
 		const clicked = await renderPage({ recipients: "clicked" });
+		assert.equal(openTab(clicked), "Recipients", "a filter keeps the page on its recipients");
+		assert.equal(openTab(await renderPage({ shown: "100" })), "Recipients", "and so does Show more");
 		assert.match(clicked, /aria-current="page"[^>]*>Clicked</);
 		assert.ok(clicked.includes(">Ada<") && !clicked.includes("ben@example.org"));
 		assert.ok(clicked.includes(`href="/campaigns/${campaign._id}?recipients=opened"`));

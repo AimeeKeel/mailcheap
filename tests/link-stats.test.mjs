@@ -98,7 +98,7 @@ describe("clicks per link", () => {
 			actions: (await import("../lib/actions/campaigns.js")).campaignActions,
 			findCampaignLinks: (await import("../lib/campaign-links.js")).findCampaignLinks,
 			CampaignReport: (await import("../components/CampaignReport.jsx")).default,
-			ButtonPreview: (await import("../components/ButtonPreview.jsx")).default,
+			ButtonClickMap: (await import("../components/ButtonClickMap.jsx")).default,
 			Campaign: (await import("../models/Campaign.js")).default,
 			CampaignLink: (await import("../models/CampaignLink.js")).default,
 			Message: (await import("../models/Message.js")).default,
@@ -158,11 +158,11 @@ describe("clicks per link", () => {
 		return action.output.parse(await action.handler({ account: user.account, input: { id } }));
 	}
 
-	// The first element of a type in a rendered tree, through each element's children.
+	// The first element of a type in a rendered tree, through each element's props: its children and the elements it's given.
 	function findElement(node, type) {
 		if (Array.isArray(node)) return node.reduce((found, child) => found ?? findElement(child, type), null);
-		if (!node || typeof node !== "object") return null;
-		return node.type === type ? node : findElement(node.props?.children, type);
+		if (!node?.props) return null;
+		return node.type === type ? node : findElement(Object.values(node.props), type);
 	}
 
 	test("a reader's clicks count once per link and once per issue; repeats only add clicks; scanners count for nothing", async () => {
@@ -211,7 +211,7 @@ describe("clicks per link", () => {
 		assert.equal(result.comparison, null, "a first issue has nothing to compare with");
 	});
 
-	test("the report's preview gets each clicked link's count, and the key of its clicks on every link its email has", async () => {
+	test("the report's click map gets each clicked link's count, and the key of its clicks on every link its email has", async () => {
 		const user = await customer("clickmap@example.com", 2);
 		const { id, emails } = await sendIssue(
 			user,
@@ -228,7 +228,7 @@ describe("clicks per link", () => {
 		const campaign = await m.Campaign.findOne({ accountId: user.accountId, _id: id }).lean();
 		const newsletter = await m.Newsletter.findOne({ accountId: user.accountId, _id: campaign.newsletterId }).lean();
 		const links = await m.findCampaignLinks(campaign);
-		const preview = findElement(m.CampaignReport({ campaign, newsletter, providers: [], links, timeZone: "UTC" }), m.ButtonPreview);
+		const preview = findElement(m.CampaignReport({ campaign, newsletter, providers: [], links, timeZone: "UTC" }), m.ButtonClickMap);
 		const [story, shop, readOnline] = ["https://example.com/story", "https://example.com/shop", page].map((url) => getLinkKey(normalizeLink(url)));
 		assert.deepEqual(preview.props.clicks, {
 			clickers: 2,
@@ -244,7 +244,7 @@ describe("clicks per link", () => {
 		const unclicked = await m.Campaign.findOne({ accountId: user.accountId, _id: quiet.id }).lean();
 		const none = findElement(
 			m.CampaignReport({ campaign: unclicked, newsletter, providers: [], links: await m.findCampaignLinks(unclicked), timeZone: "UTC" }),
-			m.ButtonPreview
+			m.ButtonClickMap
 		);
 		assert.equal(none.props.clicks, null, "nothing to show before a link gets a click");
 		assert.doesNotMatch(none.props.html, /data-link-key/);
