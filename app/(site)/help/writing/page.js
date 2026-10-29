@@ -189,7 +189,8 @@ export default function WritingPage() {
 				Preview, in the write step and in the <strong>⋯</strong> menu at any step, shows the email in a mail app&apos;s window on a
 				desktop, or in Gmail on a phone: the inbox first, with a fingertip tapping the issue&apos;s row until you open it, then the
 				email.
-				On your own phone, Mobile shows the email itself, edge to edge. Press <kbd>Esc</kbd> to close it.
+				On your own phone, Mobile shows the email itself, edge to edge. A link you click in it opens in a new tab, and the preview
+				stays on the email. Press <kbd>Esc</kbd> to close it.
 			</p>
 			<p>
 				Sample reader, at the top left, shows the email as a reader called Jane gets it. Click it to pick one of your active

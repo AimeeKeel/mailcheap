@@ -26,6 +26,7 @@ import LogoGmail from "@/components/LogoGmail";
 import OverlayClicks from "@/components/OverlayClicks";
 import PickerReader from "@/components/PickerReader";
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
+import { openLinksOutside } from "@/lib/email-preview";
 import { SAMPLE_READER, fillForReader } from "@/lib/merge-tags";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
@@ -470,8 +471,8 @@ function ScreenEmail({ sender, name, subject, html, clicks, backRef, onBack, isH
 function FrameEmail({ html, clicks }) {
 	const frameRef = useRef(null);
 
-	// Without allow-scripts nothing in the email runs; same origin only lets the frame be sized, Escape out and its
-	// links be found for their clicks.
+	// Without allow-scripts nothing in the email runs; same origin only lets the frame be sized, Escape out, and its links
+	// open outside it and be found for their clicks.
 	return (
 		<div className="relative">
 			<iframe
@@ -481,6 +482,7 @@ function FrameEmail({ html, clicks }) {
 				srcDoc={html}
 				onLoad={(event) => {
 					forwardEscape(event.currentTarget);
+					openLinksOutside(event.currentTarget);
 					fitToEmail(event.currentTarget);
 				}}
 				className="block h-160 w-full bg-white"
