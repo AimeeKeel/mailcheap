@@ -184,7 +184,8 @@ export default function SendingPage() {
 					</p>
 					<p>
 						When an issue looks clearly harmful, its send waits and its page says In review: a person at MailCheap looks at it,
-						usually within a few hours, then sends it as you wrote it or tells you why it can&apos;t go out.{" "}
+						usually within a few hours, then sends it as you wrote it or tells you why it can&apos;t go out. The bell in the
+						dashboard tells you when it&apos;s in review and when it&apos;s on its way.{" "}
 						<Link href="/acceptable-use">Acceptable use policy</Link>
 					</p>
 					<p>

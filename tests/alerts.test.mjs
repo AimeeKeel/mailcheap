@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { after, afterEach, before, describe, test } from "node:test";
-import { fileURLToPath } from "node:url";
 import { ADMIN_ALERTS, isDashboardAlert, isTelegramAlert } from "../lib/alert-rules.js";
 import { getTeamStatusAlerts } from "../lib/email-provider/postshiba-rules.js";
 import { escapeTelegramHtml, formatTelegramAlert, isTelegramConfigured } from "../lib/telegram.js";
+import { findAlertCalls, isAdminAlert, kindsOf } from "./helpers/alert-calls.mjs";
 import { activate, answerTelegram, as, catchRedirect, form, platformEmails, signIn, startTestApp, telegramMessages, withEnv } from "./helpers/app.mjs";
 import { POSTSHIBA_ENV, createFakePostshiba } from "./helpers/postshiba.mjs";
 import { failNextPublish } from "./stubs/dns-broker.mjs";
@@ -13,7 +11,6 @@ import { flushAfter } from "./stubs/next-server.mjs";
 
 // The admins' alerts on Telegram: which ones go there, how they read, how often, and nothing at all without both
 // TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID. tests/helpers/app.mjs records the Bot API's requests; none leaves.
-const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const TELEGRAM = { TELEGRAM_BOT_TOKEN: "123456:test-bot-token-never-logged", TELEGRAM_CHAT_ID: "424242" };
 const NO_TELEGRAM = { TELEGRAM_BOT_TOKEN: "", TELEGRAM_CHAT_ID: "" };
 const CRON_SECRET = "test-cron-secret-0123456789abcdef";
@@ -23,39 +20,6 @@ let app;
 let fake;
 let m;
 let visitors = 0;
-
-async function listSources(dir) {
-	return (await readdir(join(ROOT, dir), { recursive: true })).filter((name) => /\.(m?js|jsx)$/.test(name)).map((name) => join(dir, name));
-}
-
-// The object of each sendAlert({ ... }) and sendAlertIfRepeated(name, { ... }) call, its braces counted.
-function findAlertObjects(source) {
-	const objects = [];
-	for (const match of source.matchAll(/sendAlert(?:IfRepeated)?\([^{)]*\{/g)) {
-		const start = match.index + match[0].length - 1;
-		let depth = 0;
-		let end = start;
-		for (; end < source.length; end++) {
-			if (source[end] === "{") depth++;
-			if (source[end] === "}" && --depth === 0) break;
-		}
-		objects.push(source.slice(start, end + 1));
-	}
-	return objects;
-}
-
-// Admin alerts name no account: accountId is missing or null.
-function isAdminAlert(object) {
-	const property = /(?:^\{\s*|\n\s*)accountId\b\s*(?::\s*([^,\n]+))?,/.exec(object);
-	return !property || property[1]?.trim() === "null";
-}
-
-// The kinds a key can start with: its own start, and the strings it picks one from.
-function kindsOf(object) {
-	const expression = /(?:^\{\s*|[\n,]\s*)key:\s*([^,\n]+)/.exec(object)?.[1] ?? "";
-	const start = /^[`"]([a-z0-9-]*)/.exec(expression)?.[1];
-	return [start, ...[...expression.matchAll(/"([a-z0-9-]+)"/g)].map(([, kind]) => kind)].filter(Boolean);
-}
 
 function isClassified(kind) {
 	return Object.hasOwn(ADMIN_ALERTS, kind) || (kind.endsWith("-") && Object.keys(ADMIN_ALERTS).some((known) => known.startsWith(kind)));
@@ -141,15 +105,13 @@ describe("which alerts reach Telegram", () => {
 	test("every admin alert in the code has its kind in lib/alert-rules.js", async () => {
 		const unclassified = [];
 		let count = 0;
-		for (const file of [...(await listSources("lib")), ...(await listSources("app"))]) {
-			for (const object of findAlertObjects(await readFile(join(ROOT, file), "utf8"))) {
-				if (!isAdminAlert(object)) continue;
-				count++;
-				const kinds = kindsOf(object);
-				// A key that comes from a spread is checked where it's made (getTeamStatusAlerts below).
-				const isKnown = kinds.length > 0 ? kinds.some(isClassified) : /\.\.\.\w/.test(object);
-				if (!isKnown) unclassified.push(`${file}: ${object.slice(0, 120)}`);
-			}
+		for (const { file, object } of await findAlertCalls()) {
+			if (!isAdminAlert(object)) continue;
+			count++;
+			const kinds = kindsOf(object);
+			// A key that comes from a spread is checked where it's made (getTeamStatusAlerts below).
+			const isKnown = kinds.length > 0 ? kinds.some(isClassified) : /\.\.\.\w/.test(object);
+			if (!isKnown) unclassified.push(`${file}: ${object.slice(0, 120)}`);
 		}
 		assert.ok(count >= 15, `found ${count} admin alerts`);
 		assert.deepEqual(unclassified, []);
@@ -369,10 +331,11 @@ describe("what alerts", () => {
 			for (const authorization of [undefined, CRON_SECRET, `Bearer ${CRON_SECRET.slice(1)}`, `Bearer ${CRON_SECRET}x`, "Bearer someone-elses-secret-0123456789"]) {
 				assert.equal((await call(authorization)).status, 401, String(authorization));
 			}
-			const { summaries, domains, ...checks } = await (await call(`Bearer ${CRON_SECRET}`)).json();
+			const { summaries, domains, imports, ...checks } = await (await call(`Bearer ${CRON_SECRET}`)).json();
 			assert.deepEqual(checks, { postshiba: { alerts: [] }, telegram: { skipped: "already announced" } });
 			assert.equal(typeof summaries.queued, "number", "and the summary emails due this hour");
 			assert.equal(typeof domains.checked, "number", "and the verified domains due for their daily look at DNS");
+			assert.equal(typeof imports.checked, "number", "and the imports that stalled with nobody looking");
 
 			const tenantId = "TnHeld01";
 			fake.state.tenants.set(tenantId, { id: tenantId, name: `mc-${user.accountId}`, slug: `mc-${user.accountId}`, suspended: false, held: true });

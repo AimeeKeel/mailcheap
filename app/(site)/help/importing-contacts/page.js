@@ -97,6 +97,11 @@ export default function ImportingContactsPage() {
 				it is, then what it added, what was already there and what it left out, and why. A small file goes in at once.
 			</p>
 			<p>
+				When a big file is done, or if it stopped, the bell in the dashboard tells you how it went, with a link to the Contacts
+				page, even after you&apos;ve left it.{" "}
+				<Link href={getHelpHref("notifications")}>Notifications</Link>
+			</p>
+			<p>
 				Through the API or an AI assistant, import_contacts takes 1,000 rows a call and answers right away; get_import shows the
 				import&apos;s progress and counts.
 			</p>

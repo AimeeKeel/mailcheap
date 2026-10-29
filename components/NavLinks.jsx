@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { Globe, KeyRound, LayoutGrid, Send, Settings, Shield, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// The open newsletter's pages, then the account's, which every newsletter shares.
-export default function NavLinks({ isAdmin, onNavigate }) {
+// The open newsletter's pages, then the account's, which every newsletter shares. notifications: the bell
+// (components/ButtonNotifications.jsx), first of the account's, in the sidebar only: the phone has it in its top bar.
+export default function NavLinks({ isAdmin, onNavigate, notifications = null }) {
 	const pathname = usePathname();
 	const groups = [NEWSLETTER_ITEMS, [...ACCOUNT_ITEMS, ...(isAdmin ? [ADMIN_ITEM] : [])]];
 
@@ -14,6 +15,7 @@ export default function NavLinks({ isAdmin, onNavigate }) {
 		<nav className="flex flex-col gap-3">
 			{groups.map((items, index) => (
 				<ul key={index} className="flex flex-col gap-0.5 not-first:border-t not-first:border-border/60 not-first:pt-3">
+					{index === 1 && notifications && <li>{notifications}</li>}
 					{items.map(({ href, label, icon: Icon }) => {
 						const isActive = href === "/" ? pathname === href : pathname.startsWith(href);
 						return (

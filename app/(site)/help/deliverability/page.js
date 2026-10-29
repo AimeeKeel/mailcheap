@@ -31,8 +31,10 @@ export default function DeliverabilityPage() {
 			<p>
 				A campaign pauses by itself when more than {formatPercent(pause.bounceRate)} of its emails hard bounce (at least{" "}
 				{pause.minBounces}) or more than {formatPercent(pause.complaintRate)} are marked as spam (at least {pause.minComplaints}), and
-				you get an email about it. Emails already sent stay sent. Look at the campaign&apos;s report: if you know why, resume it from
-				its page to send the rest. Once resumed, only the block level below stops it again.
+				you get an email about it, which the bell in the dashboard shows too, with a link to the campaign. Emails already sent stay
+				sent. Look at the campaign&apos;s report: if you know why, resume it from its page to send the rest. Once resumed, only the
+				block level below stops it again.{" "}
+				<Link href={getHelpHref("notifications")}>Notifications</Link>
 			</p>
 			<p>
 				The first slice of a send to contacts you never emailed follows the same rule before the rest goes out.{" "}

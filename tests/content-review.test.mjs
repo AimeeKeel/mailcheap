@@ -283,6 +283,7 @@ before(async () => {
 		contacts: await import("../app/(app)/contacts/actions.js"),
 		apiKeys: await import("../app/(app)/api-keys/actions.js"),
 		admin: await import("../app/admin/actions.js"),
+		notifications: await import("../app/(app)/(notifications)/actions.js"),
 		archive: await import("../lib/archive-data.js"),
 		scheduling: await import("../lib/scheduling.js"),
 		review: await import("../lib/content-review.js"),
@@ -347,6 +348,15 @@ describe("the content check before a send", () => {
 		assert.equal((viaApi.body.data ?? viaApi.body).pauseCode, "content_review");
 		assert.ok(!JSON.stringify(viaApi.body).includes("fake bank"), "the API never shows the check's reasons");
 		await catchNotFound(as(user, () => m.admin.approveContentReview(id)));
+		const held = (await as(user, () => m.notifications.getNotifications())).notifications;
+		assert.deepEqual(
+			held.map(({ kind, title, path, read }) => ({ kind, title, path, read })),
+			[{ kind: "issue-review", title: "Issue under review", path: `/campaigns/${id}`, read: false }],
+			"its owner hears it waits, from the dashboard only"
+		);
+		assert.equal(held[0].body, "A person checks “Issue” before it goes out, usually within a few hours.");
+		assert.ok(!JSON.stringify(held).includes("fake bank"), "the notification never says why");
+		await as(user, () => m.notifications.markNotificationsRead([held[0].id]));
 
 		assert.deepEqual(await as(admin, () => m.admin.approveContentReview(id)), { ok: true });
 		campaign = await load(user, id);
@@ -354,6 +364,12 @@ describe("the content check before a send", () => {
 		assert.equal(campaign.review.decision, "approved");
 		assert.equal(campaign.review.decidedBy, "admin@example.com");
 		assert.equal(await countMessages(user, id), 2);
+		const approved = await as(user, () => m.notifications.getNotifications());
+		assert.equal(approved.unread, 1, "the decision brings it back as new");
+		assert.deepEqual(
+			approved.notifications.map(({ id: notificationId, kind, title, body }) => ({ notificationId, kind, title, body })),
+			[{ notificationId: held[0].id, kind: "issue-approved", title: "Issue approved", body: "“Issue” passed its review and is on its way." }]
+		);
 	});
 
 	test("a web-only issue goes through the same check: held, it stays off the website until an admin approves it", async () => {

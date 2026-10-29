@@ -308,6 +308,34 @@ html:has([data-campaign-steps]):not(:has([data-sidebar-expanded])) {
   }
 }
 
+/* The notifications bell when something new comes in: a swing from its top, settling fast. */
+@keyframes ring {
+  15% {
+    rotate: 14deg;
+  }
+  30% {
+    rotate: -11deg;
+  }
+  45% {
+    rotate: 7deg;
+  }
+  60% {
+    rotate: -4deg;
+  }
+  75% {
+    rotate: 2deg;
+  }
+}
+
+@utility animate-ring {
+  transform-origin: 50% 2px;
+  animation: ring 700ms cubic-bezier(0.23, 1, 0.32, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* Saved's check, drawn as a hand does: down its short stroke, then up the long one. Lucide's Check runs the other way,
    from its top right (M20 6 9 17l-5-5, 22.6 long), so its dash comes in from the end. 24 long with a gap as long, it
    starts clear of both ends, round caps included. --draw-delay: once what it's next to shows. */
