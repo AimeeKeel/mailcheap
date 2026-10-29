@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ArticleHelp from "@/components/ArticleHelp";
 import LinkApp from "@/components/LinkApp";
-import { getArchiveCnameTarget, getEmailProviderId, getSharedDomain, isCloud } from "@/lib/config";
+import { getArchiveCnameTarget, getSharedDomain, isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 
 export const metadata = getHelpPageMetadata("sender-addresses");
@@ -9,7 +9,6 @@ export const metadata = getHelpPageMetadata("sender-addresses");
 export default function SenderAddressesPage() {
 	const sharedDomain = getSharedDomain();
 	const hasOwnHost = Boolean(getArchiveCnameTarget());
-	const isPostshiba = getEmailProviderId() === "postshiba";
 
 	return (
 		<ArticleHelp slug="sender-addresses">
@@ -49,13 +48,10 @@ export default function SenderAddressesPage() {
 					</>
 				)}
 			</p>
-			{isPostshiba && (
-				<p>
-					MailCheap&apos;s email provider lets a domain send from only one account. If yours is already verified in another one, for
-					example by another app that sends through the same provider, the <LinkApp href="/domains">Domains page</LinkApp> says so
-					when you add it: remove it from that account, or add a subdomain instead, like <code>mail.example.com</code>.
-				</p>
-			)}
+			<p>
+				A domain can only be in one account. If yours is already taken, the <LinkApp href="/domains">Domains page</LinkApp> says so:
+				add a subdomain instead, like <code>mail.example.com</code>, or another domain.
+			</p>
 			<p>The page then lists the DNS records to add where your domain is managed (your registrar or DNS provider):</p>
 			<ol>
 				<li>
