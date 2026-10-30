@@ -29,11 +29,12 @@ import LogoGmail from "@/components/LogoGmail";
 import { useNotifications } from "@/components/ProviderNotifications";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatRelative } from "@/lib/format";
+import { formatRelativeShort, formatSendTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // The bell and its tray: a row of the sidebar (variant "sidebar"), or a button of the phone's top bar ("header"). Its
-// red badge counts what's unread until the tray opens, which marks what it shows read (components/ProviderNotifications.jsx).
+// red badge counts what's unread until the tray opens, which marks what it shows read (components/ProviderNotifications.jsx):
+// at the end of the sidebar's row, clear of its label, and on the bell's corner once the sidebar is folded or on a phone.
 export default function ButtonNotifications({ variant = "sidebar" }) {
 	const { unread, ringKey, open, close } = useNotifications();
 	const [isOpen, setIsOpen] = useState(false);
@@ -53,7 +54,10 @@ export default function ButtonNotifications({ variant = "sidebar" }) {
 			{unread > 0 && (
 				<span
 					aria-hidden="true"
-					className="absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-semibold text-white tabular-nums ring-2 ring-background animate-icon-in"
+					className={cn(
+						"absolute -top-1.5 -right-2.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-red-500 px-[3px] text-[9px] leading-none font-semibold text-white tabular-nums ring-2 ring-background animate-icon-in",
+						isSidebar && "hidden sidebar-folded:grid"
+					)}
 				>
 					{unread > 9 ? "9+" : unread}
 				</span>
@@ -72,6 +76,14 @@ export default function ButtonNotifications({ variant = "sidebar" }) {
 					>
 						<span className="transition-[translate] duration-250 ease-drawer motion-reduce:transition-none sidebar-folded:translate-x-1">{bell}</span>
 						<span className="sidebar-label">Notifications</span>
+						{unread > 0 && (
+							<span
+								aria-hidden="true"
+								className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1.5 text-[11px] leading-none font-semibold text-white tabular-nums sidebar-label animate-icon-in"
+							>
+								{unread > 99 ? "99+" : unread}
+							</span>
+						)}
 					</button>
 				) : (
 					<Button variant="ghost" size="icon" aria-label={label} className="data-[state=open]:bg-muted">
@@ -155,11 +167,11 @@ function RowNotification({ notification, isFresh, supportChatPath, onNavigate })
 						{isFresh && <span className="sr-only">New: </span>}
 						{title}
 					</span>
-					<time dateTime={at} className="shrink-0 text-xs text-muted-foreground tabular-nums">
-						{formatRelative(at)}
+					<time dateTime={at} title={formatSendTime(at)} className="shrink-0 text-xs text-muted-foreground tabular-nums">
+						{formatRelativeShort(at)}
 					</time>
 				</span>
-				{body && <span className="mt-0.5 line-clamp-3 block text-[13px] leading-5 text-pretty text-muted-foreground">{body}</span>}
+				{body && <span className="mt-0.5 line-clamp-4 text-[13px] leading-5 text-pretty text-muted-foreground">{body}</span>}
 			</span>
 		</>
 	);

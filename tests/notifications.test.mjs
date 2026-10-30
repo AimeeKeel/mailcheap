@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import mongoose from "mongoose";
 import { getAlertType } from "../lib/alert-rules.js";
+import { formatRelativeShort } from "../lib/format.js";
 import { NOTIFICATION_KINDS, NOTIFICATION_TONES, cleanNotificationPath, getNotificationTone, joinSentences } from "../lib/notification-rules.js";
 import { findAlertCalls, isAdminAlert, kindsOf } from "./helpers/alert-calls.mjs";
 import { activate, as, callApi, catchRedirect, form, jsonRequest, signIn, startTestApp } from "./helpers/app.mjs";
@@ -43,6 +44,20 @@ describe("what the bell shows of each kind", () => {
 		for (const path of ["https://example.com", "//example.com", "/\\example.com", "javascript:alert(1)", "/a b", "", null, `/${"a".repeat(600)}`]) {
 			assert.equal(cleanNotificationPath(path), null, String(path));
 		}
+	});
+
+	test("the tray says when in a few characters, so a short title stays on one line", () => {
+		const now = Date.parse("2026-10-30T12:00:00Z");
+		const ago = (minutes) => new Date(now - minutes * 60_000).toISOString();
+		assert.equal(formatRelativeShort(ago(0.5), now), "now");
+		assert.equal(formatRelativeShort(ago(5), now), "5m");
+		assert.equal(formatRelativeShort(ago(59), now), "59m");
+		assert.equal(formatRelativeShort(ago(60), now), "1h");
+		assert.equal(formatRelativeShort(ago(26 * 60), now), "1d");
+		assert.equal(formatRelativeShort(ago(6 * 24 * 60 + 23 * 60), now), "6d");
+		assert.equal(formatRelativeShort("2026-10-07T12:00:00Z", now), "Oct 7");
+		assert.equal(formatRelativeShort("2025-12-20T12:00:00Z", now), "Dec 20, 2025");
+		assert.equal(formatRelativeShort(null, now), null);
 	});
 
 	test("an alert's lines read as one text, and one starting with an address or a domain keeps it", () => {
