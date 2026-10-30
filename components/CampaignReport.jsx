@@ -33,6 +33,7 @@ import { withLinkKeys } from "@/lib/link-stats";
 import { PROVIDER_DOMAINS, PROVIDER_LABELS } from "@/lib/providers";
 import { describePublishTo, isOnWebsite, readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
+import { withEmailSections } from "@/lib/sections";
 import { TIMELINE_HOURS, findPeak, hoursToHalf, reachedOf } from "@/lib/report-stats";
 import { formatPaceTime } from "@/lib/send-spread";
 import { getIssueWebUrl } from "@/lib/sending-rules";
@@ -93,11 +94,12 @@ export default function CampaignReport({
 	const gmailLater = campaign.status === "sending" && gmail?.later > 0 ? getGmailLaterTrack({ domain: newsletter.sendingDomain, ...gmail }) : null;
 	const isSpread = campaign.status === "sending" && !isInSteps && Boolean(campaign.sendingUntil) && campaign.spreadHours > 0;
 	const backoffTrack = gmail ? getGmailTrack(pace?.sender ?? null, gmail.waiting) : null;
-	// With the Read online link its emails had, whose clicks the preview shows with the others'.
+	// With the Read online link its emails had, whose clicks the preview shows with the others', and every section any of
+	// them had, whose links' clicks too.
 	const { html } = renderEmail({
 		format: campaign.format,
 		markdown: campaign.markdown,
-		html: campaign.html,
+		html: campaign.format === "rich" ? withEmailSections(campaign.html) : campaign.html,
 		subject: campaign.subject,
 		previewText: campaign.previewText,
 		newsletter,

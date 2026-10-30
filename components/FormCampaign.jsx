@@ -3,6 +3,7 @@
 import { useCallback, useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
 	ArrowRight,
 	CalendarClock,
@@ -18,13 +19,16 @@ import {
 	Trash2,
 	UserRound,
 } from "lucide-react";
-import { duplicateCampaign, saveCampaign, sendTestCampaign, setCampaignPublishTo } from "@/app/(app)/campaigns/actions";
+import { countSectionReaders, duplicateCampaign, saveCampaign, sendTestCampaign, setCampaignPublishTo } from "@/app/(app)/campaigns/actions";
+import { getContactOptions } from "@/app/(app)/contacts/actions";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import BadgeStatus from "@/components/BadgeStatus";
+import CardSections from "@/components/CardSections";
 import CardSettings from "@/components/CardSettings";
 import CardTips from "@/components/CardTips";
 import DialogDiscardCampaign from "@/components/DialogDiscardCampaign";
 import DialogPreviewEmail from "@/components/DialogPreviewEmail";
+import DialogSegment from "@/components/DialogSegment";
 import EditorRich from "@/components/EditorRich";
 import IconField from "@/components/IconField";
 import LinkHelpFields from "@/components/LinkHelpFields";
@@ -52,6 +56,7 @@ import { fieldTag, firstNameTag } from "@/lib/merge-tags";
 import { getContentWarnings, getPresendChecks } from "@/lib/presend-checks";
 import { readPublishTo } from "@/lib/publish-to";
 import { renderEmail } from "@/lib/render-email";
+import { describeSectionGroup, forReader, hasSections, listSectionGroups, withEmailSections } from "@/lib/sections";
 import { SEGMENT_DELETED } from "@/lib/segments";
 import { toast } from "@/lib/toast";
 import { useCollapsedSidebar } from "@/lib/use-collapsed-sidebar";
@@ -137,11 +142,12 @@ export default function FormCampaign({
 		return false;
 	}
 
+	// The biggest email, every section in, which the checks read; the preview renders each reader's own.
 	const rendered = useMemo(
 		() =>
 			renderEmail({
 				format,
-				html: deferredValues.body,
+				html: format === "rich" ? withEmailSections(deferredValues.body) : deferredValues.body,
 				subject: deferredValues.subject,
 				previewText: deferredValues.previewText,
 				newsletter,
@@ -149,6 +155,38 @@ export default function FormCampaign({
 		[format, deferredValues, newsletter]
 	);
 	const previewHtml = useMemo(() => toPreviewFrame(rendered.html), [rendered.html]);
+	const sections = useSections({ campaignId: campaign._id, newsletterId: newsletter._id, segments });
+	const isWithSections = format === "rich" && hasSections(deferredValues.body);
+	// The preview's readers for an issue with sections: as one of its contacts, their tags and segments, or as any reader a
+	// section names, all called Jane. Only its live segments count: one deleted shows its sections to nobody.
+	const sectionPreview = useMemo(() => {
+		if (!isWithSections) return null;
+		const live = new Set(sections.segments.map(({ id }) => id));
+		const groups = listSectionGroups(deferredValues.body).filter(({ kind, value }) => kind === "tag" || live.has(value));
+		const segmentIds = groups.filter(({ kind }) => kind === "segment").map(({ value }) => value);
+		const toSegments = (group) => Object.fromEntries(segmentIds.map((id) => [id, group?.kind === "segment" && group.value === id]));
+		return {
+			segmentIds,
+			sample: { tags: [], segments: toSegments(null) },
+			groups: groups.map((group) => ({
+				id: `${group.kind}:${group.value}`,
+				isGroup: true,
+				name: describeSectionGroup(group, sections.segments),
+				tags: group.kind === "tag" ? [group.value] : [],
+				segments: toSegments(group),
+			})),
+			getHtml: (reader) =>
+				toPreviewFrame(
+					renderEmail({
+						format,
+						html: forReader(deferredValues.body, reader),
+						subject: deferredValues.subject,
+						previewText: deferredValues.previewText,
+						newsletter,
+					}).html
+				),
+		};
+	}, [isWithSections, sections.segments, deferredValues, format, newsletter]);
 	// A long issue takes a few milliseconds to read, so it's read apart from typing.
 	const contentWarnings = useMemo(
 		() => getContentWarnings({ ...deferredValues, format, contactFields }),
@@ -164,6 +202,7 @@ export default function FormCampaign({
 		isSendingEnabled,
 		planProblem,
 		contentWarnings,
+		segmentIds: sections.segments.map(({ id }) => id),
 	});
 	const reviewChecks = checks.map((check) => ({ ...check, fix: getCheckFix(check, { newsletterId: newsletter._id }) }));
 	const blocking = [
@@ -443,6 +482,7 @@ export default function FormCampaign({
 								onChange={updateBody}
 								contactFields={contactFields}
 								newsletter={newsletter}
+								sections={sections.context}
 							/>
 						)}
 					</div>
@@ -467,6 +507,15 @@ export default function FormCampaign({
 					<p role="status" className="sr-only">
 						{tips.length > 0 ? `${formatCount(tips.length, "tip")} for more opens` : ""}
 					</p>
+					{isWithSections && step === "review" && (
+						<CardSections
+							body={deferredValues.body}
+							segments={sections.segments}
+							countReaders={sections.context.countReaders}
+							isWebOnly={isWebOnly}
+							onPreview={(event) => openPreview(event.currentTarget)}
+						/>
+					)}
 					<CardSettings title="Test and preview" stagger={1}>
 						<ButtonRow
 							icon={FlaskConical}
@@ -532,7 +581,9 @@ export default function FormCampaign({
 				previewText={deferredValues.previewText}
 				newsletterId={newsletter._id}
 				contactFields={contactFields}
+				sections={sectionPreview}
 			/>
+			<DialogSegment {...sections.dialog} newsletterId={newsletter._id} />
 			<DialogDiscardCampaign
 				id={campaign._id}
 				subject={values.subject}
@@ -785,6 +836,53 @@ function ButtonRow({ icon: Icon, title, description, onClick, isDisabled = false
 			)}
 		</button>
 	);
+}
+
+// What the editor's sections pick from (components/BlockSection.jsx): the newsletter's segments, with one made here
+// until the page brings it back; its tags, read once; how many of the draft's readers a tag or a segment picks, null
+// for one the newsletter doesn't have; and the segment editor, whose new segment the section picks.
+function useSections({ campaignId, newsletterId, segments }) {
+	const router = useRouter();
+	const [made, setMade] = useState([]);
+	const [picking, setPicking] = useState(null);
+	const tagsRef = useRef(null);
+	const all = useMemo(() => [...segments, ...made.filter(({ id }) => !segments.some((segment) => segment.id === id))], [segments, made]);
+
+	const loadTags = useCallback(() => {
+		tagsRef.current ??= getContactOptions(newsletterId).then(
+			(result) => (result?.error ? [] : result.tags),
+			() => []
+		);
+		return tagsRef.current;
+	}, [newsletterId]);
+
+	const countReaders = useCallback(
+		async (group) => {
+			const result = await countSectionReaders(campaignId, [group]).catch(() => null);
+			const readers = result?.groups?.[0]?.readers;
+			return result && !result.error && typeof readers === "number" ? { readers: result.readers, count: readers } : null;
+		},
+		[campaignId]
+	);
+
+	const context = useMemo(
+		() => ({ segments: all, loadTags, countReaders, newSegment: (onSaved) => setPicking({ onSaved }) }),
+		[all, loadTags, countReaders]
+	);
+
+	return {
+		context,
+		segments: all,
+		dialog: {
+			open: Boolean(picking),
+			onOpenChange: (open) => !open && setPicking(null),
+			onSaved: (id, name) => {
+				setMade((current) => [...current, { id, name, description: "" }]);
+				picking?.onSaved(id);
+				router.refresh();
+			},
+		},
+	};
 }
 
 // Stays until a save goes through, unlike Saved.

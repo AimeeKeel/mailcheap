@@ -20,9 +20,11 @@ import {
 	MousePointerClick,
 	Pilcrow,
 	RectangleHorizontal,
+	SquareDashed,
 	TextQuote,
 	UserRound,
 } from "lucide-react";
+import { isInSection } from "@/components/BlockSection";
 import IconField from "@/components/IconField";
 import LinkHelpFields from "@/components/LinkHelpFields";
 import { findMergeTagMatch, matchFields } from "@/lib/editor-merge-tags";
@@ -211,7 +213,7 @@ function RowBack({ isSelected, onPoint, onPick }) {
 }
 
 // Typing "/" at the start of a line or after a space opens the menu, but not in a button's text; the text after it
-// searches. contactFields: the account's fields, offered after the first name.
+// searches. contactFields: the account's fields, offered after the first name. In a section, a section isn't offered.
 export const SlashCommand = Extension.create({
 	name: "slashCommand",
 	addOptions() {
@@ -219,13 +221,14 @@ export const SlashCommand = Extension.create({
 	},
 	addProseMirrorPlugins() {
 		const items = getSlashItems(this.options.contactFields);
+		const itemsInSection = items.filter((item) => item !== SECTION_ITEM);
 		return [
 			Suggestion({
 				editor: this.editor,
 				char: "/",
 				// Rendered before it's first placed, so it's placed at its own height.
 				initialItems: items,
-				items: () => items,
+				items: ({ editor }) => (isInSection(editor.state) ? itemsInSection : items),
 				allow: ({ state, range }) => state.doc.resolve(range.from).parent.type.name !== "button",
 				command: ({ editor, range, props: item }) => {
 					runPick(editor, range, item);
@@ -438,6 +441,13 @@ function toFieldItem({ key, label, type }) {
 	};
 }
 
+// Part of the issue for some readers, or for its emails or its website only (components/BlockSection.jsx).
+const SECTION_ITEM = {
+	title: "Section",
+	keywords: "some readers who sees audience tag segment personalize dynamic content email only web only",
+	icon: SquareDashed,
+	run: (chain) => chain.wrapIn("section", { isNew: true }),
+};
 const SLASH_ITEMS = [
 	{ title: "Text", keywords: "paragraph", icon: Pilcrow, run: (chain) => chain.setParagraph() },
 	{ title: "Heading 1", keywords: "title h1 big", icon: Heading1, run: (chain) => chain.setHeading({ level: 1 }) },
@@ -466,6 +476,7 @@ const SLASH_ITEMS = [
 		icon: CodeXml,
 		run: (chain) => chain.insertContent({ type: "htmlBlock", attrs: { isNew: true } }),
 	},
+	SECTION_ITEM,
 ];
 const FIRST_NAME = {
 	id: `field:${FIRST_NAME_KEY}`,

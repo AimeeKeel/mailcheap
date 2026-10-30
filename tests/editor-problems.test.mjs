@@ -152,7 +152,7 @@ describe("where the dots sit", () => {
 
 describe("the dots following their blocks", () => {
 	const content = doc(paragraph(text("Intro")), paragraph(text("TODO later")));
-	const [plugin] = Problems.config.addProseMirrorPlugins.call({ options: { contactFields: [] } });
+	const [plugin] = Problems.config.addProseMirrorPlugins.call({ options: { contactFields: [] }, storage: { segmentIds: [] } });
 
 	test("typing moves each block's problems with it, and deleting a block takes them away", () => {
 		const blocks = findDocProblems(content);

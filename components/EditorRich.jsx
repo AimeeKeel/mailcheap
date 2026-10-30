@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useImperativeHandle, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import FileHandler from "@tiptap/extension-file-handler";
 import { Placeholder } from "@tiptap/extensions";
 import StarterKit from "@tiptap/starter-kit";
 import { HtmlBlock, editHtmlBlock } from "@/components/BlockHtml";
+import { Section, SectionsContext } from "@/components/BlockSection";
 import DialogImagePicker from "@/components/DialogImagePicker";
 import GutterProblems from "@/components/GutterProblems";
 import MenuButton from "@/components/MenuButton";
@@ -20,7 +21,7 @@ import { Callout } from "@/lib/editor-callout";
 import { findWords } from "@/lib/editor-find";
 import { ImageAligned } from "@/lib/editor-image";
 import { MergeTags } from "@/lib/editor-merge-tags";
-import { Problems, findDocProblems, findProblem, revealProblem } from "@/lib/editor-problems";
+import { Problems, findDocProblems, findProblem, revealProblem, setProblemSegments } from "@/lib/editor-problems";
 import { UndoDelete } from "@/lib/editor-undo-delete";
 import { toast } from "@/lib/toast";
 import { IMAGE_TYPES, IMAGE_TYPE_ERROR, getDisplaySize, prepareImage, uploadImage } from "@/lib/upload-image";
@@ -32,14 +33,17 @@ const MIN_HEIGHT = "min-h-[560px]";
 // newsletter: whose email design HTML blocks preview in, and whose button colors and corners buttons show.
 // ref: reveal({ id, message, words }), which goes to a review step's warning or check (lib/campaign-steps.js), else to
 // the first place the issue has the words, and says whether it found it. gutterRef: the positioned element around the
-// editor's card, whose problems' dots sit beside it in the page's margin (components/GutterProblems.jsx).
-export default function EditorRich({ ref, gutterRef, content, onChange, contactFields = [], newsletter = null }) {
+// editor's card, whose problems' dots sit beside it in the page's margin (components/GutterProblems.jsx). sections: what
+// the issue's sections pick from (components/BlockSection.jsx), its segments a section without one is marked by.
+export default function EditorRich({ ref, gutterRef, content, onChange, contactFields = [], newsletter = null, sections = null }) {
 	const [isEditingLink, setIsEditingLink] = useState(false);
 	const [isEditingButtonLink, setIsEditingButtonLink] = useState(false);
 	const [isPickingImage, setIsPickingImage] = useState(false);
 	// The block whose dot says what it's about, once brought into view.
 	const [pinned, setPinned] = useState(null);
 	const unpin = useCallback(() => setPinned(null), []);
+	const segments = sections?.segments;
+	const segmentIds = useMemo(() => (segments ?? []).map(({ id }) => id), [segments]);
 	const editor = useEditor({
 		immediatelyRender: false,
 		content,
@@ -62,6 +66,7 @@ export default function EditorRich({ ref, gutterRef, content, onChange, contactF
 			Callout,
 			ButtonBlock.configure({ newsletter, onEditLink: () => setIsEditingButtonLink(true) }),
 			HtmlBlock.configure({ newsletter }),
+			Section,
 			BlockHandle,
 			UndoDelete,
 			MergeTags.configure({ contactFields }),
@@ -115,15 +120,19 @@ export default function EditorRich({ ref, gutterRef, content, onChange, contactF
 	useImperativeHandle(ref, () => ({
 		reveal: ({ id, message, words }) => {
 			if (!editor || editor.isDestroyed) return false;
-			const found = findProblem(findDocProblems(editor.state.doc, contactFields), { id, message });
+			const found = findProblem(findDocProblems(editor.state.doc, contactFields, segmentIds), { id, message });
 			return found ? reveal(found) : Boolean(words && selectWords(editor, words));
 		},
 	}));
 
+	useEffect(() => {
+		if (editor && !editor.isDestroyed) setProblemSegments(editor, segmentIds);
+	}, [editor, segmentIds]);
+
 	if (!editor) return <div className={MIN_HEIGHT} />;
 
 	return (
-		<>
+		<SectionsContext value={sections}>
 			<EditorContent editor={editor} className="relative" />
 			<GutterProblems
 				editor={editor}
@@ -141,7 +150,7 @@ export default function EditorRich({ ref, gutterRef, content, onChange, contactF
 				onOpenChange={setIsPickingImage}
 				onSelect={(image) => insertImage(editor, image)}
 			/>
-		</>
+		</SectionsContext>
 	);
 }
 

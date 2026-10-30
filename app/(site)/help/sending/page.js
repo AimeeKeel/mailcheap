@@ -24,6 +24,10 @@ export default function SendingPage() {
 			<p>Before a campaign can go out, the review step checks it:</p>
 			<ul>
 				<li>a subject, and content, with each button&apos;s text and link;</li>
+				<li>
+					readers for each <Link href={getHelpHref("writing", "sections")}>section</Link>: one whose segment was deleted waits until
+					you pick who sees it;
+				</li>
 				<li>the unsubscribe link, which MailCheap adds to every issue written in the editor;</li>
 				<li>a size under 100 KB, since Gmail cuts off longer emails;</li>
 				<li>
@@ -62,6 +66,8 @@ export default function SendingPage() {
 			<p>
 				Edit content takes you to each one in the issue, lit for a moment, where a{" "}
 				<Link href={getHelpHref("writing", "problems")}>dot beside it</Link> says what&apos;s wrong. Warnings don&apos;t stop you.
+				An issue with sections lists them under the checklist, each with who sees it, where, and how many of the readers it goes
+				to get it in their email. The size check counts the biggest email, with every section in.
 				{isCloud() &&
 					" Problems with your account show in red above the steps: your plan's limits, and on the send step a send bigger than what your plan has left this month."}{" "}
 				A web-only issue sends no email, so it only needs a subject, content and the website on.
@@ -106,7 +112,9 @@ export default function SendingPage() {
 			</p>
 			<p>
 				A draft whose segment was deleted waits until you pick another.
-				{isCloud() && " A send can't go over what your plan has left this month: pick a smaller segment, or upgrade."}
+				{isCloud() && " A send can't go over what your plan has left this month: pick a smaller segment, or upgrade."} Who gets
+				the issue is one thing; who sees a part of it is a{" "}
+				<Link href={getHelpHref("writing", "sections")}>section</Link>&apos;s, which never changes who gets it.
 			</p>
 			<p>
 				The same step shows the issue&apos;s web page address, which you can change, and what the{" "}

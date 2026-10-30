@@ -111,6 +111,11 @@ export default function WebsitePage() {
 				website without an email.{" "}
 				<Link href={getHelpHref("sending", "where")}>Email, web or both</Link>
 			</p>
+			<p>
+				An issue&apos;s page has its <Link href={getHelpHref("writing", "sections")}>sections</Link> set to show on the web, for every
+				visitor, and none set to email only. Your website doesn&apos;t know who&apos;s reading, so a section for some readers stays in
+				their emails unless you put it on the web too. Its share picture comes from the page, never from an email-only section.
+			</p>
 
 			<h2 id="remove-issue">Removing an issue</h2>
 			<p>

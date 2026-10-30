@@ -142,7 +142,8 @@ export default function ContactsPage() {
 				</li>
 				<li>
 					<strong>Tags</strong>: labels a contact has or doesn&apos;t, like vip, podcast or customer, {MAX_TAGS} per contact at most.
-					Use them to sort people into groups: list everyone with a tag, or send to them through a segment. Tags are lowercase, up
+					Use them to sort people into groups: list everyone with a tag, send to them through a segment, or show them a{" "}
+					<Link href={getHelpHref("writing", "sections")}>section</Link> of an issue. Tags are lowercase, up
 					to {MAX_TAG_LENGTH} characters, without commas, and never show in emails. <a href="#tags">Tagging contacts</a>
 				</li>
 				<li>
@@ -251,7 +252,8 @@ export default function ContactsPage() {
 				up (your website&apos;s signup form, the form on your own site, an import, by hand or the API), the email address, a tag,
 				whether they have a first name, and your own fields, {MAX_SEGMENT_CONDITIONS} at most. A segment matches all of its
 				conditions, or any of them. In the send step, pick one to send an issue to its contacts only.{" "}
-				<Link href={getHelpHref("sending", "who")}>Who gets it</Link>
+				<Link href={getHelpHref("sending", "who")}>Who gets it</Link> In the editor, pick one to show a part of an issue to its
+				contacts only. <Link href={getHelpHref("writing", "sections")}>Sections for some readers</Link>
 			</p>
 			<p>
 				Click a segment to open its page, like Segments / Engaged, whose back arrow returns to all of them. At the top: its
@@ -262,8 +264,8 @@ export default function ContactsPage() {
 			</p>
 			<p>
 				Counts are of active contacts, the ones an issue goes to. Conditions on dates count back from now, so &ldquo;opened in the last
-				30 days&rdquo; follows time, and a send reads its segment when it goes out. A segment that a scheduled or sending issue goes to
-				can&apos;t be deleted until that issue goes elsewhere.
+				30 days&rdquo; follows time, and a send reads its segment when it goes out. A segment that a scheduled or sending issue goes to,
+				or has a section for, can&apos;t be deleted until that issue goes elsewhere or the section changes.
 			</p>
 
 			<h2 id="add">Adding contacts</h2>

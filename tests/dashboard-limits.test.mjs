@@ -86,6 +86,7 @@ test("the dashboard counts the hourly limits of what costs something each call",
 			.sort(),
 		[
 			"bring_back_contacts",
+			"count_section_readers",
 			"count_segment",
 			"create_api_key",
 			"create_campaign",

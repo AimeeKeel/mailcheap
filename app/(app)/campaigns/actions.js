@@ -57,18 +57,38 @@ export async function setCampaignPublishTo(id, publishTo) {
 
 // The preview's reader picker: the newsletter's active contacts with what's typed in their address or first name, the
 // newest before anything is, each with its field values, which the preview fills in, and the hash its picture comes
-// from (AvatarContact).
-export async function findPreviewContacts(newsletterId, query) {
+// from (AvatarContact). segmentIds: the segments the issue's sections name, of which each contact gets those it's in,
+// along with its tags (lib/sections.js).
+export async function findPreviewContacts(newsletterId, query, segmentIds = []) {
+	const inSegments = Array.isArray(segmentIds) ? segmentIds.map(String).slice(0, 10) : [];
 	const { output, failure } = await runDashboardAction("search_contacts", {
 		newsletter: String(newsletterId ?? ""),
 		query: String(query ?? "").slice(0, 100),
 		status: "active",
 		limit: 8,
+		...(inSegments.length > 0 && { inSegments }),
 	});
 	if (failure) return toFormError(failure);
 	return {
-		contacts: output.contacts.map(({ id, email, firstName, fields }) => ({ id, email, firstName, fields, gravatarHash: gravatarHash(email) })),
+		contacts: output.contacts.map(({ id, email, firstName, fields, tags, inSegments: member = [] }) => ({
+			id,
+			email,
+			firstName,
+			fields,
+			tags,
+			segments: Object.fromEntries(inSegments.map((segmentId) => [segmentId, member.includes(segmentId)])),
+			gravatarHash: gravatarHash(email),
+		})),
 	};
+}
+
+// How many of the readers a draft goes to have a tag or are in a segment, for its sections: tag:<tag> or segment:<id>.
+export async function countSectionReaders(id, groups) {
+	const { output, failure } = await runDashboardAction("count_section_readers", {
+		id: String(id),
+		groups: Array.isArray(groups) ? groups.map(String).slice(0, 10) : [],
+	});
+	return failure ? toFormError(failure) : output;
 }
 
 export async function sendTestCampaign(id) {

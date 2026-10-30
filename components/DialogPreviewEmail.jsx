@@ -35,7 +35,9 @@ import { cn } from "@/lib/utils";
 // Gmail on a phone. Escape, the close button and a click on the dimmed space close it; Radix keeps the focus inside
 // meanwhile. With a newsletterId, html, subject and previewText keep their merge tags for the preview to fill in as the
 // reader it shows gets them: the sample reader, or one of the newsletter's contacts picked in it, who stays picked for
-// the next look. contactFields: the account's fields, whose tags print the reader's values. clicks: a sent issue's clicked
+// the next look. contactFields: the account's fields, whose tags print the reader's values. sections: for an issue with
+// sections (lib/sections.js), the email each reader gets, getHtml(reader), the sample reader's tags and segments, the
+// readers its sections name (groups) and their segments' IDs, which each contact listed gets its own of. clicks: a sent issue's clicked
 // links, shown on the email until Clicks hides them (components/OverlayClicks.jsx).
 export default function DialogPreviewEmail({ isOpen, onOpenChange, onCloseAutoFocus, ...email }) {
 	const [contact, setContact] = useState(null);
@@ -68,14 +70,17 @@ function Stage({
 	newsletterId,
 	contactFields,
 	clicks,
+	sections,
 	contact,
 	onContactChange,
 	onClose,
 }) {
 	const { html, subject, previewText } = useMemo(() => {
-		const email = { html: emailHtml, subject: emailSubject, previewText: emailPreviewText };
-		return newsletterId ? fillForReader(email, contact ?? SAMPLE_READER, contactFields) : email;
-	}, [emailHtml, emailSubject, emailPreviewText, newsletterId, contact, contactFields]);
+		const source = sections ? sections.getHtml(contact ?? sections.sample) : emailHtml;
+		const email = { html: source, subject: emailSubject, previewText: emailPreviewText };
+		// The readers a section names are all called Jane.
+		return newsletterId ? fillForReader(email, contact && !contact.isGroup ? contact : SAMPLE_READER, contactFields) : email;
+	}, [emailHtml, emailSubject, emailPreviewText, newsletterId, contact, contactFields, sections]);
 	const [device, setDevice] = useState(() => (window.matchMedia(SMALL_SCREEN).matches ? "mobile" : "desktop"));
 	const [space, setSpace] = useState(null);
 	const [hasOpenedEmail, setHasOpenedEmail] = useState(false);
@@ -113,7 +118,15 @@ function Stage({
 				)}
 			>
 				<div data-dim className="flex min-w-0">
-					{newsletterId && <PickerReader newsletterId={newsletterId} contact={contact} onChange={onContactChange} />}
+					{newsletterId && (
+						<PickerReader
+							newsletterId={newsletterId}
+							contact={contact}
+							groups={sections?.groups ?? []}
+							segmentIds={sections?.segmentIds ?? []}
+							onChange={onContactChange}
+						/>
+					)}
 				</div>
 				<div role="radiogroup" aria-label="Device" className="flex items-center gap-1 rounded-full bg-white/10 p-1">
 					{DEVICES.map(({ id, label, icon: Icon }) => (

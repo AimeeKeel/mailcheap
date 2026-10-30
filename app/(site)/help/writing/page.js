@@ -4,6 +4,7 @@ import LinkApp from "@/components/LinkApp";
 import { isCloud } from "@/lib/config";
 import { getHelpHref, getHelpPageMetadata } from "@/lib/help";
 import { UNSUBSCRIBE_PLACEHOLDER } from "@/lib/render-email";
+import { MAX_SECTION_GROUPS, MAX_SECTIONS } from "@/lib/sections";
 
 export const metadata = getHelpPageMetadata("writing");
 
@@ -43,8 +44,9 @@ export default function WritingPage() {
 				<li>
 					<strong>Slash commands</strong>: type <kbd>/</kbd> on an empty line for text, three heading sizes, bulleted and numbered
 					lists, a picture, a quote, a divider, a box, which sets a block apart on a gray background, a{" "}
-					<Link href={getHelpHref("writing", "buttons")}>button</Link> or{" "}
-					<Link href={getHelpHref("writing", "html")}>your own HTML</Link>. Contact fields, at the bottom
+					<Link href={getHelpHref("writing", "buttons")}>button</Link>,{" "}
+					<Link href={getHelpHref("writing", "html")}>your own HTML</Link> or a{" "}
+					<Link href={getHelpHref("writing", "sections")}>section for some readers</Link>. Contact fields, at the bottom
 					of the menu, opens the <Link href={getHelpHref("writing", "first-name")}>first name and your own fields</Link>. From the
 					keyboard, <kbd>→</kbd> opens it and <kbd>←</kbd> comes back. Keep typing after the slash to find any of them, like{" "}
 					<kbd>/quote</kbd> or a field&apos;s name.
@@ -123,7 +125,7 @@ export default function WritingPage() {
 
 			<h2 id="moving-blocks">Moving blocks</h2>
 			<p>
-				With a mouse, a grip appears to the left of the paragraph, heading, list, picture, box, button or HTML block under the pointer. Drag
+				With a mouse, a grip appears to the left of the paragraph, heading, list, picture, box, button, HTML block or section under the pointer. Drag
 				it to move the block, and a line shows where it lands. Click it to select the block. From the keyboard,{" "}
 				<kbd>⌘ Shift ↑</kbd> and{" "}
 				<kbd>⌘ Shift ↓</kbd> (<kbd>Ctrl</kbd> instead of <kbd>⌘</kbd> on Windows) move the block the cursor is in. Moves undo like any
@@ -173,7 +175,8 @@ export default function WritingPage() {
 				<Link href={getHelpHref("contacts", "fields")}>Adding fields, step by step</Link>. Text shows as it is, a number with its
 				thousands separated (1,250), and a date written out (April 12, 1991). A reader without a value sees the fallback, or
 				nothing. Tags never show in emails: they&apos;re for picking who gets an issue, with{" "}
-				<Link href={getHelpHref("contacts", "segments")}>segments</Link>.
+				<Link href={getHelpHref("contacts", "segments")}>segments</Link>, and who sees a{" "}
+				<Link href={getHelpHref("writing", "sections")}>section</Link> of it.
 			</p>
 			<p>
 				Names and fields work in the subject, the preview text and the content, and in your welcome and confirmation emails. Your
@@ -182,6 +185,47 @@ export default function WritingPage() {
 				<Link href={getHelpHref("writing", "preview")}>pick in it</Link>. Test emails show Jane too, or your own first name and
 				fields if you&apos;re one of your contacts. The review step flags any other <code>{"{{...}}"}</code>, like a tag from another
 				platform or a field you deleted, since it would go out as written.
+			</p>
+
+			<h2 id="sections">Sections for some readers</h2>
+			<p>
+				A section shows part of an issue to some of your readers only, or only in your emails or only on your website. Everyone you
+				send the issue to still gets it: a reader a section isn&apos;t for gets the same email without it.
+			</p>
+			<p>
+				Select the text of the blocks you want in it, then click Who sees this, the dashed square at the end of the bar above them.
+				Or type <kbd>/</kbd>, pick Section and write in it. A dashed outline shows where the section starts and ends, and its label
+				says who sees it and where, like &ldquo;Only readers tagged vip · Email only&rdquo;. Click the label to change them:
+			</p>
+			<ul>
+				<li>
+					<strong>Who sees this section</strong>: everyone, readers with a <Link href={getHelpHref("contacts", "tags")}>tag</Link>,
+					or readers in a <Link href={getHelpHref("contacts", "segments")}>segment</Link>, like your newest subscribers or those who
+					opened lately. Everyone except them turns it around, for readers without the tag or outside the segment. New segment, at
+					the bottom of the list, makes one without leaving the issue.
+				</li>
+				<li>
+					<strong>Show it in</strong>: email and web, email only or web only. Your website doesn&apos;t know who&apos;s reading, so
+					a section becomes email only once you pick its readers. Put it back on the web, and every visitor of your website sees it.
+				</li>
+			</ul>
+			<p>
+				Under them, how many of the readers who get the issue see the section in their email. Add a version for everyone else puts
+				the opposite section right under it, for the readers this one leaves out, like a thank you for your VIPs and an invitation
+				for everyone else. Remove the section, keep its content puts its blocks back in the issue for everyone.
+			</p>
+			<p>
+				Each reader&apos;s sections are decided as their email goes out, with their tags and segments then. A section can hold{" "}
+				<Link href={getHelpHref("writing", "html")}>HTML blocks</Link> but not another section, and an HTML block&apos;s HTML
+				can&apos;t make one: put the section around the block. An issue holds {MAX_SECTIONS} sections naming {MAX_SECTION_GROUPS}{" "}
+				tags or segments at most. A segment
+				can&apos;t be deleted while a scheduled or sending issue has a section for it. In a draft, a section whose segment was
+				deleted gets a <Link href={getHelpHref("writing", "problems")}>red dot</Link> and holds the issue until you pick who sees it.
+			</p>
+			<p>
+				The <Link href={getHelpHref("writing", "preview")}>preview</Link> shows the issue as each reader gets it, and a test email has
+				every section an email can have, to check them all in your inbox. Sections are for what matters to each reader, not for
+				secrets: a reader can forward their email.
 			</p>
 
 			<h2 id="preview">Preview and test emails</h2>
@@ -197,13 +241,16 @@ export default function WritingPage() {
 				Sample reader, at the top left, shows the email as a reader called Jane gets it. Click it to pick one of your active
 				contacts instead, the newest first, each with their picture as on the <LinkApp href="/contacts">Contacts page</LinkApp>, or
 				find one by typing any part of their email address or first name. The subject, the preview text and the email then read as
-				that person gets them, with their first name and field values, or the fallbacks where they have none. They stay picked
-				while the campaign is open. How to add names and fields to contacts, at the bottom of the list, opens{" "}
+				that person gets them, with their first name and field values, or the fallbacks where they have none, and the{" "}
+				<Link href={getHelpHref("writing", "sections")}>sections</Link> their tags and segments get them. They stay picked while the
+				campaign is open. An issue with sections also lists the readers they name, like readers tagged vip, each called Jane: Jane
+				has no tags and is in no segment. How to add names and fields to contacts, at the bottom of the list, opens{" "}
 				<Link href={getHelpHref("contacts", "fields")}>Adding fields, step by step</Link>.
 			</p>
 			<p>
-				Send a test email, in the same menu, sends the email as saved to your account&apos;s address, with [Test] before the subject.
-				Nobody else gets it.{isCloud() && " It counts toward your plan's emails."} The review step reminds you when you haven&apos;t
+				Send a test email, in the same menu, sends the email as saved to your account&apos;s address, with [Test] before the subject,
+				and every section an email of it can have. Nobody else gets it.{isCloud() && " It counts toward your plan's emails."} The
+				review step reminds you when you haven&apos;t
 				sent one. If it lands in spam: <Link href={getHelpHref("deliverability", "test-in-spam")}>When a test lands in spam</Link>
 			</p>
 
