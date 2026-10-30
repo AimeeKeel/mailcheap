@@ -11,7 +11,8 @@ export default function NotificationsPage() {
 		<ArticleHelp slug="notifications">
 			<h2 id="bell">The bell</h2>
 			<p>
-				The bell in the sidebar, right above Domains, or at the top of the screen on a phone, shows what happened in your account.
+				The bell in the sidebar, in a section of its own under <LinkApp href="/domains">Domains</LinkApp> and{" "}
+				<LinkApp href="/api-keys">API keys</LinkApp>, or at the top of the screen on a phone, shows what happened in your account.
 				Its red badge counts the new ones. Opening it marks what it shows as read, so the badge goes away, and the new ones stay
 				highlighted until you close it.
 			</p>

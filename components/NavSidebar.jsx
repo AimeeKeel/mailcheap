@@ -12,8 +12,8 @@ import { readCookie } from "@/lib/storage";
 import { isSidebarCollapsed, readSidebarVisit, subscribeToSidebarVisits } from "@/lib/use-collapsed-sidebar";
 import { cn } from "@/lib/utils";
 
-// The sidebar from md up: the logo, the newsletter menu (switcher), the navigation with the notifications' bell among the
-// account's pages (notifications) and the account menu (footer). The
+// The sidebar from md up: the logo, the newsletter menu (switcher), the navigation with the notifications' bell in a
+// section of its own after the account's pages (notifications) and the account menu (footer). The
 // button next to the logo collapses it, and the page takes the room (app/globals.css). Collapsed, it's folded down to
 // its icons, and unfolds over the page while a mouse is on it, where the same button keeps it open; folded, the logo
 // opens it too, for touch screens and the keyboard. The campaign editor collapses it too while it's open, unless it's
